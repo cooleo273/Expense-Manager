@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type MaterialCommunityIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -64,10 +65,28 @@ export default function AccountsScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const [showBalances, setShowBalances] = useState(true);
   const router = useRouter();
+  const { filters } = useFilterContext();
+
+  const filteredAccountGroups = useMemo(() => {
+    return accountGroups.map(group => ({
+      ...group,
+      accounts: group.accounts.filter(account => {
+        // Filter by selected account
+        if (filters.selectedAccount !== 'all' && account.id !== filters.selectedAccount) {
+          return false;
+        }
+        // Filter by search term
+        if (filters.searchTerm && !account.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+          return false;
+        }
+        return true;
+      })
+    })).filter(group => group.accounts.length > 0);
+  }, [filters]);
 
   const totalAccounts = useMemo(
-    () => accountGroups.reduce((count, group) => count + group.accounts.length, 0),
-    []
+    () => filteredAccountGroups.reduce((count, group) => count + group.accounts.length, 0),
+    [filteredAccountGroups]
   );
 
   const formatAmount = (amount: number) => (showBalances ? `₹${amount.toLocaleString()}` : '••••••');
@@ -124,7 +143,7 @@ export default function AccountsScreen() {
           ))}
         </View>
 
-        {accountGroups.map((group) => (
+        {filteredAccountGroups.map((group) => (
           <ThemedView
             key={group.id}
             style={[styles.groupCard, { backgroundColor: palette.card, borderColor: palette.border }]}
