@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { DateRange, useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -153,7 +153,7 @@ export const CalendarButton: React.FC = () => {
     <View>
       <TouchableOpacity
         onPress={() => setCalendarVisible(true)}
-        style={{ marginHorizontal: 5, marginRight: 16 }}
+        style={{ marginHorizontal: Spacing.xs, marginRight: Spacing.lg }}
       >
         <MaterialCommunityIcons name="calendar" size={24} color={palette.text} />
       </TouchableOpacity>
@@ -172,8 +172,8 @@ export const CalendarButton: React.FC = () => {
               styles.calendarSheet,
               {
                 backgroundColor: palette.card,
-                marginTop: insets.top + 16,
-                marginRight: 16,
+                marginTop: insets.top + Spacing.lg,
+                marginRight: Spacing.lg,
                 shadowColor: 'rgba(15,23,42,0.25)',
               },
             ]}
@@ -251,7 +251,7 @@ export const CalendarButton: React.FC = () => {
               style={[styles.confirmButton, { backgroundColor: palette.tint }]}
               onPress={handleConfirm}
             >
-              <Text style={{ color: palette.background, fontWeight: '600' }}>Confirm</Text>
+              <Text style={{ color: palette.background, fontWeight: FontWeights.semibold as any }}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -268,75 +268,72 @@ const styles = StyleSheet.create({
   calendarSheet: {
     alignSelf: 'flex-end',
     width: 320,
-    borderRadius: 20,
-    padding: 20,
-    elevation: 12,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    ...Shadows.modal,
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   sheetTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.heavy as any,
   },
   quickRow: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   quickChip: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 18,
-    paddingVertical: 8,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.sm,
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   monthHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   navButton: {
-    padding: 6,
-    borderRadius: 16,
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.lg,
   },
   monthTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
   },
   weekHeaderRow: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   weekHeaderCell: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold as any,
   },
   weekRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: Spacing.xs,
   },
   dayCell: {
     flex: 1,
     height: 40,
-    marginHorizontal: 2,
-    borderRadius: 12,
+    marginHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 14,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -102,7 +102,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
             {
               backgroundColor: palette.card,
               transform: [{ translateX }],
-              shadowColor: 'rgba(15,23,42,0.25)',
               paddingTop: Math.max(insets.top, 24),
             },
           ]}
@@ -133,7 +132,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
                   color={palette.icon}
                   style={{ marginRight: 12 }}
                 />
-                <Text style={{ color: palette.text, fontSize: 16 }}>{item.label}</Text>
+                <Text style={{ color: palette.text, fontSize: FontSizes.lg }}>{item.label}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -161,63 +160,60 @@ const styles = StyleSheet.create({
   },
   drawer: {
     width: DRAWER_WIDTH,
-    padding: 20,
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 12,
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    padding: Spacing.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    borderBottomRightRadius: BorderRadius.xl,
+    ...Shadows.drawerSubtle,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   avatarCircle: {
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: BorderRadius.round,
     backgroundColor: '#E3F2FD',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: Spacing.lg,
   },
   avatarInitial: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.heavy as any,
     color: '#1F2933',
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.heavy as any,
   },
   profileHint: {
-    marginTop: 4,
-    fontSize: 13,
+    marginTop: Spacing.xs,
+    fontSize: FontSizes.sm,
   },
   dismissButton: {
     marginLeft: 'auto',
-    padding: 6,
+    padding: Spacing.xs,
   },
   footerSection: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(229,231,235,0.7)',
-    paddingTop: 16,
+    paddingTop: Spacing.lg,
   },
   footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
   },
 });

@@ -1,10 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Dimensions, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { homeStyles } from '@/app/styles/home.styles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -48,7 +50,11 @@ export default function HomeScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { filters } = useFilterContext();
+  const tabBarHeight = useBottomTabBarHeight();
   const chartWidth = Dimensions.get('window').width - 64;
+  const [showOverlay, setShowOverlay] = useState(false);
+  const donutSize = Math.min(Math.max(chartWidth * 0.36, 140), 220);
+  const innerSize = Math.max(donutSize * 0.55, 70);
 
   const formatCurrency = (value: number) => {
     const amount = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -109,31 +115,24 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+        contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <View style={styles.balanceHeader}>
-            <View>
+          <View style={styles.balanceContent}>
+            <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
               <ThemedText style={[styles.balanceValue, { color: palette.text }]}>$10,280.50</ThemedText>
             </View>
-            <TouchableOpacity
-              style={[styles.balanceIconButton, { borderColor: palette.border }]}
-              accessibilityRole="button"
-              onPress={() => router.push('/add-account')}
-            >
-              <MaterialCommunityIcons name="plus" size={20} color={palette.icon} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.balanceMetaRow}>
-            <View style={styles.metaPill}>
-              <MaterialCommunityIcons name="trending-up" size={18} color={palette.success} />
-              <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
-            </View>
-            <View style={styles.metaPill}>
-              <MaterialCommunityIcons name="trending-down" size={18} color={palette.error} />
-              <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
+            <View style={styles.leftSide}>
+              <View style={styles.metaPill}>
+                <MaterialCommunityIcons name="chevron-up" size={18} color={palette.success} />
+                <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
+              </View>
+              <View style={styles.metaPill}>
+                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.error} />
+                <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
+              </View>
             </View>
           </View>
         </ThemedView>
@@ -141,36 +140,57 @@ export default function HomeScreen() {
         <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
             <ThemedText type="subtitle">Expense Structure</ThemedText>
-            <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
           </View>
-          <View style={styles.chartContainer}>
-            <PieChart
-              data={chartData}
-              width={Math.max(chartWidth, 240)}
-              height={200}
-              chartConfig={chartConfig}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="0"
-              hasLegend={false}
-              absolute
-            />
-            <View style={[styles.chartLabelBadge, { backgroundColor: palette.background }]}
-            >
-              <ThemedText style={{ fontSize: 20, fontWeight: '700', color: palette.text }}>$1,250.25</ThemedText>
-              <ThemedText style={{ color: palette.icon }}>Spent</ThemedText>
+          <View style={styles.chartRow}>
+            <View style={styles.legendContainer}>
+              {expenseStructure.map((item) => (
+                <View key={item.id} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                  <View>
+                    <ThemedText style={{ fontWeight: '600' }}>{item.label}</ThemedText>
+                  </View>
+                </View>
+              ))}
             </View>
-          </View>
-          <View style={styles.legendGrid}>
-            {expenseStructure.map((item) => (
-              <View key={item.id} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                <View>
-                  <ThemedText style={{ fontWeight: '600' }}>{item.label}</ThemedText>
-                  <ThemedText style={{ color: palette.icon }}>{formatCurrency(item.value)}</ThemedText>
+            <View style={[styles.chartContainer, { width: donutSize, height: donutSize }]}>
+              <PieChart
+                data={chartData}
+                width={donutSize}
+                height={donutSize}
+                chartConfig={chartConfig}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="0"
+                hasLegend={false}
+                absolute
+              />
+              <View style={styles.chartOverlay} pointerEvents="none">
+                <View
+                  style={[
+                    styles.chartCenterCircle,
+                    {
+                      width: innerSize,
+                      height: innerSize,
+                      borderRadius: innerSize / 2,
+                      backgroundColor: palette.card,
+                    },
+                  ]}
+                >
+                  <ThemedText style={[styles.chartCenterValue, { color: palette.text }]}>$1,250.25</ThemedText>
                 </View>
               </View>
-            ))}
+            </View>
+          </View>
+          <View style={[styles.separator, { backgroundColor: palette.border }]} />
+          <View style={styles.bottomSection}>
+            <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
+            <TouchableOpacity
+              onPress={() => router.push('/statistics')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
+            </TouchableOpacity>
           </View>
         </ThemedView>
 
@@ -184,7 +204,7 @@ export default function HomeScreen() {
               <View style={[styles.recordIcon, { backgroundColor: `${record.type === 'income' ? palette.success : palette.error}12` }]}
               >
                 <MaterialCommunityIcons
-                  name={record.type === 'income' ? 'arrow-down-left' : 'arrow-up-right'}
+                  name={record.type === 'income' ? 'wallet-plus' : 'cart-minus'}
                   size={20}
                   color={record.type === 'income' ? palette.success : palette.error}
                 />
@@ -203,161 +223,37 @@ export default function HomeScreen() {
           ))}
 
           <TouchableOpacity
-            onPress={() => router.push('/transactions')}
-            style={[styles.showMoreButton, { borderColor: palette.border }]}
+            onPress={() => router.push('/records')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
           >
             <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={palette.tint} />
+            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: palette.tint, bottom: tabBarHeight + 20 }]} onPress={() => setShowOverlay(true)}>
+        <MaterialCommunityIcons name="plus" size={24} color="white" />
+      </TouchableOpacity>
+      <Modal transparent visible={showOverlay} onRequestClose={() => setShowOverlay(false)}>
+        <TouchableOpacity style={styles.overlay} onPress={() => setShowOverlay(false)}>
+          <TouchableOpacity
+            style={[styles.fabOption, { bottom: tabBarHeight + 80 }]}
+            onPress={() => { setShowOverlay(false); router.push('/log-expenses'); }}
+          >
+            <MaterialCommunityIcons name="plus" size={20} color="white" />
+            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Add Record</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.fabOption, { bottom: tabBarHeight + 20 }]}
+            onPress={() => { setShowOverlay(false); router.push('/scan'); }}
+          >
+            <MaterialCommunityIcons name="camera" size={20} color="white" />
+            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Scan Receipt</ThemedText>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  sectionCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    gap: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  balanceCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
-    gap: 16,
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  balanceValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  balanceIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceMetaRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(148, 163, 184, 0.12)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  metaValue: {
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chartLabelBadge: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 60,
-    elevation: 4,
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -60 }, { translateY: -40 }],
-  },
-  legendGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: '48%',
-  },
-  legendDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  recordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    gap: 12,
-  },
-  recordIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recordContent: {
-    flex: 1,
-  },
-  recordTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  recordSubtitle: {
-    marginTop: 2,
-    fontSize: 13,
-  },
-  recordMeta: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  recordAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  showMoreButton: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-});
+const styles = homeStyles;

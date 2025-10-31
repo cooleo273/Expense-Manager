@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 
 type ToastProps = {
   message: string;
@@ -13,6 +15,23 @@ export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(100)).current;
+
+  const hideToast = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onHide();
+    });
+  }, [fadeAnim, translateY, onHide]);
 
   useEffect(() => {
     if (visible) {
@@ -37,24 +56,7 @@ export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration
 
       return () => clearTimeout(timer);
     }
-  }, [visible, duration]);
-
-  const hideToast = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onHide();
-    });
-  };
+  }, [visible, duration, hideToast, fadeAnim, translateY]);
 
   if (!visible) return null;
 
@@ -79,29 +81,22 @@ export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    left: Spacing.xl,
+    right: Spacing.xl,
     zIndex: 1000,
   },
   toast: {
     backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    ...Shadows.medium,
   },
   message: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.medium as any,
     textAlign: 'center',
   },
 });

@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { logExpensesStyles } from '@/app/styles/log-expenses.styles';
 
 type EntryType = 'Expense' | 'Income' | 'Transfer';
 
@@ -164,67 +165,4 @@ export default function LogExpensesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  header: {
-    gap: 8,
-    marginBottom: 12,
-  },
-  tabs: {
-    flexDirection: 'row',
-    borderRadius: 20,
-    padding: 4,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  tabText: {
-    fontWeight: '600',
-  },
-  form: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  scanButton: {
-    borderRadius: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  saveButton: {
-    borderRadius: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  entryCard: {
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 6,
-  },
-  entryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-});
+const styles = logExpensesStyles;

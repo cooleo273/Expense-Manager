@@ -1,9 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Dimensions, ScrollView, Switch, View } from 'react-native';
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { statisticsStyles } from '@/app/styles/statistics.styles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -44,7 +45,7 @@ const categoryBreakdown = [
   { name: 'Travel', percent: 5, amount: 1210, color: '#EC4899' },
 ];
 
-export default function Analysis() {
+export default function Statistics() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
@@ -161,68 +162,4 @@ export default function Analysis() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 20,
-  },
-  cardHeader: {
-    marginBottom: 12,
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginTop: 12,
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  legendSwatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  compareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  compareLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
-  },
-  categorySwatch: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-  },
-  categoryLabel: {
-    flex: 1,
-  },
-});
+const styles = statisticsStyles;

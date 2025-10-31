@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -68,7 +68,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
             {
               backgroundColor: palette.card,
               marginTop: insets.top + 16,
-              shadowColor: 'rgba(15,23,42,0.25)',
             },
           ]}
         >
@@ -155,34 +154,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15,23,42,0.55)',
   },
   searchContainer: {
-    marginHorizontal: 16,
-    padding: 20,
-    borderRadius: 16,
-    elevation: 10,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
+    marginHorizontal: Spacing.lg,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.modalSubtle,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   searchButton: {
-    padding: 10,
-    borderRadius: 8,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
   },
   historyContainer: {
-    marginTop: 20,
+    marginTop: Spacing.xl,
     maxHeight: 220,
   },
   historyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold as any,
+    marginBottom: Spacing.md,
   },
   historyList: {
     maxHeight: 220,
@@ -190,43 +186,43 @@ const styles = StyleSheet.create({
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   searchFieldWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   closeButton: {
-    marginLeft: 12,
+    marginLeft: Spacing.md,
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: BorderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(233,236,239,0.6)',
   },
   filterChipRow: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
 });

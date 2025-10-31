@@ -1,8 +1,9 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { HapticTab } from '@/components/haptic-tab';
+import { tabLayoutStyles } from '@/app/styles/tab-layout.styles';
 import { HeaderRight } from '@/components/HeaderRight';
 import { MenuButton } from '@/components/MenuButton';
 import { Colors } from '@/constants/theme';
@@ -29,30 +30,35 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: palette.tint,
           tabBarInactiveTintColor: palette.icon,
-  tabBarStyle,
-          tabBarButton: HapticTab,
+          tabBarStyle,
           tabBarHideOnKeyboard: true,
           headerShown: true,
         }}>
         <Tabs.Screen
           name="index"
           options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
           }}
         />
         <Tabs.Screen
-          name="accounts"
+          name="records"
           options={{
+            title: 'Records',
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="receipt" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
           }}
         />
         <Tabs.Screen
-          name="analysis"
+          name="statistics"
           options={{
+            title: 'Statistics',
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
@@ -66,38 +72,4 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  tabBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 68,
-    borderRadius: 28,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 0,
-    elevation: 8,
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  tabBarItem: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 4,
-    borderRadius: 20,
-  },
-  tabLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  tabIcon: {
-    marginBottom: 0,
-  },
-});
+const styles = tabLayoutStyles;

@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, Shadows, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -112,11 +112,11 @@ const styles = StyleSheet.create({
   dropdown: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderWidth: 1,
-    borderRadius: 8,
-    marginHorizontal: 5,
+    borderRadius: BorderRadius.sm,
+    marginHorizontal: Spacing.xs,
   },
   overlay: {
     flex: 1,
@@ -125,18 +125,14 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     position: 'absolute',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     maxHeight: DROPDOWN_MAX_HEIGHT,
     overflow: 'hidden',
-    elevation: 8,
-    shadowColor: 'rgba(15,23,42,0.25)',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    ...Shadows.medium,
     zIndex: 10,
   },
   dropdownItem: {
-    padding: 10,
+    padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
