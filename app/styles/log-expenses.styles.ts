@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
 import { BorderRadius, FontWeights, Spacing } from '@/constants/theme';
+import { StyleSheet } from 'react-native';
 
 export const logExpensesStyles = StyleSheet.create({
   safeArea: {

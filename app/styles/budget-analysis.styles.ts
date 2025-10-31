@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
 import { BorderRadius, Spacing } from '@/constants/theme';
+import { StyleSheet } from 'react-native';
 
 export const budgetAnalysisStyles = StyleSheet.create({
   safeArea: {
