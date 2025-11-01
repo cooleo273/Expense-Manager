@@ -67,12 +67,12 @@ export const AccountDropdown: React.FC = () => {
         animationType="fade"
         onRequestClose={closeDropdown}
       >
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeDropdown}>
             <View style={styles.overlay} />
           </Pressable>
           {anchorLayout && (
-            <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
               <View
                 style={[
                   styles.dropdownMenu,

@@ -58,7 +58,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
           <View style={styles.backdrop} />
         </Pressable>

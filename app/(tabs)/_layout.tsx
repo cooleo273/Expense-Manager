@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { tabLayoutStyles } from '@/app/styles/tab-layout.styles';
+import { tabLayoutStyles } from '@/styles/tab-layout.styles';
 import { HeaderRight } from '@/components/HeaderRight';
 import { MenuButton } from '@/components/MenuButton';
 import { Colors } from '@/constants/theme';
@@ -66,7 +66,7 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
       </View>
     </View>
   );

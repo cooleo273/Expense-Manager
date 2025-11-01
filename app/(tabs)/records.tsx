@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { recordsStyles } from '@/app/styles/records.styles';
+import { recordsStyles } from '@/styles/records.styles';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { Colors } from '@/constants/theme';

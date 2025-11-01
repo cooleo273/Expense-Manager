@@ -1,10 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useMemo, useState } from 'react';
 import { Dimensions, ScrollView, TouchableOpacity, View } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
 
-import { statisticsStyles } from '@/app/styles/statistics.styles';
+import { statisticsStyles } from '@/styles/statistics.styles';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { ThemedText } from '@/components/themed-text';
@@ -44,36 +44,30 @@ export default function Statistics() {
 
   const activeSeries = WEEKLY_AMOUNTS[selectedType];
 
-  const weeklyBarData = useMemo(
-    () => ({
-      labels: WEEK_LABELS,
-      datasets: [
-        {
-          data: activeSeries,
-          color: () => palette.tint,
-        },
-      ],
-    }),
-    [activeSeries, palette.tint]
+  const formatCurrency = (value: number) => `₹${value.toLocaleString()}`;
+
+  const maxDataValue = useMemo(
+    () => activeSeries.reduce((max, value) => Math.max(max, value), 0),
+    [activeSeries]
   );
 
-  const barChartConfig = useMemo(
-    () => ({
-      backgroundGradientFrom: palette.card,
-      backgroundGradientTo: palette.card,
-      decimalPlaces: 0,
-      color: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
-      labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
-      fillShadowGradient: palette.tint,
-      fillShadowGradientOpacity: 0.85,
-      propsForBackgroundLines: {
-        strokeDasharray: '',
-        stroke: palette.border,
-      },
-      barPercentage: 0.55,
-    }),
-    [palette]
+  const weeklyChartData = useMemo(
+    () =>
+      WEEK_LABELS.map((label, index) => ({
+        x: label,
+        y: activeSeries[index],
+      })),
+    [activeSeries]
   );
+
+  const yAxisTickValues = useMemo(() => {
+    if (maxDataValue === 0) {
+      return [0, 1, 2, 3];
+    }
+    const steps = 4;
+    const stepSize = Math.max(1, Math.ceil(maxDataValue / steps));
+    return Array.from({ length: steps + 1 }, (_, idx) => idx * stepSize);
+  }, [maxDataValue]);
 
   const weeklyTotal = activeSeries.reduce((sum, value) => sum + value, 0);
   let peakIndex = 0;
@@ -111,25 +105,56 @@ export default function Statistics() {
           <ThemedText style={{ color: palette.icon }}>This Week</ThemedText>
         </View>
 
-        <ThemedView style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+  <ThemedView style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
             <ThemedText type="subtitle">Weekly Breakdown</ThemedText>
             <ThemedText style={{ color: palette.icon }}>
               {selectedType === 'income' ? 'Income overview' : 'Expense overview'}
             </ThemedText>
           </View>
-          <BarChart
-            data={weeklyBarData}
-            width={chartWidth}
-            height={220}
-            chartConfig={barChartConfig}
-            showBarTops
-            fromZero
-            yAxisLabel=""
-            yAxisSuffix=""
-            style={styles.chart}
-            withInnerLines
-          />
+          <View style={[styles.chart, { width: chartWidth }]}>
+            <VictoryChart
+              animate={{ duration: 600 }}
+              height={240}
+              padding={{ top: 32, bottom: 56, left: 56, right: 24 }}
+              domainPadding={{ x: 24, y: [0, 12] }}
+              width={chartWidth}
+            >
+              <VictoryAxis
+                style={{
+                  axis: { stroke: palette.border },
+                  tickLabels: { fill: palette.icon, fontSize: 12, padding: 12 },
+                  ticks: { stroke: palette.border },
+                }}
+              />
+              <VictoryAxis
+                dependentAxis
+                tickValues={yAxisTickValues}
+                tickFormat={(value: number) => formatCurrency(value)}
+                style={{
+                  axis: { stroke: palette.border },
+                  grid: { stroke: palette.border, strokeDasharray: '4,4' },
+                  tickLabels: { fill: palette.icon, fontSize: 12, padding: 8 },
+                  ticks: { stroke: palette.border },
+                }}
+              />
+              <VictoryBar
+                data={weeklyChartData}
+                barWidth={24}
+                cornerRadius={{ top: 8, bottom: 8 }}
+                labels={({ datum }: { datum: { y: number } }) =>
+                  datum.y ? formatCurrency(datum.y) : ''
+                }
+                labelComponent={
+                  <VictoryLabel
+                    dy={-8}
+                    style={{ fill: palette.icon, fontSize: 12, fontWeight: '600' }}
+                  />
+                }
+                style={{ data: { fill: palette.tint } }}
+              />
+            </VictoryChart>
+          </View>
           <View style={styles.barSummaryRow}>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total</ThemedText>

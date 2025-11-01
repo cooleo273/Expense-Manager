@@ -48,6 +48,8 @@ export const statisticsStyles = StyleSheet.create({
   },
   chart: {
     borderRadius: BorderRadius.lg,
+    alignSelf: 'center',
+    overflow: 'hidden',
   },
   barSummaryRow: {
     flexDirection: 'row',

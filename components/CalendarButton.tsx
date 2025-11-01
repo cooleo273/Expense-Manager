@@ -163,7 +163,7 @@ export const CalendarButton: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setCalendarVisible(false)}
       >
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setCalendarVisible(false)}>
             <View style={styles.backdrop} />
           </Pressable>

@@ -5,13 +5,13 @@ import React, { useMemo, useState } from 'react';
 import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { homeStyles } from '@/app/styles/home.styles';
-import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
+import { homeStyles } from '@/styles/home.styles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 
 const expenseStructure = [
   { id: 'household', label: 'Household', value: 480, color: '#4F46E5' },

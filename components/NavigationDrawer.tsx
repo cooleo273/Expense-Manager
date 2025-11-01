@@ -92,7 +92,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.modalRoot} pointerEvents="box-none">
+      <View style={[styles.modalRoot, { pointerEvents: 'box-none' }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
           <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
         </Pressable>
