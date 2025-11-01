@@ -3,11 +3,11 @@ import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { tabLayoutStyles } from '@/styles/tab-layout.styles';
 import { HeaderRight } from '@/components/HeaderRight';
 import { MenuButton } from '@/components/MenuButton';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { tabLayoutStyles } from '@/styles/tab-layout.styles';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();

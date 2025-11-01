@@ -4,11 +4,11 @@ import { Dimensions, ScrollView, TouchableOpacity } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fabTransitionStyles } from '@/styles/fab-transition.styles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { fabTransitionStyles } from '@/styles/fab-transition.styles';
 
 const { height: screenHeight } = Dimensions.get('window');
 
