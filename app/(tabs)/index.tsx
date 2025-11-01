@@ -2,11 +2,11 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Dimensions, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
-import { PieChart } from 'react-native-chart-kit';
+import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { homeStyles } from '@/app/styles/home.styles';
+import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -51,10 +51,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { filters } = useFilterContext();
   const tabBarHeight = useBottomTabBarHeight();
-  const chartWidth = Dimensions.get('window').width - 64;
   const [showOverlay, setShowOverlay] = useState(false);
-  const donutSize = Math.min(Math.max(chartWidth * 0.36, 140), 220);
-  const innerSize = Math.max(donutSize * 0.55, 70);
 
   const formatCurrency = (value: number) => {
     const amount = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -91,26 +88,6 @@ export default function HomeScreen() {
 
   const displayedRecords = filteredRecords.slice(0, 10);
 
-  const chartData = useMemo(() => {
-    return expenseStructure.map((item) => ({
-      name: item.label,
-      population: item.value,
-      color: item.color,
-      legendFontColor: palette.icon,
-      legendFontSize: 12,
-    }));
-  }, [palette.icon]);
-
-  const chartConfig = useMemo(
-    () => ({
-      backgroundGradientFrom: palette.card,
-      backgroundGradientTo: palette.card,
-      color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-      useShadowColorFromDataset: false,
-      decimalPlaces: 0,
-    }),
-    [palette.card]
-  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -137,62 +114,26 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
-        <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <View style={styles.sectionHeader}>
-            <ThemedText type="subtitle">Expense Structure</ThemedText>
-          </View>
-          <View style={styles.chartRow}>
-            <View style={styles.legendContainer}>
-              {expenseStructure.map((item) => (
-                <View key={item.id} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                  <View>
-                    <ThemedText style={{ fontWeight: '600' }}>{item.label}</ThemedText>
-                  </View>
-                </View>
-              ))}
+        <ExpenseStructureCard
+          title="Expense Structure"
+          data={expenseStructure}
+          totalLabel="$1,250.25"
+          legendVariant="simple"
+          showValuesOnChart
+          footerSeparator
+          footer={(
+            <View style={styles.bottomSection}>
+              <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
+              <TouchableOpacity
+                onPress={() => router.push('/statistics')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
+                <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
+              </TouchableOpacity>
             </View>
-            <View style={[styles.chartContainer, { width: donutSize, height: donutSize }]}>
-              <PieChart
-                data={chartData}
-                width={donutSize}
-                height={donutSize}
-                chartConfig={chartConfig}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="0"
-                hasLegend={false}
-                absolute
-              />
-              <View style={styles.chartOverlay} pointerEvents="none">
-                <View
-                  style={[
-                    styles.chartCenterCircle,
-                    {
-                      width: innerSize,
-                      height: innerSize,
-                      borderRadius: innerSize / 2,
-                      backgroundColor: palette.card,
-                    },
-                  ]}
-                >
-                  <ThemedText style={[styles.chartCenterValue, { color: palette.text }]}>$1,250.25</ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
-          <View style={[styles.separator, { backgroundColor: palette.border }]} />
-          <View style={styles.bottomSection}>
-            <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
-            <TouchableOpacity
-              onPress={() => router.push('/statistics')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-            >
-              <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
+          )}
+        />
 
         <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>

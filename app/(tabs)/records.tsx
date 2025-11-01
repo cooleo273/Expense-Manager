@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { recordsStyles } from '@/app/styles/records.styles';
 import { ThemedText } from '@/components/themed-text';
+import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -110,7 +111,7 @@ export default function RecordsScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const accent = palette.tint;
 
-  const [selectedRecordType, setSelectedRecordType] = useState<'all' | 'income' | 'expense'>('all');
+  const [selectedRecordType, setSelectedRecordType] = useState<TransactionTypeValue>('all');
   const [sortAscending, setSortAscending] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -151,32 +152,12 @@ export default function RecordsScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.filterRow}>
-              <View style={styles.chipRow}>
-                {(['expense', 'income', 'all'] as const).map((chip) => {
-                  const isActive = selectedRecordType === chip;
-                  return (
-                    <TouchableOpacity
-                      key={chip}
-                      style={[
-                        styles.chip,
-                        isActive
-                          ? { backgroundColor: `${accent}15`, borderColor: accent }
-                          : { borderColor: palette.border },
-                      ]}
-                      onPress={() => setSelectedRecordType(chip)}
-                    >
-                      <ThemedText
-                        style={[
-                          styles.chipLabel,
-                          { color: isActive ? accent : palette.icon },
-                        ]}
-                      >
-                        {chip.toUpperCase()}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <TransactionTypeFilter
+                value={selectedRecordType}
+                onChange={setSelectedRecordType}
+                options={['expense', 'income', 'all']}
+                style={styles.chipRow}
+              />
               <View style={styles.actionIcons}>
                 <TouchableOpacity
                   style={[styles.actionIcon, { borderColor: palette.border }]}

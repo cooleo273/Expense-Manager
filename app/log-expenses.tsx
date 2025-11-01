@@ -129,7 +129,7 @@ export default function LogExpensesScreen() {
                 placeholderTextColor={palette.icon}
               />
               <TouchableOpacity style={[styles.scanButton, { backgroundColor: palette.success }]}
-                onPress={() => router.push('/(tabs)/scan')}>
+                onPress={() => router.push('/scan')}>
                 <ThemedText style={styles.buttonText}>Scan receipt instead</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.saveButton, { backgroundColor: palette.tint }]} onPress={handleSave}>
