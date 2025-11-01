@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Appearance } from 'react-native';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 type ResolvedScheme = 'light' | 'dark';
@@ -13,29 +12,17 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const systemColorScheme = (): ResolvedScheme => (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ThemePreference>('system');
-  const [systemScheme, setSystemScheme] = useState<ResolvedScheme>(systemColorScheme());
+  const [preference, setPreferenceState] = useState<ThemePreference>('light');
+  const colorScheme: ResolvedScheme = 'light';
 
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (colorScheme) {
-        setSystemScheme(colorScheme === 'dark' ? 'dark' : 'light');
-      }
-    });
-
-    return () => subscription.remove();
-  }, []);
-
-  const colorScheme: ResolvedScheme = preference === 'system' ? systemScheme : preference;
+  const setPreference = (next: ThemePreference) => {
+    // Lock the experience to light mode while preserving the existing API surface.
+    setPreferenceState('light');
+  };
 
   const togglePreference = () => {
-    setPreference(prev => {
-      const current = prev === 'system' ? systemScheme : prev;
-      return current === 'dark' ? 'light' : 'dark';
-    });
+    setPreferenceState('light');
   };
 
   const value = useMemo(

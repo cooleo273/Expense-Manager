@@ -4,7 +4,7 @@ import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-n
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, FontWeights, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const initialReminders = [
@@ -100,36 +100,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.lg,
   },
   header: {
-    gap: 12,
-    marginBottom: 8,
+    gap: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   form: {
-    gap: 12,
+    gap: Spacing.md,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
   },
   addButton: {
-    borderRadius: 16,
-    paddingVertical: 12,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: FontWeights.semibold as any,
   },
   card: {
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 8,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
   },
   cardRow: {
     flexDirection: 'row',
@@ -137,9 +137,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkButton: {
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 16,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
     borderWidth: 1,
   },

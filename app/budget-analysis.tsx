@@ -1,10 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { budgetAnalysisStyles } from '@/styles/budget-analysis.styles';
 
 const budgetCategories = [
   { id: 'shopping', label: 'Shopping', spent: 7000, limit: 20000 },
@@ -68,35 +69,4 @@ export default function BudgetAnalysisScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  header: {
-    gap: 8,
-  },
-  card: {
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(148,163,184,0.25)',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-});
+const styles = budgetAnalysisStyles;
