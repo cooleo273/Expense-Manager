@@ -3,7 +3,7 @@ import { Linking, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function SupportScreen() {
@@ -35,16 +35,16 @@ export default function SupportScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    padding: 16,
-    gap: 16,
+    padding: Spacing.lg,
+    gap: Spacing.lg,
   },
   header: {
-    gap: 8,
+    gap: Spacing.sm,
   },
   card: {
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
 });

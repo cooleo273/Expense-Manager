@@ -69,3 +69,109 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+export const BorderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  round: 50,
+};
+
+export const FontSizes = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 18,
+  xxl: 20,
+  xxxl: 24,
+  huge: 28,
+  massive: 32,
+};
+
+export const FontWeights = {
+  normal: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  heavy: '800',
+};
+
+export const Shadows = {
+  light: {
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  medium: {
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  heavy: {
+    boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.25)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  tabBar: {
+    boxShadow: '0px 8px 12px rgba(0, 0, 0, 0.12)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  modal: {
+    boxShadow: '0px 12px 18px rgba(0, 0, 0, 0.2)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  drawer: {
+    boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.2)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  modalSubtle: {
+    boxShadow: '0px 12px 18px rgba(15, 23, 42, 0.2)',
+    shadowColor: 'rgba(15,23,42,0.25)',
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  drawerSubtle: {
+    boxShadow: '0px 8px 16px rgba(15, 23, 42, 0.2)',
+    shadowColor: 'rgba(15,23,42,0.25)',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+};

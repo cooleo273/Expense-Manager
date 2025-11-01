@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const transactions = [
@@ -34,7 +34,7 @@ export default function TransactionsScreen() {
             <View style={styles.rowText}>
               <ThemedText type="subtitle">{item.title}</ThemedText>
               <ThemedText style={{ color: palette.icon }}>{item.subtitle}</ThemedText>
-              <ThemedText style={{ color: palette.icon, marginTop: 2 }}>{item.date}</ThemedText>
+              <ThemedText style={{ color: palette.icon, marginTop: Spacing.xs }}>{item.date}</ThemedText>
             </View>
             <ThemedText style={{ color: item.amount >= 0 ? palette.success : palette.error }}>
               {`${item.amount >= 0 ? '+' : '-'}₹${Math.abs(item.amount).toLocaleString()}`}
@@ -51,25 +51,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 12,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.md,
   },
   header: {
-    gap: 8,
-    marginBottom: 8,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   row: {
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: Spacing.md,
   },
   rowText: {
     flex: 1,
-    gap: 4,
+    gap: Spacing.xs,
   },
 });
