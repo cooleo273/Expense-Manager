@@ -2,7 +2,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Pressable } from 'react-native';
 import { NavigationDrawer } from './NavigationDrawer';
 
 export const MenuButton: React.FC = () => {
@@ -12,12 +12,12 @@ export const MenuButton: React.FC = () => {
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         onPress={() => setDrawerVisible(true)}
         style={{ marginLeft: 16 }}
       >
-        <MaterialCommunityIcons name="menu" size={24} color={palette.text} />
-      </TouchableOpacity>
+        <MaterialCommunityIcons name="menu" size={24} color={palette.text} accessibilityHint={undefined} />
+      </Pressable>
       <NavigationDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
     </>
   );

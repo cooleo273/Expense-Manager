@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
@@ -92,6 +92,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -103,11 +104,11 @@ export default function HomeScreen() {
             </View>
             <View style={styles.leftSide}>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-up" size={18} color={palette.success} />
+                <MaterialCommunityIcons name="chevron-up" size={18} color={palette.success} accessibilityHint={undefined} />
                 <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
               </View>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.error} />
+                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.error} accessibilityHint={undefined} />
                 <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
               </View>
             </View>
@@ -124,13 +125,13 @@ export default function HomeScreen() {
           footer={(
             <View style={styles.bottomSection}>
               <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => router.push('/statistics')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
                 <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-                <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
-              </TouchableOpacity>
+                <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} accessibilityHint={undefined} />
+              </Pressable>
             </View>
           )}
         />
@@ -148,6 +149,7 @@ export default function HomeScreen() {
                   name={record.type === 'income' ? 'wallet-plus' : 'cart-minus'}
                   size={20}
                   color={record.type === 'income' ? palette.success : palette.error}
+                  accessibilityHint={undefined}
                 />
               </View>
               <View style={styles.recordContent}>
@@ -163,35 +165,35 @@ export default function HomeScreen() {
             </View>
           ))}
 
-          <TouchableOpacity
+          <Pressable
             onPress={() => router.push('/records')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
           >
             <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
-          </TouchableOpacity>
+            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} accessibilityHint={undefined} />
+          </Pressable>
         </ThemedView>
       </ScrollView>
-      <TouchableOpacity style={[styles.fab, { backgroundColor: palette.tint, bottom: tabBarHeight + 20 }]} onPress={() => setShowOverlay(true)}>
-        <MaterialCommunityIcons name="plus" size={24} color="white" />
-      </TouchableOpacity>
+      <Pressable style={[styles.fab, { backgroundColor: palette.tint, bottom: tabBarHeight + 20 }]} onPress={() => setShowOverlay(true)}>
+        <MaterialCommunityIcons name="plus" size={24} color="white" accessibilityHint={undefined} />
+      </Pressable>
       <Modal transparent visible={showOverlay} onRequestClose={() => setShowOverlay(false)}>
-        <TouchableOpacity style={styles.overlay} onPress={() => setShowOverlay(false)}>
-          <TouchableOpacity
+        <Pressable style={styles.overlay} onPress={() => setShowOverlay(false)}>
+          <Pressable
             style={[styles.fabOption, { bottom: tabBarHeight + 80 }]}
             onPress={() => { setShowOverlay(false); router.push('/log-expenses'); }}
           >
-            <MaterialCommunityIcons name="plus" size={20} color="white" />
+            <MaterialCommunityIcons name="plus" size={20} color="white" accessibilityHint={undefined} />
             <ThemedText style={{ color: 'white', fontWeight: '600' }}>Add Record</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Pressable>
+          <Pressable
             style={[styles.fabOption, { bottom: tabBarHeight + 20 }]}
             onPress={() => { setShowOverlay(false); router.push('/scan'); }}
           >
-            <MaterialCommunityIcons name="camera" size={20} color="white" />
+            <MaterialCommunityIcons name="camera" size={20} color="white" accessibilityHint={undefined} />
             <ThemedText style={{ color: 'white', fontWeight: '600' }}>Scan Receipt</ThemedText>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );

@@ -110,68 +110,108 @@ export const FontWeights = {
 };
 
 export const Shadows = {
-  light: {
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  medium: {
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  heavy: {
-    boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.25)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  tabBar: {
-    boxShadow: '0px 8px 12px rgba(0, 0, 0, 0.12)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  modal: {
-    boxShadow: '0px 12px 18px rgba(0, 0, 0, 0.2)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
-  },
-  drawer: {
-    boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.2)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  modalSubtle: {
-    boxShadow: '0px 12px 18px rgba(15, 23, 42, 0.2)',
-    shadowColor: 'rgba(15,23,42,0.25)',
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
-  },
-  drawerSubtle: {
-    boxShadow: '0px 8px 16px rgba(15, 23, 42, 0.2)',
-    shadowColor: 'rgba(15,23,42,0.25)',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
+  light: Platform.select({
+    web: {
+      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    },
+    default: {
+      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+  }),
+  medium: Platform.select({
+    web: {
+      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
+    },
+    default: {
+      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+  }),
+  heavy: Platform.select({
+    web: {
+      boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.25)',
+    },
+    default: {
+      boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.25)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 8,
+    },
+  }),
+  tabBar: Platform.select({
+    web: {
+      boxShadow: '0px 8px 12px rgba(0, 0, 0, 0.12)',
+    },
+    default: {
+      boxShadow: '0px 8px 12px rgba(0, 0, 0, 0.12)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 8,
+    },
+  }),
+  modal: Platform.select({
+    web: {
+      boxShadow: '0px 12px 18px rgba(0, 0, 0, 0.2)',
+    },
+    default: {
+      boxShadow: '0px 12px 18px rgba(0, 0, 0, 0.2)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.2,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 10,
+    },
+  }),
+  drawer: Platform.select({
+    web: {
+      boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.2)',
+    },
+    default: {
+      boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.2)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 12,
+    },
+  }),
+  modalSubtle: Platform.select({
+    web: {
+      boxShadow: '0px 12px 18px rgba(15, 23, 42, 0.2)',
+    },
+    default: {
+      boxShadow: '0px 12px 18px rgba(15, 23, 42, 0.2)',
+      shadowColor: 'rgba(15,23,42,0.25)',
+      shadowOpacity: 0.2,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 10,
+    },
+  }),
+  drawerSubtle: Platform.select({
+    web: {
+      boxShadow: '0px 8px 16px rgba(15, 23, 42, 0.2)',
+    },
+    default: {
+      boxShadow: '0px 8px 16px rgba(15, 23, 42, 0.2)',
+      shadowColor: 'rgba(15,23,42,0.25)',
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 12,
+    },
+  }),
 };

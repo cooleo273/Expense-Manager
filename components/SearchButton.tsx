@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Pressable } from 'react-native';
 import { SearchOverlay } from './SearchOverlay';
 
 export const SearchButton: React.FC = () => {
@@ -12,12 +12,12 @@ export const SearchButton: React.FC = () => {
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         onPress={() => setSearchVisible(true)}
         style={{ marginHorizontal: 5 }}
       >
-        <MaterialCommunityIcons name="magnify" size={24} color={palette.text} />
-      </TouchableOpacity>
+        <MaterialCommunityIcons name="magnify" size={24} color={palette.text} accessibilityHint={undefined} />
+      </Pressable>
       <SearchOverlay visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </>
   );
