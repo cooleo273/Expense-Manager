@@ -1,9 +1,10 @@
-            import { Colors } from '@/constants/theme';
+import { Colors, IconSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { NavigationDrawer } from './NavigationDrawer';
+import { AccountDropdown } from './AccountDropdown';
 
 export const MenuButton: React.FC = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -14,11 +15,12 @@ export const MenuButton: React.FC = () => {
     <>
       <TouchableOpacity
         onPress={() => setDrawerVisible(true)}
-        style={{ marginLeft: 16 }}
+        style={{ marginLeft: Spacing.lg }}
       >
-        <MaterialCommunityIcons name="menu" size={24} color={palette.text} />
+        <MaterialCommunityIcons name="menu" size={IconSizes.xl} color={palette.text} />
       </TouchableOpacity>
       <NavigationDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
+      <AccountDropdown />
     </>
   );
 };;

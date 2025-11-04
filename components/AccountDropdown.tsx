@@ -58,8 +58,8 @@ export const AccountDropdown: React.FC = () => {
         style={[styles.dropdown, { borderColor: palette.border }]}
         onPress={openDropdown}
       >
-        <Text style={{ color: palette.text }}>{selectedAccount.name}</Text>
-        <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
+        <Text style={{ color: palette.text, fontSize: 16, fontWeight: '600' }}>{selectedAccount.name}</Text>
+        <MaterialCommunityIcons name="chevron-down" size={20} color={palette.icon} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
       <Modal
         visible={dropdownVisible}
@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    marginHorizontal: Spacing.xs,
+    borderWidth: 0,
+    // borderRadius: BorderRadius.sm,
+    marginHorizontal: Spacing.sm,
   },
   overlay: {
     flex: 1,

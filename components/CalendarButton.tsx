@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, IconSizes, Shadows, Spacing } from '@/constants/theme';
 import { DateRange, useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -155,7 +155,7 @@ export const CalendarButton: React.FC = () => {
         onPress={() => setCalendarVisible(true)}
         style={{ marginHorizontal: Spacing.xs, marginRight: Spacing.lg }}
       >
-        <MaterialCommunityIcons name="calendar" size={24} color={palette.text} />
+        <MaterialCommunityIcons name="calendar" size={IconSizes.xl} color={palette.text} />
       </TouchableOpacity>
       <Modal
         visible={calendarVisible}
