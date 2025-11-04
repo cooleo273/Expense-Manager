@@ -70,7 +70,7 @@ export const recordsStyles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     gap: Spacing.lg,
   },
   iconBadge: {
@@ -82,17 +82,17 @@ export const recordsStyles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    gap: Spacing.sm,
+    gap: 0,
   },
   itemTitle: {
-    fontSize: FontSizes.lg,
+    fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold as any,
   },
   itemSubtitle: {
-    fontSize: FontSizes.md,
+    fontSize: FontSizes.sm,
   },
   itemNote: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
   },
   itemMeta: {
     alignItems: 'flex-end',

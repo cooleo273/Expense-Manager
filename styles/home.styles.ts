@@ -123,7 +123,7 @@ export const homeStyles = StyleSheet.create({
   recordIcon: {
     width: 44,
     height: 44,
-    borderRadius: BorderRadius.md,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -135,8 +135,8 @@ export const homeStyles = StyleSheet.create({
     fontWeight: FontWeights.semibold as any,
   },
   recordSubtitle: {
-    marginTop: Spacing.xs,
-    fontSize: FontSizes.md,
+    marginTop: 0,
+    fontSize: FontSizes.xs,
   },
   recordMeta: {
     alignItems: 'flex-end',

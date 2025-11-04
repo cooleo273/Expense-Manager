@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSizes } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
 
@@ -214,7 +214,7 @@ export default function RecordsScreen() {
       <View style={{ flex: 1, overflow: 'visible' }}>
         <FlatList
           contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
-        ListHeaderComponent={
+          ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.filterRow}>
               <TransactionTypeFilter
@@ -225,19 +225,29 @@ export default function RecordsScreen() {
                 variant="compact"
               />
               <View style={styles.actionIcons}>
-                <TouchableOpacity
-                  style={[styles.actionIcon, { borderColor: palette.border }]}
-                  onPress={() => setShowFilters(true)}
-                >
-                  <MaterialCommunityIcons name="tune-variant" size={18} color={palette.icon} />
-                </TouchableOpacity>
-                <View style={styles.sortContainer}>
+                <View style={{ alignItems: 'center' }}>
                   <TouchableOpacity
                     style={[styles.actionIcon, { borderColor: palette.border }]}
-                    onPress={() => setShowSortDropdown(!showSortDropdown)}
+                    onPress={() => setShowFilters(true)}
                   >
-                    <MaterialCommunityIcons name="swap-vertical" size={18} color={palette.icon} />
+                    <MaterialCommunityIcons name="tune-variant" size={18} color={palette.icon} />
                   </TouchableOpacity>
+                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
+                    {selectedRecordType.toUpperCase()}
+                  </ThemedText>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <View style={styles.sortContainer}>
+                    <TouchableOpacity
+                      style={[styles.actionIcon, { borderColor: palette.border }]}
+                      onPress={() => setShowSortDropdown(!showSortDropdown)}
+                    >
+                      <MaterialCommunityIcons name="swap-vertical" size={18} color={palette.icon} />
+                    </TouchableOpacity>
+                  </View>
+                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
+                    {SORT_OPTIONS.find(o => o.value === sortOption)?.label}
+                  </ThemedText>
                 </View>
               </View>
             </View>
