@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { Colors, IconSizes } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
@@ -99,15 +99,15 @@ export default function HomeScreen() {
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
-              <ThemedText style={[styles.balanceValue, { color: palette.text }]}>$10,280.50</ThemedText>
+              <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.balanceValue, { color: palette.text }]}>$1,000,000,280.50</ThemedText>
             </View>
             <View style={styles.leftSide}>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-up" size={18} color={palette.success} />
+                <MaterialCommunityIcons name="chevron-up" size={IconSizes.lg} color={palette.success} />
                 <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
               </View>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.error} />
+                <MaterialCommunityIcons name="chevron-down" size={IconSizes.lg} color={palette.error} />
                 <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
               </View>
             </View>

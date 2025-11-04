@@ -35,7 +35,8 @@ export const homeStyles = StyleSheet.create({
   },
   leftSide: {
     flexDirection: 'column',
-    gap: Spacing.md,
+    gap: Spacing.sm,
+    maxWidth: '60%',
   },
   balanceLabel: {
     fontSize: FontSizes.lg,
@@ -43,17 +44,16 @@ export const homeStyles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   balanceValue: {
-    fontSize: FontSizes.massive,
+    fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
   },
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: 'rgba(148, 163, 184, 0.12)',
-    paddingVertical: Spacing.sm,
+    gap: Spacing.xs,
+    paddingVertical: Spacing.tiny,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderWidth: 0,
   },
   metaValue: {
     fontWeight: FontWeights.semibold as any,
