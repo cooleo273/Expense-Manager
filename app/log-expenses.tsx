@@ -17,7 +17,7 @@ import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { categoryList, getCategoryDefinition } from '@/constants/categories';
+import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
@@ -32,6 +32,7 @@ type RecordType = Exclude<TransactionTypeValue, 'all'>;
 type SingleDraft = {
   amount: string;
   category: string;
+  subcategoryId?: string;
   payee: string;
   note: string;
   labels: string;
@@ -41,6 +42,7 @@ type BatchDraft = {
   id: string;
   note: string;
   category: string;
+  subcategoryId?: string;
   amount: string;
 };
 
@@ -49,12 +51,12 @@ type StoredRecord = {
   type: RecordType;
   amount: number;
   category: string;
+  subcategoryId?: string;
   payee?: string;
   note?: string;
   labels?: string;
 };
 
-const categories = categoryList.map(c => c.id);
 
 const INITIAL_SINGLE_DRAFT: SingleDraft = {
   amount: '',
@@ -89,15 +91,21 @@ export default function LogExpensesScreen() {
   const firstBatchAmountRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    if (params.selectedCategory) {
+    if (params.category || params.subcategory) {
       if (params.batchId) {
-        handleBatchChange(params.batchId as string, 'category', params.selectedCategory as string);
+        handleBatchChange(params.batchId as string, 'category', params.category as string);
+        if (params.subcategory) {
+          handleBatchChange(params.batchId as string, 'subcategoryId', params.subcategory as string);
+        }
       } else {
-        handleSingleChange('category', params.selectedCategory as string);
+        handleSingleChange('category', params.category as string);
+        if (params.subcategory) {
+          handleSingleChange('subcategoryId', params.subcategory as string);
+        }
       }
-      setLastSelectedCategory(params.selectedCategory as string);
+      setLastSelectedCategory(params.category as string);
     }
-  }, [params.selectedCategory, params.batchId]);
+  }, [params.category, params.subcategory, params.batchId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -198,6 +206,7 @@ export default function LogExpensesScreen() {
           type: transactionType,
           amount: numeric,
           category: draft.category || 'Uncategorised',
+          subcategoryId: draft.subcategoryId,
           note: draft.note,
         });
       }
@@ -221,6 +230,7 @@ export default function LogExpensesScreen() {
         type: transactionType,
         amount: numeric,
         category: singleDraft.category || 'Uncategorised',
+        subcategoryId: singleDraft.subcategoryId,
         payee: singleDraft.payee,
         note: singleDraft.note,
         labels: singleDraft.labels,
@@ -324,9 +334,9 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                 <TouchableOpacity
                   style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                  onPress={() => router.push({ pathname: '/categories', params: { current: singleDraft.category } })}
+                  onPress={() => router.push({ pathname: '/categories', params: { current: singleDraft.category, currentSubcategory: singleDraft.subcategoryId } })}
                 >
-                  <ThemedText style={{ color: palette.text }}>{getCategoryDefinition(singleDraft.category)?.name || singleDraft.category}</ThemedText>
+                  <ThemedText style={{ color: palette.text }}>{getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}</ThemedText>
                   <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
                 </TouchableOpacity>
               </View>
@@ -420,9 +430,9 @@ export default function LogExpensesScreen() {
                           <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                           <TouchableOpacity
                             style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                            onPress={() => router.push({ pathname: '/categories', params: { current: draft.category, batchId: draft.id } })}
+                            onPress={() => router.push({ pathname: '/categories', params: { current: draft.category, currentSubcategory: draft.subcategoryId, batchId: draft.id } })}
                           >
-                            <ThemedText style={{ color: palette.text }}>{getCategoryDefinition(draft.category)?.name || draft.category}</ThemedText>
+                            <ThemedText style={{ color: palette.text }}>{getFullCategoryLabel(draft.category, draft.subcategoryId) || draft.category}</ThemedText>
                             <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
                           </TouchableOpacity>
                         </View>

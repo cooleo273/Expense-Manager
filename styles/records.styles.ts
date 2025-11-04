@@ -218,4 +218,74 @@ export const recordsStyles = StyleSheet.create({
   sortOptionText: {
     fontSize: FontSizes.md,
   },
+  calendarSheet: {
+    width: '78%',
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderBottomLeftRadius: BorderRadius.xxl,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  calendarTitle: {
+    fontSize: FontSizes.xxxl,
+    fontWeight: FontWeights.bold as any,
+  },
+  quickSelectRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: Spacing.lg,
+  },
+  quickSelectButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  quickSelectText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  monthTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+  },
+  weekDayHeader: {
+    flexDirection: 'row',
+    marginBottom: Spacing.sm,
+  },
+  weekDayLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  calendarGrid: {
+    gap: Spacing.xs,
+  },
+  weekRow: {
+    flexDirection: 'row',
+  },
+  dayCell: {
+    flex: 1,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
+    margin: 1,
+  },
+  dayText: {
+    fontSize: FontSizes.md,
+  },
 });

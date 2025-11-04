@@ -152,10 +152,20 @@ export const CalendarButton: React.FC = () => {
   return (
     <View>
       <TouchableOpacity
-        onPress={() => setCalendarVisible(true)}
+        onPress={() => {
+          if (filters.dateRange) {
+            setDateRange(null);
+          } else {
+            setCalendarVisible(true);
+          }
+        }}
         style={{ marginHorizontal: Spacing.xs, marginRight: Spacing.lg }}
       >
-        <MaterialCommunityIcons name="calendar" size={IconSizes.xl} color={palette.text} />
+        <MaterialCommunityIcons 
+          name={filters.dateRange ? "close" : "calendar"} 
+          size={IconSizes.xl} 
+          color={palette.text} 
+        />
       </TouchableOpacity>
       <Modal
         visible={calendarVisible}
