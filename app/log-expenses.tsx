@@ -22,6 +22,7 @@ import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
+import { StorageService } from '../services/storage';
 
 export const options = {
   headerShown: true,
@@ -191,17 +192,39 @@ export default function LogExpensesScreen() {
     setBatchDrafts([createBatchDraft(lastSelectedCategory)]);
   };
 
-  const persistRecords = (records: StoredRecord[], stayOnScreen: boolean) => {
-    setStoredRecords((prev) => [...records, ...prev]);
-    resetDrafts();
-    if (stayOnScreen) {
-      Alert.alert('Saved', `${records.length} record${records.length > 1 ? 's' : ''} stored.`);
-      if (isBatchMode) {
-        setBatchDrafts([createBatchDraft(lastSelectedCategory), createBatchDraft(lastSelectedCategory)]);
+  const persistRecords = async (records: StoredRecord[], stayOnScreen: boolean) => {
+    try {
+      // Save to local storage
+      await StorageService.addBatchTransactions(records.map(record => ({
+        id: record.id,
+        title: record.note || 'Transaction', // Use note as title if available
+        account: 'Default Account', // Default account since it's not specified in the form
+        note: record.note || '',
+        amount: record.type === 'expense' ? -Math.abs(record.amount) : record.amount,
+        date: new Date().toISOString(), // Convert to ISO string
+        type: record.type,
+        icon: 'cash', // Default icon
+        categoryId: record.category,
+        subcategoryId: record.subcategoryId,
+        userId: 'default-user' // Default user ID
+      })));
+
+      // Update local state for UI feedback
+      setStoredRecords((prev) => [...records, ...prev]);
+      
+      resetDrafts();
+      if (stayOnScreen) {
+        Alert.alert('Saved', `${records.length} record${records.length > 1 ? 's' : ''} stored.`);
+        if (isBatchMode) {
+          setBatchDrafts([createBatchDraft(lastSelectedCategory), createBatchDraft(lastSelectedCategory)]);
+        }
+        return;
       }
-      return;
+      router.back();
+    } catch (error) {
+      console.error('Failed to save transactions:', error);
+      Alert.alert('Error', 'Failed to save transactions. Please try again.');
     }
-    router.back();
   };
 
   const buildRecords = (): StoredRecord[] | null => {
