@@ -1,4 +1,4 @@
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { StyleSheet } from 'react-native';
 
 export const recordsStyles = StyleSheet.create({
@@ -36,8 +36,7 @@ export const recordsStyles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
+    flexWrap: 'nowrap',
   },
   chip: {
     paddingVertical: Spacing.sm,
@@ -53,6 +52,9 @@ export const recordsStyles = StyleSheet.create({
   actionIcons: {
     flexDirection: 'row',
     gap: Spacing.md,
+  },
+  sortContainer: {
+    position: 'relative',
   },
   actionIcon: {
     width: 36,
@@ -174,5 +176,48 @@ export const recordsStyles = StyleSheet.create({
     paddingVertical: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sortDropdown: {
+    position: 'absolute',
+    top: 44,
+    right: 0,
+    width: 160,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    zIndex: 9999,
+    ...Shadows.medium,
+  },
+  sortHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+    backgroundColor: '#ffffff',
+    zIndex: 9999,
+  },
+  sortTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+    marginBottom: Spacing.sm,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#ffffff',
+  },
+  sortOptionText: {
+    fontSize: FontSizes.md,
   },
 });

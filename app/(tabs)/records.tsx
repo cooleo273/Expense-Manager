@@ -156,14 +156,24 @@ const filterSections = [
   },
 ];
 
+type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'date-desc', label: 'Date (desc)' },
+  { value: 'date-asc', label: 'Date (asc)' },
+  { value: 'amount-desc', label: 'Amount (desc)' },
+  { value: 'amount-asc', label: 'Amount (asc)' },
+];
+
 export default function RecordsScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const accent = palette.tint;
 
   const [selectedRecordType, setSelectedRecordType] = useState<TransactionTypeValue>('all');
-  const [sortAscending, setSortAscending] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   const filteredAndSortedData = useMemo(() => {
     const filtered = transactions.filter((item) => {
@@ -172,14 +182,24 @@ export default function RecordsScreen() {
     });
 
     const sorted = [...filtered].sort((a, b) => {
-      if (sortAscending) {
-        return a.amount - b.amount;
+      switch (sortOption) {
+        case 'date-desc':
+          // Sort by original order (assuming data is already in date desc order)
+          return transactions.indexOf(a) - transactions.indexOf(b);
+        case 'date-asc':
+          // Reverse order for ascending
+          return transactions.indexOf(b) - transactions.indexOf(a);
+        case 'amount-desc':
+          return b.amount - a.amount;
+        case 'amount-asc':
+          return a.amount - b.amount;
+        default:
+          return 0;
       }
-      return b.amount - a.amount;
     });
 
     return sorted;
-  }, [selectedRecordType, sortAscending]);
+  }, [selectedRecordType, sortOption]);
 
   const formatCurrency = (value: number) => {
     const abs = Math.abs(value).toLocaleString(undefined, {
@@ -191,22 +211,18 @@ export default function RecordsScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
-      <FlatList
-        contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+      <View style={{ flex: 1, overflow: 'visible' }}>
+        <FlatList
+          contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.headerRow}>
-              <ThemedText style={[styles.headerTitle, { color: palette.text }]}>All Accounts</ThemedText>
-              <TouchableOpacity style={[styles.headerButton, { borderColor: palette.border }]}>
-                <MaterialCommunityIcons name="calendar-month" size={20} color={palette.tint} />
-              </TouchableOpacity>
-            </View>
             <View style={styles.filterRow}>
               <TransactionTypeFilter
                 value={selectedRecordType}
                 onChange={setSelectedRecordType}
                 options={['expense', 'income', 'all']}
                 style={styles.chipRow}
+                variant="compact"
               />
               <View style={styles.actionIcons}>
                 <TouchableOpacity
@@ -215,17 +231,14 @@ export default function RecordsScreen() {
                 >
                   <MaterialCommunityIcons name="tune-variant" size={18} color={palette.icon} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionIcon, { borderColor: palette.border }]}
-                  onPress={() => setSortAscending((prev) => !prev)}
-                >
-                  <MaterialCommunityIcons
-                    name="swap-vertical"
-                    size={18}
-                    color={sortAscending ? accent : palette.icon}
-                    style={sortAscending ? styles.sortIconRotated : undefined}
-                  />
-                </TouchableOpacity>
+                <View style={styles.sortContainer}>
+                  <TouchableOpacity
+                    style={[styles.actionIcon, { borderColor: palette.border }]}
+                    onPress={() => setShowSortDropdown(!showSortDropdown)}
+                  >
+                    <MaterialCommunityIcons name="swap-vertical" size={18} color={palette.icon} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
@@ -269,6 +282,44 @@ export default function RecordsScreen() {
         ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: palette.border }]} />}
         ListFooterComponent={<View style={{ height: 40 }} />}
       />
+      </View>
+
+      <Modal transparent visible={showSortDropdown} animationType="none" onRequestClose={() => setShowSortDropdown(false)}>
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSortDropdown(false)} />
+        <View style={[styles.sortDropdown, { backgroundColor: '#ffffff', borderColor: palette.border, position: 'absolute', top: 100, right: 20 }]}>
+          <View style={styles.sortHeader}>
+            <ThemedText style={[styles.sortTitle, { color: palette.text }]}>Sort by</ThemedText>
+            <TouchableOpacity onPress={() => setShowSortDropdown(false)}>
+              <MaterialCommunityIcons name="close" size={20} color={palette.icon} />
+            </TouchableOpacity>
+          </View>
+          {SORT_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={styles.sortOption}
+              onPress={() => {
+                setSortOption(option.value);
+                setShowSortDropdown(false);
+              }}
+            >
+              <ThemedText
+                style={[
+                  styles.sortOptionText,
+                  {
+                    color: sortOption === option.value ? accent : palette.text,
+                    fontWeight: sortOption === option.value ? '600' : '400',
+                  },
+                ]}
+              >
+                {option.label}
+              </ThemedText>
+              {sortOption === option.value && (
+                <MaterialCommunityIcons name="check" size={20} color={accent} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Modal>
 
       <Modal transparent visible={showFilters} animationType="fade" onRequestClose={() => setShowFilters(false)}>
         <View style={styles.modalOverlay}>
@@ -279,7 +330,7 @@ export default function RecordsScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setSelectedRecordType('all');
-                  setSortAscending(false);
+                  setSortOption('date-desc');
                 }}
               >
                 <ThemedText style={{ color: accent, fontWeight: '600' }}>Reset</ThemedText>

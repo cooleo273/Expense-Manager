@@ -32,7 +32,16 @@ export function TransactionTypeFilter({
   }, [options]);
 
   return (
-    <View style={[styles.container, { borderColor: palette.border }, style]}>
+    <View
+      style={[
+        styles.container,
+        {
+          borderColor: palette.border,
+          backgroundColor: palette.card,
+        },
+        style,
+      ]}
+    >
       {chips.map((option, index) => {
         const isActive = option === value;
         const isLast = index === chips.length - 1;
@@ -44,7 +53,9 @@ export function TransactionTypeFilter({
               style={[
                 styles.chip,
                 variant === 'compact' ? styles.compactChip : styles.defaultChip,
-                isActive && { backgroundColor: `${palette.tint}18`, borderRadius: BorderRadius.xxl },
+                isActive
+                  ? { backgroundColor: `${palette.tint}1A` }
+                  : { backgroundColor: palette.card },
               ]}
             >
               <ThemedText
@@ -68,22 +79,22 @@ export function TransactionTypeFilter({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     borderWidth: 1,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
   },
   chipContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   chip: {
-    borderWidth: 0, // Remove individual borders
-    borderRadius: 0, // Remove border radius for seamless container
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   defaultChip: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
   },
   compactChip: {
     paddingVertical: Spacing.xs,
@@ -92,13 +103,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold as any,
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   compactLabel: {
-    fontSize: FontSizes.xs,
+    fontSize: FontSizes.sm,
   },
   separator: {
-    width: 1,
-    height: '60%',
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
   },
 });
