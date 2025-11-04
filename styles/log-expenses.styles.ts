@@ -88,6 +88,8 @@ export const logExpensesStyles = StyleSheet.create({
   currencySymbol: {
     fontSize: FontSizes.massive,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.massive + 4,
+    textAlignVertical: 'center',
   },
   amountInput: {
     flex: 1,
@@ -107,6 +109,10 @@ export const logExpensesStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.lg,
   },
+  categoryText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium as any,
+  },
   cameraButton: {
     width: 48,
     height: 48,
@@ -118,6 +124,8 @@ export const logExpensesStyles = StyleSheet.create({
   batchTotal: {
     fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.huge + 4,
+    textAlignVertical: 'center',
   },
   batchList: {
     gap: Spacing.md,

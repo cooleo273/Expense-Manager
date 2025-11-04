@@ -19,7 +19,7 @@ export default function CategoriesScreen() {
   const { filters, setSelectedCategories } = useFilterContext();
 
   const currentCategory = params.current as string || '';
-  const batchId = params.batchId as string || '';
+  const batchIndex = params.batchIndex as string || '';
   const from = params.from as string || '';
 
   const isFilterMode = from === 'filter';
@@ -62,8 +62,8 @@ export default function CategoriesScreen() {
     const paramsToPass: Record<string, string> = {
       category: categoryId,
     };
-    if (batchId) {
-      paramsToPass.batchId = batchId;
+    if (batchIndex) {
+      paramsToPass.batchIndex = batchIndex;
     }
     if (currentCategory === categoryId && currentSubcategory) {
       paramsToPass.selected = currentSubcategory;

@@ -17,7 +17,7 @@ export default function SubcategoriesScreen() {
   const params = useLocalSearchParams();
 
   const categoryId = params.category as CategoryKey;
-  const batchId = params.batchId as string || '';
+  const batchIndex = params.batchIndex as string || '';
   const selectedSubcategory = params.selected as string || '';
 
   const category = getCategoryDefinition(categoryId);
@@ -30,8 +30,8 @@ export default function SubcategoriesScreen() {
       category: categoryId,
       subcategory: subcategoryId,
     };
-    if (batchId) {
-      paramsToPass.batchId = batchId;
+    if (batchIndex) {
+      paramsToPass.batchIndex = batchIndex;
     }
     router.push({ pathname: '/log-expenses', params: paramsToPass });
   };
@@ -40,8 +40,8 @@ export default function SubcategoriesScreen() {
     const paramsToPass: Record<string, string> = {
       category: categoryId,
     };
-    if (batchId) {
-      paramsToPass.batchId = batchId;
+    if (batchIndex) {
+      paramsToPass.batchIndex = batchIndex;
     }
     router.push({ pathname: '/log-expenses', params: paramsToPass });
   };
