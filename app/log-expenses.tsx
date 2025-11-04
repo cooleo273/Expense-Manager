@@ -1,18 +1,15 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +17,7 @@ import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
+import { categoryList, getCategoryDefinition } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
@@ -56,27 +54,17 @@ type StoredRecord = {
   labels?: string;
 };
 
-const categories = [
-  'Uncategorised',
-  'Food',
-  'Transport',
-  'Entertainment',
-  'Bills',
-  'Shopping',
-  'Health',
-  'Education',
-  'Other',
-];
+const categories = categoryList.map(c => c.id);
 
 const INITIAL_SINGLE_DRAFT: SingleDraft = {
   amount: '',
-  category: 'Uncategorised',
+  category: 'housing',
   payee: '',
   note: '',
   labels: '',
 };
 
-const createBatchDraft = (defaultCategory: string = 'Uncategorised'): BatchDraft => ({
+const createBatchDraft = (defaultCategory: string = 'housing'): BatchDraft => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   note: '',
   category: defaultCategory,
@@ -88,18 +76,28 @@ export default function LogExpensesScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const navigation = useNavigation();
+  const params = useLocalSearchParams();
 
   const [transactionType, setTransactionType] = useState<RecordType>('expense');
   const [singleDraft, setSingleDraft] = useState<SingleDraft>(INITIAL_SINGLE_DRAFT);
   const [batchDrafts, setBatchDrafts] = useState<BatchDraft[]>([createBatchDraft()]);
   const [storedRecords, setStoredRecords] = useState<StoredRecord[]>([]);
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [lastSelectedCategory, setLastSelectedCategory] = useState('Uncategorised');
-  const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
-  const [currentEditingBatchId, setCurrentEditingBatchId] = useState<string | null>(null);
+  const [lastSelectedCategory, setLastSelectedCategory] = useState('housing');
 
   const singleAmountRef = useRef<TextInput>(null);
   const firstBatchAmountRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (params.selectedCategory) {
+      if (params.batchId) {
+        handleBatchChange(params.batchId as string, 'category', params.selectedCategory as string);
+      } else {
+        handleSingleChange('category', params.selectedCategory as string);
+      }
+      setLastSelectedCategory(params.selectedCategory as string);
+    }
+  }, [params.selectedCategory, params.batchId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -242,17 +240,6 @@ export default function LogExpensesScreen() {
     persistRecords(records, stayOnScreen);
   };
 
-  const handleCategorySelect = (category: string) => {
-    setLastSelectedCategory(category);
-    if (currentEditingBatchId) {
-      handleBatchChange(currentEditingBatchId, 'category', category);
-      setCurrentEditingBatchId(null);
-    } else {
-      handleSingleChange('category', category);
-    }
-    setCategoryDropdownVisible(false);
-  };
-
   useEffect(() => {
     navigation.setOptions({
       headerTitle: '',
@@ -337,9 +324,9 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                 <TouchableOpacity
                   style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                  onPress={() => setCategoryDropdownVisible(true)}
+                  onPress={() => router.push({ pathname: '/categories', params: { current: singleDraft.category } })}
                 >
-                  <ThemedText style={{ color: palette.text }}>{singleDraft.category || 'Select category'}</ThemedText>
+                  <ThemedText style={{ color: palette.text }}>{getCategoryDefinition(singleDraft.category)?.name || singleDraft.category}</ThemedText>
                   <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
                 </TouchableOpacity>
               </View>
@@ -433,9 +420,9 @@ export default function LogExpensesScreen() {
                           <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                           <TouchableOpacity
                             style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                            onPress={() => { setCurrentEditingBatchId(draft.id); setCategoryDropdownVisible(true); }}
+                            onPress={() => router.push({ pathname: '/categories', params: { current: draft.category, batchId: draft.id } })}
                           >
-                            <ThemedText style={{ color: palette.text }}>{draft.category || 'Uncategorised'}</ThemedText>
+                            <ThemedText style={{ color: palette.text }}>{getCategoryDefinition(draft.category)?.name || draft.category}</ThemedText>
                             <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
                           </TouchableOpacity>
                         </View>
@@ -481,24 +468,6 @@ export default function LogExpensesScreen() {
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-      <Modal transparent visible={categoryDropdownVisible} animationType="fade" onRequestClose={() => { setCategoryDropdownVisible(false); setCurrentEditingBatchId(null); }}>
-        <Pressable style={styles.menuOverlay} onPress={() => { setCategoryDropdownVisible(false); setCurrentEditingBatchId(null); }}>
-          <View style={[styles.menuContainer, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => handleCategorySelect(item)}
-                >
-                  <ThemedText style={[styles.menuLabel, { color: palette.text }]}>{item}</ThemedText>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }
