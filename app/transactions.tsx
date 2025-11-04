@@ -5,13 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const transactions = [
-  { id: 't1', title: 'Amazon', subtitle: 'Shopping', amount: -1050, date: '07 Feb 2024' },
-  { id: 't2', title: 'Salary', subtitle: 'Income', amount: 50000, date: '05 Feb 2024' },
-  { id: 't3', title: 'Groceries', subtitle: 'Food & Drinks', amount: -890, date: '02 Feb 2024' },
-  { id: 't4', title: 'Mutual Fund', subtitle: 'Investments', amount: -2500, date: '31 Jan 2024' },
-];
+import { mockTransactionsList } from './mock-data';
 
 export default function TransactionsScreen() {
   const colorScheme = useColorScheme();
@@ -27,7 +21,7 @@ export default function TransactionsScreen() {
             <ThemedText style={{ color: palette.icon }}>Review spending and income history.</ThemedText>
           </View>
         }
-        data={transactions}
+        data={mockTransactionsList}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ThemedView style={[styles.row, { backgroundColor: palette.card, borderColor: palette.border }]}> 

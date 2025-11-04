@@ -11,20 +11,9 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
+import { mockCategoryBreakdown, mockWeeklyAmounts } from '../mock-data';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const WEEKLY_AMOUNTS: Record<'expense' | 'income', number[]> = {
-  expense: [95, 120, 60, 85, 190, 70, 45],
-  income: [210, 160, 120, 140, 260, 180, 140],
-};
-
-const CATEGORY_BREAKDOWN = [
-  { id: 'household', label: 'Household', value: 480, percent: 28, color: '#4F46E5' },
-  { id: 'vehicle', label: 'Vehicle', value: 320, percent: 19, color: '#F97316' },
-  { id: 'utilities', label: 'Utilities', value: 210, percent: 12, color: '#0EA5E9' },
-  { id: 'others', label: 'Others', value: 140, percent: 8, color: '#22C55E' },
-];
 
 export default function Statistics() {
   const colorScheme = useColorScheme();
@@ -42,7 +31,7 @@ export default function Statistics() {
     setSelectedType(next);
   };
 
-  const activeSeries = WEEKLY_AMOUNTS[selectedType];
+  const activeSeries = mockWeeklyAmounts[selectedType];
 
   const formatCurrency = (value: number) => `₹${value.toLocaleString()}`;
 
@@ -178,7 +167,7 @@ export default function Statistics() {
         <ExpenseStructureCard
           title="Expense Structure"
           subtitle="Top categories"
-          data={CATEGORY_BREAKDOWN}
+          data={mockCategoryBreakdown}
           totalLabel={`₹${weeklyTotal.toLocaleString()}`}
           totalCaption="This week"
           legendVariant="detailed"

@@ -1,160 +1,17 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { Colors, FontSizes } from '@/constants/theme';
+import { getCategoryDefinition } from '@/constants/categories';
+import { Colors, FontSizes, Spacing } from '@/constants/theme';
+import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
-
-const transactions = [
-  {
-    id: 'rent',
-    title: 'Rent',
-    account: 'RBC Credit Card',
-    note: "October's fee · Mr. L Lord",
-    amount: -780,
-    dateLabel: 'Yesterday',
-    type: 'expense',
-    icon: 'home-city-outline',
-  },
-  {
-    id: 'salary',
-    title: 'Salary',
-    account: 'RBC Account',
-    note: "September's · Company X",
-    amount: 4500,
-    dateLabel: 'Oct 18',
-    type: 'income',
-    icon: 'briefcase-outline',
-  },
-  {
-    id: 'fuel',
-    title: 'Fuel',
-    account: 'RBC Credit Card',
-    note: 'Gas · Mobil',
-    amount: -18.52,
-    dateLabel: 'Oct 18',
-    type: 'expense',
-    icon: 'gas-station-outline',
-  },
-  {
-    id: 'groceries',
-    title: 'Groceries (10)',
-    account: 'RBC Credit Card',
-    note: 'Milk (9) · Walmart',
-    amount: -50.7,
-    dateLabel: 'Oct 16',
-    type: 'expense',
-    icon: 'cart-outline',
-  },
-  {
-    id: 'stationary',
-    title: 'Stationary',
-    account: 'RBC Credit Card',
-    note: 'Notebooks · Staples',
-    amount: -4.7,
-    dateLabel: 'Oct 14',
-    type: 'expense',
-    icon: 'pencil-outline',
-  },
-  {
-    id: 'coffee',
-    title: 'Coffee',
-    account: 'Visa Infinite',
-    note: 'Latte · Starbucks',
-    amount: -5.99,
-    dateLabel: 'Oct 12',
-    type: 'expense',
-    icon: 'coffee-outline',
-  },
-  {
-    id: 'movie',
-    title: 'Movie Tickets',
-    account: 'Amex Platinum',
-    note: 'Avengers · Cineplex',
-    amount: -25.0,
-    dateLabel: 'Oct 10',
-    type: 'expense',
-    icon: 'movie-open-outline',
-  },
-  {
-    id: 'freelance',
-    title: 'Freelance Work',
-    account: 'PayPal',
-    note: 'Web design · Client Y',
-    amount: 1200.0,
-    dateLabel: 'Oct 08',
-    type: 'income',
-    icon: 'laptop-outline',
-  },
-  {
-    id: 'gym',
-    title: 'Gym Membership',
-    account: 'Mastercard',
-    note: 'Monthly fee · FitLife',
-    amount: -49.99,
-    dateLabel: 'Oct 06',
-    type: 'expense',
-    icon: 'dumbbell',
-  },
-  {
-    id: 'internet',
-    title: 'Internet Bill',
-    account: 'RBC Account',
-    note: 'Monthly · Bell',
-    amount: -89.99,
-    dateLabel: 'Oct 04',
-    type: 'expense',
-    icon: 'wifi',
-  },
-];
-
-const filterSections = [
-  {
-    id: 'recordType',
-    title: 'Record Type',
-    detail: undefined,
-    chips: ['Expense', 'Income', 'All'],
-  },
-  {
-    id: 'categories',
-    title: 'Categories (7)',
-    detail: 'Fuel, Groceries, Household…',
-  },
-  {
-    id: 'payers',
-    title: 'Payers, Payees',
-    detail: '—',
-  },
-  {
-    id: 'labels',
-    title: 'Labels (2)',
-    detail: 'Sale, Bargain',
-  },
-  {
-    id: 'keyTerms',
-    title: 'Key Terms (3)',
-    detail: 'Black, Gift, Mom',
-  },
-  {
-    id: 'amount',
-    title: 'Amount',
-    detail: '$5.00 - $75',
-  },
-  {
-    id: 'accounts',
-    title: 'Accounts (All)',
-    detail: undefined,
-  },
-  {
-    id: 'timePeriod',
-    title: 'Time Period',
-    detail: 'This Week',
-  },
-];
+import { mockTransactions } from '../mock-data';
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
@@ -169,6 +26,8 @@ export default function RecordsScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const accent = palette.tint;
+  const router = useRouter();
+  const { filters, setSelectedCategories } = useFilterContext();
 
   const [selectedRecordType, setSelectedRecordType] = useState<TransactionTypeValue>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
@@ -176,19 +35,22 @@ export default function RecordsScreen() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   const filteredAndSortedData = useMemo(() => {
-    const filtered = transactions.filter((item) => {
+    const filtered = mockTransactions.filter((item) => {
       if (selectedRecordType === 'all') return true;
       return selectedRecordType === item.type;
+    }).filter((item) => {
+      if (filters.selectedCategories.length === 0) return true;
+      return filters.selectedCategories.includes(item.categoryId);
     });
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortOption) {
         case 'date-desc':
           // Sort by original order (assuming data is already in date desc order)
-          return transactions.indexOf(a) - transactions.indexOf(b);
+          return mockTransactions.indexOf(a) - mockTransactions.indexOf(b);
         case 'date-asc':
           // Reverse order for ascending
-          return transactions.indexOf(b) - transactions.indexOf(a);
+          return mockTransactions.indexOf(b) - mockTransactions.indexOf(a);
         case 'amount-desc':
           return b.amount - a.amount;
         case 'amount-asc':
@@ -199,7 +61,7 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption]);
+  }, [selectedRecordType, sortOption, filters.selectedCategories]);
 
   const formatCurrency = (value: number) => {
     const abs = Math.abs(value).toLocaleString(undefined, {
@@ -208,6 +70,52 @@ export default function RecordsScreen() {
     });
     return `${value >= 0 ? '+' : '-'}$${abs}`;
   };
+
+  const filterSections = [
+    {
+      id: 'recordType',
+      title: 'Record Type',
+      detail: undefined,
+      chips: ['Expense', 'Income', 'All'],
+    },
+    {
+      id: 'categories',
+      title: `Categories (${filters.selectedCategories.length || 'All'})`,
+      detail: filters.selectedCategories.length > 0 
+        ? filters.selectedCategories.map(id => getCategoryDefinition(id)?.name).slice(0, 3).join(', ') + (filters.selectedCategories.length > 3 ? '...' : '')
+        : 'Fuel, Groceries, Household…',
+    },
+    {
+      id: 'payers',
+      title: 'Payers, Payees',
+      detail: '—',
+    },
+    {
+      id: 'labels',
+      title: 'Labels (2)',
+      detail: 'Sale, Bargain',
+    },
+    {
+      id: 'keyTerms',
+      title: 'Key Terms (3)',
+      detail: 'Black, Gift, Mom',
+    },
+    {
+      id: 'amount',
+      title: 'Amount',
+      detail: '$5.00 - $75',
+    },
+    {
+      id: 'accounts',
+      title: 'Accounts (All)',
+      detail: undefined,
+    },
+    {
+      id: 'timePeriod',
+      title: 'Time Period',
+      detail: 'This Week',
+    },
+  ];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -336,6 +244,9 @@ export default function RecordsScreen() {
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowFilters(false)} />
           <View style={[styles.filterSheet, { backgroundColor: palette.card, borderColor: palette.border }]}> 
             <View style={styles.filterHeader}>
+              <TouchableOpacity onPress={() => setShowFilters(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
+              </TouchableOpacity>
               <ThemedText style={[styles.filterTitle, { color: palette.text }]}>Filters</ThemedText>
               <TouchableOpacity
                 onPress={() => {
@@ -343,47 +254,73 @@ export default function RecordsScreen() {
                   setSortOption('date-desc');
                 }}
               >
-                <ThemedText style={{ color: accent, fontWeight: '600' }}>Reset</ThemedText>
+                <ThemedText style={{ color: accent, fontWeight: '600' }}>RESET</ThemedText>
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.filterContent}>
               {filterSections.map((section) => (
-                <View key={section.id} style={[styles.filterRowItem, { borderColor: palette.border }]}> 
-                  <View style={styles.filterRowText}>
-                    <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
-                    {section.detail && (
-                      <ThemedText style={{ color: palette.icon, marginTop: 4 }}>{section.detail}</ThemedText>
-                    )}
-                    {section.chips && (
-                      <View style={styles.filterChipRow}>
-                        {section.chips.map((chip) => {
-                          const isActive = selectedRecordType === chip.toLowerCase();
-                          return (
-                            <TouchableOpacity
-                              key={chip}
-                              style={[
-                                styles.modalChip,
-                                isActive
-                                  ? { backgroundColor: `${accent}15`, borderColor: accent }
-                                  : { borderColor: palette.border },
-                              ]}
-                              onPress={() => setSelectedRecordType(chip.toLowerCase() as 'all' | 'income' | 'expense')}
-                            >
-                              <ThemedText
-                                style={[
-                                  styles.modalChipLabel,
-                                  { color: isActive ? accent : palette.icon },
-                                ]}
-                              >
-                                {chip.toUpperCase()}
-                              </ThemedText>
-                            </TouchableOpacity>
-                          );
-                        })}
+                <View key={section.id}>
+                  {section.id === 'categories' ? (
+                    <TouchableOpacity onPress={() => router.push('/categories?from=filter')}>
+                      <View style={[styles.filterRowItem]}> 
+                        <View style={styles.filterRowText}>
+                          <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
+                          {section.detail && (
+                            <ThemedText style={{ color: palette.icon, marginTop: 4 }}>{section.detail}</ThemedText>
+                          )}
+                        </View>
+                        <MaterialCommunityIcons name="chevron-down" size={22} color={palette.icon} />
                       </View>
-                    )}
-                  </View>
-                  <MaterialCommunityIcons name="chevron-down" size={22} color={palette.icon} />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.filterRowItem]}> 
+                      <View style={styles.filterRowText}>
+                        <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
+                        {section.detail && (
+                          <ThemedText style={{ color: palette.icon, marginTop: 4 }}>{section.detail}</ThemedText>
+                        )}
+                        {section.chips && section.id === 'recordType' && (
+                          <TransactionTypeFilter
+                            value={selectedRecordType}
+                            onChange={setSelectedRecordType}
+                            options={['expense', 'income', 'all']}
+                            variant="compact"
+                            style={{ marginTop: Spacing.sm }}
+                          />
+                        )}
+                        {section.chips && section.id !== 'recordType' && (
+                          <View style={styles.filterChipRow}>
+                            {section.chips.map((chip) => {
+                              const isActive = selectedRecordType === chip.toLowerCase();
+                              return (
+                                <TouchableOpacity
+                                  key={chip}
+                                  style={[
+                                    styles.modalChip,
+                                    isActive
+                                      ? { backgroundColor: `${accent}15`, borderColor: accent }
+                                      : { borderColor: palette.border },
+                                  ]}
+                                  onPress={() => setSelectedRecordType(chip.toLowerCase() as 'all' | 'income' | 'expense')}
+                                >
+                                  <ThemedText
+                                    style={[
+                                      styles.modalChipLabel,
+                                      { color: isActive ? accent : palette.icon },
+                                    ]}
+                                  >
+                                    {chip.toUpperCase()}
+                                  </ThemedText>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
+                      {section.id !== 'recordType' && <MaterialCommunityIcons name="chevron-down" size={22} color={palette.icon} />}
+                    </View>
+                  )}
+                  <View style={[styles.separator, { backgroundColor: palette.border }]} />
                 </View>
               ))}
             </ScrollView>

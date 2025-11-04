@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { categoryList, getCategoryColor, getCategoryIcon } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
+import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function CategoriesScreen() {
@@ -15,28 +16,51 @@ export default function CategoriesScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { filters, setSelectedCategories } = useFilterContext();
 
   const currentCategory = params.current as string || '';
   const batchId = params.batchId as string || '';
+  const from = params.from as string || '';
+
+  const isFilterMode = from === 'filter';
+  const [selectedCategories, setSelectedCategoriesLocal] = useState<string[]>(filters.selectedCategories);
 
   const handleCategorySelect = (categoryId: string) => {
-    router.push({
-      pathname: '/log-expenses',
-      params: { selectedCategory: categoryId, ...(batchId && { batchId }) }
-    });
+    if (isFilterMode) {
+      setSelectedCategoriesLocal(prev => 
+        prev.includes(categoryId) 
+          ? prev.filter(id => id !== categoryId) 
+          : [...prev, categoryId]
+      );
+    } else {
+      router.push({
+        pathname: '/log-expenses',
+        params: { selectedCategory: categoryId, ...(batchId && { batchId }) }
+      });
+    }
+  };
+
+  const handleDone = () => {
+    setSelectedCategories(selectedCategories);
+    router.back();
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['top']}>
-      <ThemedView style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border }}>
-        <ThemedText type="subtitle" style={{ color: palette.text }}>Select Category</ThemedText>
+      <ThemedView style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <ThemedText type="subtitle" style={{ color: palette.text }}>{isFilterMode ? 'Select Categories' : 'Select Category'}</ThemedText>
+        {isFilterMode && (
+          <TouchableOpacity onPress={handleDone}>
+            <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>DONE</ThemedText>
+          </TouchableOpacity>
+        )}
       </ThemedView>
       <FlatList
         data={categoryList}
         keyExtractor={(item) => item.id}
         style={{ backgroundColor: palette.card }}
         renderItem={({ item }) => {
-          const isSelected = item.id === currentCategory;
+          const isSelected = isFilterMode ? selectedCategories.includes(item.id) : item.id === currentCategory;
           const categoryColor = getCategoryColor(item.id, palette.tint);
           const iconName = getCategoryIcon(item.id);
 
@@ -74,7 +98,7 @@ export default function CategoriesScreen() {
                 <ThemedText style={{ color: palette.icon, fontSize: 12 }}>{item.type}</ThemedText>
               </View>
               {isSelected && (
-                <MaterialCommunityIcons name="check" size={20} color={categoryColor} />
+                <MaterialCommunityIcons name={isFilterMode ? "checkbox-marked" : "check"} size={20} color={categoryColor} />
               )}
             </TouchableOpacity>
           );

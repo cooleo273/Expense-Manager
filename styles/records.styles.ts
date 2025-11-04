@@ -136,10 +136,8 @@ export const recordsStyles = StyleSheet.create({
     fontWeight: FontWeights.bold as any,
   },
   filterContent: {
-    gap: Spacing.md,
   },
   filterRowItem: {
-    borderWidth: 1,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     flexDirection: 'row',
@@ -162,7 +160,7 @@ export const recordsStyles = StyleSheet.create({
   modalChip: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 0,
     borderWidth: 1,
   },
   modalChipLabel: {

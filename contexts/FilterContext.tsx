@@ -11,6 +11,7 @@ export type FilterState = {
   dateRange: DateRange | null; // null means all time
   searchHistory: string[];
   searchCategory: 'all' | 'income' | 'expense';
+  selectedCategories: string[];
 };
 
 const defaultFilterState: FilterState = {
@@ -19,6 +20,7 @@ const defaultFilterState: FilterState = {
   dateRange: null,
   searchHistory: [],
   searchCategory: 'all',
+  selectedCategories: [],
 };
 
 type FilterContextType = {
@@ -28,6 +30,7 @@ type FilterContextType = {
   setDateRange: (range: DateRange | null) => void;
   addToSearchHistory: (term: string) => void;
   setSearchCategory: (category: 'all' | 'income' | 'expense') => void;
+  setSelectedCategories: (categories: string[]) => void;
   resetFilters: () => void;
 };
 
@@ -69,6 +72,10 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const setSelectedCategories = (categories: string[]) => {
+    setFilters(prev => ({ ...prev, selectedCategories: categories }));
+  };
+
   const resetFilters = () => {
     setFilters(defaultFilterState);
   };
@@ -81,6 +88,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSearchTerm,
         setDateRange,
         setSearchCategory,
+        setSelectedCategories,
         addToSearchHistory,
         resetFilters,
       }}

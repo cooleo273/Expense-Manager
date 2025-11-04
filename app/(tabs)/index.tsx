@@ -8,37 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCategoryColor, getCategoryDefinition, getCategoryIcon, type CategoryKey, type CategoryType } from '@/constants/categories';
+import { getCategoryColor, getCategoryDefinition, getCategoryIcon, type CategoryKey } from '@/constants/categories';
 import { Colors, IconSizes } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
-
-type RecordEntry = {
-  id: string;
-  title: string;
-  subtitle: string;
-  amount: number;
-  dateLabel: string;
-  type: CategoryType;
-  date: Date;
-  categoryId: CategoryKey;
-};
-
-const recordsData: RecordEntry[] = [
-  { id: 'rent', title: 'Rent', subtitle: 'RBC Credit Card', amount: -780, dateLabel: 'Yesterday', type: 'expense', date: new Date(2024, 1, 23), categoryId: 'housing' },
-  { id: 'salary', title: 'Salary', subtitle: 'RBC Account', amount: 4500, dateLabel: 'Oct 01', type: 'income', date: new Date(2024, 9, 1), categoryId: 'income' },
-  { id: 'fuel', title: 'Fuel', subtitle: 'Mastercard', amount: -95.5, dateLabel: 'Sep 30', type: 'expense', date: new Date(2024, 8, 30), categoryId: 'transportation' },
-  { id: 'groceries', title: 'Groceries', subtitle: 'Metro Market', amount: -210.99, dateLabel: 'Sep 29', type: 'expense', date: new Date(2024, 8, 29), categoryId: 'groceries' },
-  { id: 'bonus', title: 'Quarterly Bonus', subtitle: 'RBC Account', amount: 1250.25, dateLabel: 'Sep 27', type: 'income', date: new Date(2024, 8, 27), categoryId: 'income' },
-  { id: 'dining', title: 'Dinner Out', subtitle: 'Visa Infinite', amount: -86.4, dateLabel: 'Sep 25', type: 'expense', date: new Date(2024, 8, 25), categoryId: 'dining' },
-  { id: 'insurance', title: 'Auto Insurance', subtitle: 'RBC Account', amount: -220.0, dateLabel: 'Sep 24', type: 'expense', date: new Date(2024, 8, 24), categoryId: 'insurance' },
-  { id: 'freelance', title: 'Freelance', subtitle: 'PayPal', amount: 780.0, dateLabel: 'Sep 22', type: 'income', date: new Date(2024, 8, 22), categoryId: 'income' },
-  { id: 'gym', title: 'Gym Membership', subtitle: 'Amex Platinum', amount: -55.0, dateLabel: 'Sep 20', type: 'expense', date: new Date(2024, 8, 20), categoryId: 'health' },
-  { id: 'investment', title: 'ETF Dividend', subtitle: 'Questrade', amount: 160.75, dateLabel: 'Sep 18', type: 'income', date: new Date(2024, 8, 18), categoryId: 'income' },
-  { id: 'streaming', title: 'Streaming Services', subtitle: 'Visa Infinite', amount: -32.99, dateLabel: 'Sep 16', type: 'expense', date: new Date(2024, 8, 16), categoryId: 'entertainment' },
-  { id: 'utilities', title: 'Utilities', subtitle: 'Hydro One', amount: -128.5, dateLabel: 'Sep 14', type: 'expense', date: new Date(2024, 8, 14), categoryId: 'utilities' },
-];
+import { mockRecordsData } from '../mock-data';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -55,24 +30,8 @@ export default function HomeScreen() {
 
   const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
 
-  const overallIncome = recordsData.reduce((sum, record) => {
-    if (record.type === 'income') {
-      return sum + record.amount;
-    }
-    return sum;
-  }, 0);
-
-  const overallExpenses = recordsData.reduce((sum, record) => {
-    if (record.type === 'expense') {
-      return sum + Math.abs(record.amount);
-    }
-    return sum;
-  }, 0);
-
-  const netBalance = overallIncome - overallExpenses;
-
   const filteredRecords = useMemo(() => {
-    return recordsData.filter((record) => {
+    return mockRecordsData.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
         if (!record.title.toLowerCase().includes(search) && !record.subtitle.toLowerCase().includes(search)) {
@@ -98,6 +57,22 @@ export default function HomeScreen() {
       return true;
     });
   }, [filters]);
+
+  const overallIncome = filteredRecords.reduce((sum, record) => {
+    if (record.type === 'income') {
+      return sum + record.amount;
+    }
+    return sum;
+  }, 0);
+
+  const overallExpenses = filteredRecords.reduce((sum, record) => {
+    if (record.type === 'expense') {
+      return sum + Math.abs(record.amount);
+    }
+    return sum;
+  }, 0);
+
+  const netBalance = overallIncome - overallExpenses;
 
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
