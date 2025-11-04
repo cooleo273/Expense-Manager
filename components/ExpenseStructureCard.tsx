@@ -60,7 +60,7 @@ export function ExpenseStructureCard({
   legendVariant = 'simple',
   valueFormatter,
   containerStyle,
-  chartSize = 240,
+  chartSize =180,
   footer,
   footerSeparator = false,
   showValuesOnChart = false,
@@ -132,22 +132,22 @@ export function ExpenseStructureCard({
             data={pieData}
             width={chartSize}
             height={chartSize}
-            innerRadius={Math.max(chartSize * 0.28, 60)}
+            innerRadius={Math.max(chartSize * 0.2, 40)}
             padAngle={pieData.length > 1 ? 2 : 0}
             radius={Math.max(chartSize / 2 - 8, 80)}
             startAngle={-90}
             endAngle={270}
             standalone
             labels={({ datum }: { datum: PieDatum }) =>
-              showValuesOnChart && datum.segment ? formatValue(datum.y, datum.segment) : ''
+              showValuesOnChart && datum.segment ? formatPercentLabel(clampPercent(datum.segment.percent ?? 0)) : ''
             }
             labelComponent={
               <VictoryLabel
-                style={{ fill: palette.icon, fontSize: 12, fontWeight: '600' }}
+                style={{ fill: 'white', fontSize: 12, fontWeight: '600' }}
                 textAnchor="middle"
               />
             }
-            labelRadius={Math.max(chartSize * 0.36, 72)}
+            labelRadius={(Math.max(chartSize * 0.2, 40) + Math.max(chartSize / 2 - 8, 80)) / 2}
             style={{
               data: { fill: ({ datum }) => datum.color },
               labels: { padding: 4 },
@@ -211,13 +211,7 @@ export function ExpenseStructureCard({
                         >
                           {segment.label}
                         </ThemedText>
-                        <ThemedText style={[styles.simpleValue, { color: palette.text }]}>
-                          {formattedValue}
-                        </ThemedText>
                       </View>
-                      <ThemedText style={[styles.simplePercent, { color: palette.icon }]}>
-                        {percentLabel}
-                      </ThemedText>
                     </>
                   )}
                 </View>
@@ -252,10 +246,10 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
   },
   contentRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row-reverse',
+    flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: Spacing.lg,
+    gap: Spacing.sm,
   },
   chartWrapper: {
     alignItems: 'center',
@@ -273,9 +267,9 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   chartCenter: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.md,
@@ -283,7 +277,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   centerValue: {
-    fontSize: FontSizes.xxl,
+    fontSize: FontSizes.xs,
     fontWeight: FontWeights.bold as any,
     textAlign: 'center',
   },
@@ -293,8 +287,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   legendContainer: {
-    flex: 1,
-    minWidth: 160,
+    minWidth: 120,
     gap: Spacing.md,
   },
   legendItem: {
@@ -348,7 +341,7 @@ const styles = StyleSheet.create({
   },
   footerSeparator: {
     height: 1,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.md,
+    marginTop: Spacing.tiny,
+    marginBottom: Spacing.tiny,
   },
 });

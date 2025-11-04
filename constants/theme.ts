@@ -11,7 +11,7 @@ const tintColorDark = '#60A5FA'; // Lighter blue for dark mode
 export const Colors = {
   light: {
     text: '#1F2933',
-    background: '#FFFFFF',
+    background: '#F5F5F5',
     tint: tintColorLight,
     icon: '#6B7280',
     tabIconDefault: '#9CA3AF',
