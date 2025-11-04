@@ -104,11 +104,11 @@ export default function HomeScreen() {
             <View style={styles.leftSide}>
               <View style={styles.metaPill}>
                 <MaterialCommunityIcons name="chevron-up" size={IconSizes.lg} color={palette.success} />
-                <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
               </View>
               <View style={styles.metaPill}>
                 <MaterialCommunityIcons name="chevron-down" size={IconSizes.lg} color={palette.error} />
-                <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
               </View>
             </View>
           </View>
@@ -155,7 +155,7 @@ export default function HomeScreen() {
                 <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
               </View>
               <View style={styles.recordMeta}>
-                <ThemedText style={[styles.recordAmount, { color: record.type === 'income' ? palette.success : palette.error }]}>
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: record.type === 'income' ? palette.success : palette.error }]}>
                   {record.type === 'income' ? '+' : '-'}{formatCurrency(record.amount)}
                 </ThemedText>
                 <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{record.dateLabel}</ThemedText>

@@ -157,7 +157,7 @@ export function ExpenseStructureCard({
             <View style={styles.chartOverlay}>
               <View style={[styles.chartCenter, { backgroundColor: palette.card, borderColor: palette.border }]}>
                 {totalLabel ? (
-                  <ThemedText style={[styles.centerValue, { color: palette.text }]}>{totalLabel}</ThemedText>
+                  <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.centerValue, { color: palette.text }]}>{totalLabel}</ThemedText>
                 ) : null}
                 {totalCaption ? (
                   <ThemedText style={[styles.centerCaption, { color: palette.icon }]}>{totalCaption}</ThemedText>
@@ -198,7 +198,7 @@ export function ExpenseStructureCard({
                           ]}
                         />
                       </View>
-                      <ThemedText style={[styles.legendAmount, { color: palette.text }]}>
+                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: palette.text }]}>
                         {formattedValue}
                       </ThemedText>
                     </>
