@@ -1,18 +1,16 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +18,7 @@ import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
+import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
@@ -34,6 +33,7 @@ type RecordType = Exclude<TransactionTypeValue, 'all'>;
 type SingleDraft = {
   amount: string;
   category: string;
+  subcategoryId?: string;
   payee: string;
   note: string;
   labels: string;
@@ -43,6 +43,7 @@ type BatchDraft = {
   id: string;
   note: string;
   category: string;
+  subcategoryId?: string;
   amount: string;
 };
 
@@ -51,32 +52,22 @@ type StoredRecord = {
   type: RecordType;
   amount: number;
   category: string;
+  subcategoryId?: string;
   payee?: string;
   note?: string;
   labels?: string;
 };
 
-const categories = [
-  'Uncategorised',
-  'Food',
-  'Transport',
-  'Entertainment',
-  'Bills',
-  'Shopping',
-  'Health',
-  'Education',
-  'Other',
-];
 
 const INITIAL_SINGLE_DRAFT: SingleDraft = {
   amount: '',
-  category: 'Uncategorised',
+  category: 'housing',
   payee: '',
   note: '',
   labels: '',
 };
 
-const createBatchDraft = (defaultCategory: string = 'Uncategorised'): BatchDraft => ({
+const createBatchDraft = (defaultCategory: string = 'housing'): BatchDraft => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   note: '',
   category: defaultCategory,
@@ -88,18 +79,51 @@ export default function LogExpensesScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const navigation = useNavigation();
+  const params = useLocalSearchParams();
 
   const [transactionType, setTransactionType] = useState<RecordType>('expense');
   const [singleDraft, setSingleDraft] = useState<SingleDraft>(INITIAL_SINGLE_DRAFT);
   const [batchDrafts, setBatchDrafts] = useState<BatchDraft[]>([createBatchDraft()]);
   const [storedRecords, setStoredRecords] = useState<StoredRecord[]>([]);
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [lastSelectedCategory, setLastSelectedCategory] = useState('Uncategorised');
-  const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
-  const [currentEditingBatchId, setCurrentEditingBatchId] = useState<string | null>(null);
+  const [lastSelectedCategory, setLastSelectedCategory] = useState('housing');
+  const [showMenu, setShowMenu] = useState(false);
 
   const singleAmountRef = useRef<TextInput>(null);
   const firstBatchAmountRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (params.category || params.subcategory) {
+      if (params.batchIndex !== undefined) {
+        // Only switch to batch mode if not already in batch mode
+        if (!isBatchMode) {
+          setIsBatchMode(true);
+        }
+        // Update the specific batch draft by index
+        setBatchDrafts(currentDrafts => {
+          const index = parseInt(params.batchIndex as string);
+          if (index >= 0 && index < currentDrafts.length) {
+            return currentDrafts.map((draft, i) =>
+              i === index
+                ? {
+                    ...draft,
+                    category: params.category as string,
+                    subcategoryId: params.subcategory as string || undefined
+                  }
+                : draft
+            );
+          }
+          return currentDrafts;
+        });
+      } else {
+        handleSingleChange('category', params.category as string);
+        if (params.subcategory) {
+          handleSingleChange('subcategoryId', params.subcategory as string);
+        }
+      }
+      setLastSelectedCategory(params.category as string);
+    }
+  }, [params.category, params.subcategory, params.batchIndex]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -200,6 +224,7 @@ export default function LogExpensesScreen() {
           type: transactionType,
           amount: numeric,
           category: draft.category || 'Uncategorised',
+          subcategoryId: draft.subcategoryId,
           note: draft.note,
         });
       }
@@ -223,6 +248,7 @@ export default function LogExpensesScreen() {
         type: transactionType,
         amount: numeric,
         category: singleDraft.category || 'Uncategorised',
+        subcategoryId: singleDraft.subcategoryId,
         payee: singleDraft.payee,
         note: singleDraft.note,
         labels: singleDraft.labels,
@@ -242,17 +268,6 @@ export default function LogExpensesScreen() {
     persistRecords(records, stayOnScreen);
   };
 
-  const handleCategorySelect = (category: string) => {
-    setLastSelectedCategory(category);
-    if (currentEditingBatchId) {
-      handleBatchChange(currentEditingBatchId, 'category', category);
-      setCurrentEditingBatchId(null);
-    } else {
-      handleSingleChange('category', category);
-    }
-    setCategoryDropdownVisible(false);
-  };
-
   useEffect(() => {
     navigation.setOptions({
       headerTitle: '',
@@ -265,12 +280,31 @@ export default function LogExpensesScreen() {
         </View>
       ),
       headerRight: () => (
-        <TouchableOpacity onPress={() => handleSave(false)} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Next</ThemedText>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {!isBatchMode ? (
+            <>
+              <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
+                <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowMenu(true)}
+                style={{ padding: 8 }}
+              >
+                <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              onPress={() => handleSave(false)}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: palette.tint, borderRadius: 6 }}
+            >
+              <ThemedText style={{ color: 'white', fontWeight: '600' }}>Next</ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
       ),
     });
-  }, [navigation, palette.icon, palette.tint, handleSave]);
+  }, [navigation, palette.icon, palette.tint, handleSave, isBatchMode]);
 
   const totalSaved = storedRecords.length;
 
@@ -320,7 +354,7 @@ export default function LogExpensesScreen() {
               <View style={styles.fieldGroup}>
                 <ThemedText style={[styles.amountLabel, { color: palette.icon }]}>Amount</ThemedText>
                 <View style={styles.amountRow}>
-                  <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>₹</ThemedText>
+                  <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
                   <TextInput
                     ref={singleAmountRef}
                     style={[styles.amountInput, { color: palette.text }]}
@@ -337,18 +371,18 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                 <TouchableOpacity
                   style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                  onPress={() => setCategoryDropdownVisible(true)}
+                  onPress={() => router.push({ pathname: '/categories', params: { current: singleDraft.category, currentSubcategory: singleDraft.subcategoryId } })}
                 >
-                  <ThemedText style={{ color: palette.text }}>{singleDraft.category || 'Select category'}</ThemedText>
+                  <ThemedText style={[styles.categoryText, { color: palette.text }]}>{getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}</ThemedText>
                   <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Payee</ThemedText>
+                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>{transactionType === 'income' ? 'Payer' : 'Payee'}</ThemedText>
                 <TextInput
                   style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                  placeholder="Eg: Boardwalk Housing"
+                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
                   placeholderTextColor={palette.icon}
                   value={singleDraft.payee}
                   onChangeText={(value) => handleSingleChange('payee', value)}
@@ -385,7 +419,7 @@ export default function LogExpensesScreen() {
                 <View>
                   <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Total Amount</ThemedText>
                   <ThemedText style={[styles.batchTotal, { color: palette.text }]}>
-                    ₹{batchTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    ${batchTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                   </ThemedText>
                 </View>
                 <TouchableOpacity
@@ -433,9 +467,9 @@ export default function LogExpensesScreen() {
                           <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
                           <TouchableOpacity
                             style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                            onPress={() => { setCurrentEditingBatchId(draft.id); setCategoryDropdownVisible(true); }}
+                            onPress={() => router.push({ pathname: '/categories', params: { current: draft.category, currentSubcategory: draft.subcategoryId, batchIndex: index } })}
                           >
-                            <ThemedText style={{ color: palette.text }}>{draft.category || 'Uncategorised'}</ThemedText>
+                            <ThemedText style={[styles.categoryText, { color: palette.text }]}>{getFullCategoryLabel(draft.category, draft.subcategoryId) || draft.category}</ThemedText>
                             <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
                           </TouchableOpacity>
                         </View>
@@ -481,23 +515,70 @@ export default function LogExpensesScreen() {
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-      <Modal transparent visible={categoryDropdownVisible} animationType="fade" onRequestClose={() => { setCategoryDropdownVisible(false); setCurrentEditingBatchId(null); }}>
-        <Pressable style={styles.menuOverlay} onPress={() => { setCategoryDropdownVisible(false); setCurrentEditingBatchId(null); }}>
-          <View style={[styles.menuContainer, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
+
+      {/* Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 100,
+            right: 20,
+            backgroundColor: palette.card,
+            borderRadius: 8,
+            padding: 8,
+            minWidth: 150,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+            elevation: 5,
+          }}>
+            {!isBatchMode ? (
+              <>
                 <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => handleCategorySelect(item)}
+                  onPress={() => {
+                    handleSave(true);
+                    // Reset the form for new input
+                    setSingleDraft({ ...INITIAL_SINGLE_DRAFT, category: lastSelectedCategory });
+                    setShowMenu(false);
+                  }}
+                  style={{ padding: 12 }}
                 >
-                  <ThemedText style={[styles.menuLabel, { color: palette.text }]}>{item}</ThemedText>
+                  <ThemedText style={{ color: palette.text }}>Save and add new record</ThemedText>
                 </TouchableOpacity>
-              )}
-            />
+                <TouchableOpacity
+                  onPress={() => {
+                    // Save as template functionality
+                    Alert.alert('Template Saved', 'Record saved as template for future use.');
+                    setShowMenu(false);
+                  }}
+                  style={{ padding: 12 }}
+                >
+                  <ThemedText style={{ color: palette.text }}>Save template</ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                onPress={() => {
+                  // For batch mode, maybe save or some other action
+                  setShowMenu(false);
+                }}
+                style={{ padding: 12 }}
+              >
+                <ThemedText style={{ color: palette.text }}>Save</ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
-        </Pressable>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );

@@ -1,4 +1,4 @@
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { StyleSheet } from 'react-native';
 
 export const recordsStyles = StyleSheet.create({
@@ -36,8 +36,7 @@ export const recordsStyles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
+    flexWrap: 'nowrap',
   },
   chip: {
     paddingVertical: Spacing.sm,
@@ -54,6 +53,9 @@ export const recordsStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.md,
   },
+  sortContainer: {
+    position: 'relative',
+  },
   actionIcon: {
     width: 36,
     height: 36,
@@ -68,7 +70,7 @@ export const recordsStyles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     gap: Spacing.lg,
   },
   iconBadge: {
@@ -80,17 +82,17 @@ export const recordsStyles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    gap: Spacing.sm,
+    gap: 0,
   },
   itemTitle: {
-    fontSize: FontSizes.lg,
+    fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold as any,
   },
   itemSubtitle: {
-    fontSize: FontSizes.md,
+    fontSize: FontSizes.sm,
   },
   itemNote: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
   },
   itemMeta: {
     alignItems: 'flex-end',
@@ -134,10 +136,8 @@ export const recordsStyles = StyleSheet.create({
     fontWeight: FontWeights.bold as any,
   },
   filterContent: {
-    gap: Spacing.md,
   },
   filterRowItem: {
-    borderWidth: 1,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     flexDirection: 'row',
@@ -160,7 +160,7 @@ export const recordsStyles = StyleSheet.create({
   modalChip: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 0,
     borderWidth: 1,
   },
   modalChipLabel: {
@@ -174,5 +174,118 @@ export const recordsStyles = StyleSheet.create({
     paddingVertical: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sortDropdown: {
+    position: 'absolute',
+    top: 44,
+    right: 0,
+    width: 160,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    zIndex: 9999,
+    ...Shadows.medium,
+  },
+  sortHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+    backgroundColor: '#ffffff',
+    zIndex: 9999,
+  },
+  sortTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+    marginBottom: Spacing.sm,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#ffffff',
+  },
+  sortOptionText: {
+    fontSize: FontSizes.md,
+  },
+  calendarSheet: {
+    width: '78%',
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderBottomLeftRadius: BorderRadius.xxl,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  calendarTitle: {
+    fontSize: FontSizes.xxxl,
+    fontWeight: FontWeights.bold as any,
+  },
+  quickSelectRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: Spacing.lg,
+  },
+  quickSelectButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  quickSelectText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  monthTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+  },
+  weekDayHeader: {
+    flexDirection: 'row',
+    marginBottom: Spacing.sm,
+  },
+  weekDayLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  calendarGrid: {
+    gap: Spacing.xs,
+  },
+  weekRow: {
+    flexDirection: 'row',
+  },
+  dayCell: {
+    flex: 1,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
+    margin: 1,
+  },
+  dayText: {
+    fontSize: FontSizes.md,
   },
 });

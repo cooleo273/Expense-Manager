@@ -4,16 +4,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useRef, useState } from 'react';
 import { Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-const accounts = [
-  { id: 'all', name: 'All Accounts' },
-  { id: 'icici-bank', name: 'ICICI Bank' },
-  { id: 'sbi-bank', name: 'SBI Bank' },
-  { id: 'axis-card', name: 'Axis Card' },
-  { id: 'icici-card', name: 'ICICI Card' },
-  { id: 'paytm', name: 'Paytm' },
-  { id: 'cash', name: 'Cash' },
-];
+import { mockAccounts } from '../app/mock-data';
 
 const DROPDOWN_MAX_HEIGHT = 240;
 
@@ -25,7 +16,7 @@ export const AccountDropdown: React.FC = () => {
   const { filters, setSelectedAccount } = useFilterContext();
   const anchorRef = useRef<View | null>(null);
 
-  const selectedAccount = accounts.find(acc => acc.id === filters.selectedAccount) || accounts[0];
+      const selectedAccount = mockAccounts.find(acc => acc.id === filters.selectedAccount) || mockAccounts[0];
 
   const handleSelect = (accountId: string) => {
     setSelectedAccount(accountId);
@@ -86,7 +77,7 @@ export const AccountDropdown: React.FC = () => {
                 ]}
               >
                 <FlatList
-                  data={accounts}
+                                    data={mockAccounts}
                   keyExtractor={(item) => item.id}
                   style={{ maxHeight: DROPDOWN_MAX_HEIGHT }}
                   showsVerticalScrollIndicator={false}
