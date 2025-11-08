@@ -1,9 +1,9 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -13,8 +13,8 @@ import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/con
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
-import { StorageService } from '../../services/storage';
 import { mockRecordsData } from '../../constants/mock-data';
+import { StorageService } from '../../services/storage';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

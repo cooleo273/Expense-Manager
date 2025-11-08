@@ -20,12 +20,12 @@ import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
+import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { StorageService } from '../services/storage';
-import { useToast } from '@/contexts/ToastContext';
 
 export const options = {
   headerShown: true,

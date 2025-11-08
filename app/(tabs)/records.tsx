@@ -11,9 +11,9 @@ import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId 
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
+import { mockRecordsData } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
-import { mockRecordsData } from '../../constants/mock-data';
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
