@@ -6,18 +6,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, FontWeights, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const initialReminders = [
-  { id: '1', title: 'Monthly Rent', amount: 25000, schedule: 'Repeats monthly · 05 Mar 10:00' },
-  { id: '2', title: 'Netflix Subscription', amount: 649, schedule: 'Repeats monthly · 08 Mar 11:00' },
-  { id: '3', title: 'Amazon Prime', amount: 1499, schedule: 'Repeats yearly · 20 Apr 13:30' },
-];
+import { mockInitialReminders } from '../constants/mock-data';
 
 export default function RemindersScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const [reminders, setReminders] = useState(initialReminders);
+  const [reminders, setReminders] = useState(mockInitialReminders);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
 

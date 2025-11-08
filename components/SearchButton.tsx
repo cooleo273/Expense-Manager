@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { Colors, IconSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
@@ -14,10 +14,10 @@ export const SearchButton: React.FC = () => {
     <>
       <Pressable
         onPress={() => setSearchVisible(true)}
-        style={{ marginHorizontal: 5 }}
+        style={{ marginHorizontal: Spacing.xsm }}
       >
-        <MaterialCommunityIcons name="magnify" size={24} color={palette.text} accessibilityHint={undefined} />
-      </Pressable>
+        <MaterialCommunityIcons name="magnify" size={IconSizes.xl} color={palette.text} />
+      </TouchableOpacity>
       <SearchOverlay visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </>
   );

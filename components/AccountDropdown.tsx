@@ -4,16 +4,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useRef, useState } from 'react';
 import { Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-const accounts = [
-  { id: 'all', name: 'All Accounts' },
-  { id: 'icici-bank', name: 'ICICI Bank' },
-  { id: 'sbi-bank', name: 'SBI Bank' },
-  { id: 'axis-card', name: 'Axis Card' },
-  { id: 'icici-card', name: 'ICICI Card' },
-  { id: 'paytm', name: 'Paytm' },
-  { id: 'cash', name: 'Cash' },
-];
+import { mockAccounts } from '../constants/mock-data';
 
 const DROPDOWN_MAX_HEIGHT = 240;
 
@@ -25,7 +16,7 @@ export const AccountDropdown: React.FC = () => {
   const { filters, setSelectedAccount } = useFilterContext();
   const anchorRef = useRef<View | null>(null);
 
-  const selectedAccount = accounts.find(acc => acc.id === filters.selectedAccount) || accounts[0];
+      const selectedAccount = mockAccounts.find(acc => acc.id === filters.selectedAccount) || mockAccounts[0];
 
   const handleSelect = (accountId: string) => {
     setSelectedAccount(accountId);
@@ -58,8 +49,8 @@ export const AccountDropdown: React.FC = () => {
         style={[styles.dropdown, { borderColor: palette.border }]}
         onPress={openDropdown}
       >
-        <Text style={{ color: palette.text }}>{selectedAccount.name}</Text>
-        <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
+        <Text style={{ color: palette.text, fontSize: 16, fontWeight: '600' }}>{selectedAccount.name}</Text>
+        <MaterialCommunityIcons name="chevron-down" size={20} color={palette.icon} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
       <Modal
         visible={dropdownVisible}
@@ -86,7 +77,7 @@ export const AccountDropdown: React.FC = () => {
                 ]}
               >
                 <FlatList
-                  data={accounts}
+                                    data={mockAccounts}
                   keyExtractor={(item) => item.id}
                   style={{ maxHeight: DROPDOWN_MAX_HEIGHT }}
                   showsVerticalScrollIndicator={false}
@@ -114,9 +105,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    marginHorizontal: Spacing.xs,
+    borderWidth: 0,
+    // borderRadius: BorderRadius.sm,
+    marginHorizontal: Spacing.sm,
   },
   overlay: {
     flex: 1,

@@ -1,49 +1,21 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { getCategoryColor, getCategoryDefinition, getCategoryIcon, type CategoryKey } from '@/constants/categories';
+import { Colors, IconSizes } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
-
-const expenseStructure = [
-  { id: 'household', label: 'Household', value: 480, color: '#4F46E5' },
-  { id: 'vehicle', label: 'Vehicle', value: 320, color: '#F97316' },
-  { id: 'utilities', label: 'Utilities', value: 210, color: '#0EA5E9' },
-  { id: 'others', label: 'Others', value: 140, color: '#22C55E' },
-];
-
-type RecordEntry = {
-  id: string;
-  title: string;
-  subtitle: string;
-  amount: number;
-  dateLabel: string;
-  type: 'income' | 'expense';
-  date: Date;
-};
-
-const recordsData: RecordEntry[] = [
-  { id: 'rent', title: 'Rent', subtitle: 'RBC Credit Card', amount: -780, dateLabel: 'Yesterday', type: 'expense', date: new Date(2024, 1, 23) },
-  { id: 'salary', title: 'Salary', subtitle: 'RBC Account', amount: 4500, dateLabel: 'Oct 01', type: 'income', date: new Date(2024, 9, 1) },
-  { id: 'fuel', title: 'Fuel', subtitle: 'Mastercard', amount: -95.5, dateLabel: 'Sep 30', type: 'expense', date: new Date(2024, 8, 30) },
-  { id: 'groceries', title: 'Groceries', subtitle: 'Metro Market', amount: -210.99, dateLabel: 'Sep 29', type: 'expense', date: new Date(2024, 8, 29) },
-  { id: 'bonus', title: 'Quarterly Bonus', subtitle: 'RBC Account', amount: 1250.25, dateLabel: 'Sep 27', type: 'income', date: new Date(2024, 8, 27) },
-  { id: 'dining', title: 'Dinner Out', subtitle: 'Visa Infinite', amount: -86.4, dateLabel: 'Sep 25', type: 'expense', date: new Date(2024, 8, 25) },
-  { id: 'insurance', title: 'Auto Insurance', subtitle: 'RBC Account', amount: -220.0, dateLabel: 'Sep 24', type: 'expense', date: new Date(2024, 8, 24) },
-  { id: 'freelance', title: 'Freelance', subtitle: 'PayPal', amount: 780.0, dateLabel: 'Sep 22', type: 'income', date: new Date(2024, 8, 22) },
-  { id: 'gym', title: 'Gym Membership', subtitle: 'Amex Platinum', amount: -55.0, dateLabel: 'Sep 20', type: 'expense', date: new Date(2024, 8, 20) },
-  { id: 'investment', title: 'ETF Dividend', subtitle: 'Questrade', amount: 160.75, dateLabel: 'Sep 18', type: 'income', date: new Date(2024, 8, 18) },
-  { id: 'streaming', title: 'Streaming Services', subtitle: 'Visa Infinite', amount: -32.99, dateLabel: 'Sep 16', type: 'expense', date: new Date(2024, 8, 16) },
-  { id: 'utilities', title: 'Utilities', subtitle: 'Hydro One', amount: -128.5, dateLabel: 'Sep 14', type: 'expense', date: new Date(2024, 8, 14) },
-];
+import { mockRecordsData } from '../../constants/mock-data';
+import { StorageService } from '../../services/storage';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -52,14 +24,53 @@ export default function HomeScreen() {
   const { filters } = useFilterContext();
   const tabBarHeight = useBottomTabBarHeight();
   const [showOverlay, setShowOverlay] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await StorageService.getTransactions();
+      // Use mock data if no real data exists
+      const transactionsToUse = data.length > 0 ? data : mockRecordsData;
+      // Transform data to match UI expectations
+      const transformedData = transactionsToUse.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      // Fallback to mock data on error
+      const transformedData = mockRecordsData.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+    }, [loadTransactions])
+  );
 
   const formatCurrency = (value: number) => {
     const amount = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return `$${amount}`;
   };
 
+  const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
+
   const filteredRecords = useMemo(() => {
-    return recordsData.filter((record) => {
+    return transactions.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
         if (!record.title.toLowerCase().includes(search) && !record.subtitle.toLowerCase().includes(search)) {
@@ -84,7 +95,52 @@ export default function HomeScreen() {
 
       return true;
     });
-  }, [filters]);
+  }, [filters, transactions]);
+
+  const overallIncome = filteredRecords.reduce((sum, record) => {
+    if (record.type === 'income') {
+      return sum + record.amount;
+    }
+    return sum;
+  }, 0);
+
+  const overallExpenses = filteredRecords.reduce((sum, record) => {
+    if (record.type === 'expense') {
+      return sum + Math.abs(record.amount);
+    }
+    return sum;
+  }, 0);
+
+  const netBalance = overallIncome - overallExpenses;
+
+  const expenseSegments = useMemo(() => {
+    const totals = new Map<CategoryKey, number>();
+
+    filteredRecords.forEach((record) => {
+      if (record.type !== 'expense') {
+        return;
+      }
+      const amount = Math.abs(record.amount);
+      totals.set(record.categoryId, (totals.get(record.categoryId) ?? 0) + amount);
+    });
+
+    return Array.from(totals.entries())
+      .map(([categoryId, value]) => {
+        const category = getCategoryDefinition(categoryId);
+        return {
+          id: categoryId,
+          label: category?.name ?? categoryId,
+          value,
+          color: getCategoryColor(categoryId, palette.tint),
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [filteredRecords, palette.tint]);
+
+  const expenseStructureTotal = useMemo(
+    () => expenseSegments.reduce((sum, segment) => sum + segment.value, 0),
+    [expenseSegments],
+  );
 
   const displayedRecords = filteredRecords.slice(0, 10);
 
@@ -100,16 +156,22 @@ export default function HomeScreen() {
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
-              <ThemedText style={[styles.balanceValue, { color: palette.text }]}>$10,280.50</ThemedText>
+              <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.balanceValue, { color: palette.text }]}>
+                {formatWithSign(netBalance)}
+              </ThemedText>
             </View>
             <View style={styles.leftSide}>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-up" size={18} color={palette.success} accessibilityHint={undefined} />
-                <ThemedText style={[styles.metaValue, { color: palette.success }]}>$2,890.00</ThemedText>
+                <MaterialCommunityIcons name="chevron-up" size={IconSizes.lg} color={palette.success} />
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.success }]}>
+                  {formatCurrency(overallIncome)}
+                </ThemedText>
               </View>
               <View style={styles.metaPill}>
-                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.error} accessibilityHint={undefined} />
-                <ThemedText style={[styles.metaValue, { color: palette.error }]}>$1,250.25</ThemedText>
+                <MaterialCommunityIcons name="chevron-down" size={IconSizes.lg} color={palette.error} />
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.error }]}>
+                  {formatCurrency(overallExpenses)}
+                </ThemedText>
               </View>
             </View>
           </View>
@@ -117,10 +179,11 @@ export default function HomeScreen() {
 
         <ExpenseStructureCard
           title="Expense Structure"
-          data={expenseStructure}
-          totalLabel="$1,250.25"
+          data={expenseSegments}
+          totalLabel={formatCurrency(expenseStructureTotal)}
+          totalCaption="Total expenses"
           legendVariant="simple"
-          showValuesOnChart
+          valueFormatter={formatCurrency}
           footerSeparator
           footer={(
             <View style={styles.bottomSection}>
@@ -141,29 +204,35 @@ export default function HomeScreen() {
             <ThemedText type="subtitle">Records</ThemedText>
             <ThemedText style={{ color: palette.icon }}>{displayedRecords.length} of {filteredRecords.length} shown</ThemedText>
           </View>
-          {displayedRecords.map((record) => (
-            <View key={record.id} style={styles.recordRow}>
-              <View style={[styles.recordIcon, { backgroundColor: `${record.type === 'income' ? palette.success : palette.error}12` }]}
-              >
-                <MaterialCommunityIcons
-                  name={record.type === 'income' ? 'wallet-plus' : 'cart-minus'}
-                  size={20}
-                  color={record.type === 'income' ? palette.success : palette.error}
-                  accessibilityHint={undefined}
-                />
+          {displayedRecords.map((record) => {
+            const category = getCategoryDefinition(record.categoryId);
+            const categoryColor = getCategoryColor(record.categoryId, palette.tint);
+            const iconName = getCategoryIcon(record.categoryId, record.type === 'income' ? 'wallet-plus' : 'shape-outline');
+            const isIncome = category?.type === 'income' || record.type === 'income';
+
+            return (
+              <View key={record.id} style={styles.recordRow}>
+                <View style={[styles.recordIcon, { backgroundColor: `${categoryColor}20` }]}
+                >
+                  <MaterialCommunityIcons
+                    name={iconName}
+                    size={20}
+                    color={categoryColor}
+                  />
+                </View>
+                <View style={styles.recordContent}>
+                  <ThemedText style={styles.recordTitle}>{record.title}</ThemedText>
+                  <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
+                </View>
+                <View style={styles.recordMeta}>
+                  <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: categoryColor }]}>
+                    {isIncome ? '+' : '-'}{formatCurrency(record.amount)}
+                  </ThemedText>
+                  <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{record.dateLabel}</ThemedText>
+                </View>
               </View>
-              <View style={styles.recordContent}>
-                <ThemedText style={styles.recordTitle}>{record.title}</ThemedText>
-                <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
-              </View>
-              <View style={styles.recordMeta}>
-                <ThemedText style={[styles.recordAmount, { color: record.type === 'income' ? palette.success : palette.error }]}>
-                  {record.type === 'income' ? '+' : '-'}{formatCurrency(record.amount)}
-                </ThemedText>
-                <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{record.dateLabel}</ThemedText>
-              </View>
-            </View>
-          ))}
+            );
+          })}
 
           <Pressable
             onPress={() => router.push('/records')}

@@ -6,13 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { budgetAnalysisStyles } from '@/styles/budget-analysis.styles';
-
-const budgetCategories = [
-  { id: 'shopping', label: 'Shopping', spent: 7000, limit: 20000 },
-  { id: 'groceries', label: 'Groceries', spent: 5200, limit: 12000 },
-  { id: 'entertainment', label: 'Entertainment', spent: 1800, limit: 6000 },
-  { id: 'subscriptions', label: 'Subscriptions', spent: 1400, limit: 3000 },
-];
+import { mockBudgetCategories } from '../constants/mock-data';
 
 export default function BudgetAnalysisScreen() {
   const colorScheme = useColorScheme();
@@ -28,7 +22,7 @@ export default function BudgetAnalysisScreen() {
           </ThemedText>
         </View>
 
-        {budgetCategories.map((category) => {
+        {mockBudgetCategories.map((category) => {
           const remaining = category.limit - category.spent;
           const progress = Math.min(category.spent / category.limit, 1);
           const isRisky = progress > 0.75;

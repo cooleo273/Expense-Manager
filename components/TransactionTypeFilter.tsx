@@ -32,35 +32,44 @@ export function TransactionTypeFilter({
   }, [options]);
 
   return (
-    <View style={[styles.row, style]}>
-      {chips.map((option) => {
+    <View
+      style={[
+        styles.container,
+        {
+          borderColor: palette.border,
+          backgroundColor: palette.card,
+        },
+        style,
+      ]}
+    >
+      {chips.map((option, index) => {
         const isActive = option === value;
+        const isLast = index === chips.length - 1;
         return (
-          <TouchableOpacity
-            key={option}
-            accessibilityRole="button"
-            onPress={() => onChange(option)}
-            style={[
-              styles.chip,
-              variant === 'compact' ? styles.compactChip : styles.defaultChip,
-              isActive
-                ? {
-                    backgroundColor: `${palette.tint}18`,
-                    borderColor: palette.tint,
-                  }
-                : { borderColor: palette.border },
-            ]}
-          >
-            <ThemedText
+          <View key={option} style={styles.chipContainer}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => onChange(option)}
               style={[
-                styles.label,
-                variant === 'compact' ? styles.compactLabel : undefined,
-                { color: isActive ? palette.tint : palette.icon },
+                styles.chip,
+                variant === 'compact' ? styles.compactChip : styles.defaultChip,
+                isActive
+                  ? { backgroundColor: `${palette.tint}1A` }
+                  : { backgroundColor: palette.card },
               ]}
             >
-              {option.toUpperCase()}
-            </ThemedText>
-          </TouchableOpacity>
+              <ThemedText
+                style={[
+                  styles.label,
+                  variant === 'compact' ? styles.compactLabel : undefined,
+                  { color: isActive ? palette.tint : palette.icon },
+                ]}
+              >
+                {option.toUpperCase()}
+              </ThemedText>
+            </TouchableOpacity>
+            {!isLast && <View style={[styles.separator, { backgroundColor: palette.border }]} />}
+          </View>
         );
       })}
     </View>
@@ -68,18 +77,24 @@ export function TransactionTypeFilter({
 }
 
 const styles = StyleSheet.create({
-  row: {
+  container: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    alignItems: 'stretch',
+    borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
   },
   chip: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.xxl,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   defaultChip: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
   },
   compactChip: {
     paddingVertical: Spacing.xs,
@@ -88,9 +103,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold as any,
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   compactLabel: {
-    fontSize: FontSizes.xs,
+    fontSize: FontSizes.sm,
+  },
+  separator: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
   },
 });

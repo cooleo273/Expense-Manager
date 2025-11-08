@@ -11,7 +11,7 @@ export const tabLayoutStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 68,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: 0,
     borderWidth: 1,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,

@@ -11,7 +11,7 @@ const tintColorDark = '#60A5FA'; // Lighter blue for dark mode
 export const Colors = {
   light: {
     text: '#1F2933',
-    background: '#FFFFFF',
+    background: '#F5F5F5',
     tint: tintColorLight,
     icon: '#6B7280',
     tabIconDefault: '#9CA3AF',
@@ -71,7 +71,9 @@ export const Fonts = Platform.select({
 });
 
 export const Spacing = {
+  tiny: 2,
   xs: 4,
+  xsm: 5,
   sm: 8,
   md: 12,
   lg: 16,
@@ -107,6 +109,15 @@ export const FontWeights = {
   semibold: '600',
   bold: '700',
   heavy: '800',
+};
+
+export const IconSizes = {
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 28,
+  xxl: 32,
 };
 
 export const Shadows = {

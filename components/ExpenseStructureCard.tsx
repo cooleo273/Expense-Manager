@@ -1,5 +1,5 @@
-import React, { ReactNode, useMemo } from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -60,7 +60,7 @@ export function ExpenseStructureCard({
   legendVariant = 'simple',
   valueFormatter,
   containerStyle,
-  chartSize = 240,
+  chartSize = 180,
   footer,
   footerSeparator = false,
   showValuesOnChart = false,
@@ -112,6 +112,50 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
+  const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => pieData[0]?.segment?.id);
+
+  useEffect(() => {
+    if (!pieData.some((entry) => entry.segment?.id === activeSegmentId)) {
+      setActiveSegmentId(pieData[0]?.segment?.id);
+    }
+  }, [activeSegmentId, pieData]);
+
+  const activeSegment = useMemo(() => {
+    if (!activeSegmentId) {
+      return undefined;
+    }
+    return segments.find((segment) => segment.id === activeSegmentId);
+  }, [segments, activeSegmentId]);
+
+  const fallbackSegmentForFormatter = useMemo<ExpenseStructureSegment>(() => {
+    if (segments[0]) {
+      return segments[0];
+    }
+    return {
+      id: 'total',
+      label: title,
+      value: totalValue,
+      color: palette.tint,
+    };
+  }, [segments, title, totalValue, palette.tint]);
+
+  const formattedTotalValue = useMemo(() => {
+    if (totalLabel) {
+      return totalLabel;
+    }
+    return formatValue(totalValue, fallbackSegmentForFormatter);
+  }, [formatValue, fallbackSegmentForFormatter, totalLabel, totalValue]);
+
+  const centerValueText = activeSegment
+    ? formatValue(activeSegment.value, activeSegment)
+    : formattedTotalValue;
+  const centerCaptionText = activeSegment ? activeSegment.label : totalCaption ?? title;
+  const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
+  const innerRadius = Math.max(chartSize * 0.2, 40);
+  const outerRadius = Math.max(chartSize / 2 - 8, 80);
+  const labelRadius = (innerRadius + outerRadius) / 2;
+  const chartCenterBorderColor = activeSegment ? `${activeSegment.color}55` : palette.border;
+
   return (
     <ThemedView
       style={[
@@ -128,39 +172,83 @@ export function ExpenseStructureCard({
       <View style={styles.contentRow}>
         <View style={[styles.chartWrapper, { width: chartSize, height: chartSize }]}>
           <VictoryPie
-            animate={{ duration: 500, easing: 'cubicInOut' }}
+            animate={false}
             data={pieData}
             width={chartSize}
             height={chartSize}
-            innerRadius={Math.max(chartSize * 0.28, 60)}
+            innerRadius={innerRadius}
             padAngle={pieData.length > 1 ? 2 : 0}
-            radius={Math.max(chartSize / 2 - 8, 80)}
+            radius={outerRadius}
             startAngle={-90}
             endAngle={270}
             standalone
             labels={({ datum }: { datum: PieDatum }) =>
-              showValuesOnChart && datum.segment ? formatValue(datum.y, datum.segment) : ''
+              showValuesOnChart && datum.segment ? formatPercentLabel(clampPercent(datum.segment.percent ?? 0)) : ''
             }
             labelComponent={
               <VictoryLabel
-                style={{ fill: palette.icon, fontSize: 12, fontWeight: '600' }}
+                style={{ fill: 'white', fontSize: 12, fontWeight: '600' }}
                 textAnchor="middle"
               />
             }
-            labelRadius={Math.max(chartSize * 0.36, 72)}
+            labelRadius={labelRadius}
             style={{
-              data: { fill: ({ datum }) => datum.color },
+              data: {
+                fill: ({ datum }) => datum.color,
+                opacity: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 1 : 0.35),
+                stroke: ({ datum }) => (datum.segment?.id === activeSegment?.id ? palette.card : 'transparent'),
+                strokeWidth: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 2 : 0),
+              },
               labels: { padding: 4 },
             }}
+            events={[
+              {
+                target: 'data',
+                eventHandlers: {
+                  onPressIn: (_, props) => {
+                    const segmentId = props.datum.segment?.id;
+                    if (segmentId) {
+                      setActiveSegmentId(segmentId);
+                    }
+                    return undefined;
+                  },
+                },
+              },
+            ]}
           />
-          {(totalLabel || totalCaption) && (
+          {(centerValueText || centerCaptionText || centerPercentText) && (
             <View style={styles.chartOverlay}>
-              <View style={[styles.chartCenter, { backgroundColor: palette.card, borderColor: palette.border }]}>
-                {totalLabel ? (
-                  <ThemedText style={[styles.centerValue, { color: palette.text }]}>{totalLabel}</ThemedText>
+              <View
+                style={[
+                  styles.chartCenter,
+                  {
+                    backgroundColor: palette.card,
+                    borderColor: chartCenterBorderColor,
+                  },
+                ]}
+              >
+                {centerValueText ? (
+                  <ThemedText
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={[styles.centerValue, { color: palette.text }]}
+                  >
+                    {centerValueText}
+                  </ThemedText>
                 ) : null}
-                {totalCaption ? (
-                  <ThemedText style={[styles.centerCaption, { color: palette.icon }]}>{totalCaption}</ThemedText>
+                {centerCaptionText ? (
+                  <ThemedText
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={[styles.centerCaption, { color: palette.icon }]}
+                  >
+                    {centerCaptionText}
+                  </ThemedText>
+                ) : null}
+                {centerPercentText ? (
+                  <ThemedText style={[styles.centerPercent, { color: palette.icon }]}>
+                    {centerPercentText}
+                  </ThemedText>
                 ) : null}
               </View>
             </View>
@@ -176,7 +264,20 @@ export function ExpenseStructureCard({
               : defaultValueFormatter(segment.value);
 
             return (
-              <View key={segment.id} style={styles.legendItem}>
+              <TouchableOpacity
+                key={segment.id}
+                activeOpacity={0.8}
+                onPress={() => setActiveSegmentId(segment.id)}
+                style={[
+                  styles.legendItem,
+                  activeSegment?.id === segment.id && {
+                    backgroundColor: `${segment.color}20`,
+                    borderRadius: BorderRadius.md,
+                    paddingVertical: Spacing.xs,
+                    paddingHorizontal: Spacing.sm,
+                  },
+                ]}
+              >
                 <View style={[styles.legendSwatch, { backgroundColor: segment.color }]} />
                 <View style={styles.legendContent}>
                   {legendVariant === 'detailed' ? (
@@ -191,14 +292,9 @@ export function ExpenseStructureCard({
                         <ThemedText style={[styles.legendPercent, { color: palette.icon }]}>{percentLabel}</ThemedText>
                       </View>
                       <View style={[styles.progressTrack, { backgroundColor: palette.muted }]}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            { width: `${percentValue}%`, backgroundColor: segment.color },
-                          ]}
-                        />
+                        <View style={[styles.progressFill, { width: `${percentValue}%`, backgroundColor: segment.color }]} />
                       </View>
-                      <ThemedText style={[styles.legendAmount, { color: palette.text }]}>
+                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: palette.text }]}>
                         {formattedValue}
                       </ThemedText>
                     </>
@@ -211,17 +307,11 @@ export function ExpenseStructureCard({
                         >
                           {segment.label}
                         </ThemedText>
-                        <ThemedText style={[styles.simpleValue, { color: palette.text }]}>
-                          {formattedValue}
-                        </ThemedText>
                       </View>
-                      <ThemedText style={[styles.simplePercent, { color: palette.icon }]}>
-                        {percentLabel}
-                      </ThemedText>
                     </>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -252,8 +342,8 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
   },
   contentRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row-reverse',
+    flexWrap: 'nowrap',
     alignItems: 'center',
     gap: Spacing.lg,
   },
@@ -273,9 +363,9 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   chartCenter: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.md,
@@ -283,7 +373,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   centerValue: {
-    fontSize: FontSizes.xxl,
+    fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     textAlign: 'center',
   },
@@ -292,9 +382,14 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.medium as any,
     textAlign: 'center',
   },
+  centerPercent: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium as any,
+    textAlign: 'center',
+  },
   legendContainer: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 120,
     gap: Spacing.md,
   },
   legendItem: {
@@ -322,13 +417,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold as any,
     flexShrink: 1,
-  },
-  simpleValue: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.semibold as any,
-  },
-  simplePercent: {
-    fontSize: FontSizes.sm,
   },
   legendAmount: {
     fontSize: FontSizes.sm,
