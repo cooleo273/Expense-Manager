@@ -3,14 +3,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -55,6 +55,15 @@ export default function LogExpensesScreen() {
   const [showMenu, setShowMenu] = useState(false);
 
   const singleAmountRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const scrollToInput = useCallback((yOffset: number) => {
+    scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+  }, []);
+
+  const scrollToEnd = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   const updateLastSelectedCategory = useCallback((category: string) => {
     setLastSelectedCategoryState(category);
@@ -234,12 +243,16 @@ export default function LogExpensesScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardWrapper}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.topControls}>
             <TransactionTypeFilter
@@ -307,6 +320,8 @@ export default function LogExpensesScreen() {
                 }
               >
                 <ThemedText style={[styles.categoryText, { color: palette.text }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
                 </ThemedText>
@@ -335,6 +350,7 @@ export default function LogExpensesScreen() {
                 placeholderTextColor={palette.icon}
                 value={singleDraft.note}
                 onChangeText={(value) => handleSingleChange('note', value)}
+                onFocus={() => scrollToInput(280)} // Scroll to position that properly shows note field
               />
             </View>
 
@@ -346,6 +362,7 @@ export default function LogExpensesScreen() {
                 placeholderTextColor={palette.icon}
                 value={singleDraft.labels}
                 onChangeText={(value) => handleSingleChange('labels', value)}
+                onFocus={() => scrollToInput(350)} // Scroll to position that properly shows labels field
               />
             </View>
           </ThemedView>

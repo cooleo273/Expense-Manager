@@ -10,7 +10,7 @@ export const logExpensesStyles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: 250, // Increased back to 250 for better keyboard space
     gap: Spacing.lg,
   },
   headerBar: {
@@ -110,7 +110,7 @@ export const logExpensesStyles = StyleSheet.create({
     gap: Spacing.lg,
   },
   categoryText: {
-    fontSize: FontSizes.xs,
+    fontSize: FontSizes.lg, // Increased from sm (12) to md (14) for better readability
     fontWeight: FontWeights.medium as any,
   },
   cameraButton: {

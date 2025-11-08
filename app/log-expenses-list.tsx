@@ -1,15 +1,15 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -36,6 +36,16 @@ export default function LogExpensesListScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const { showToast } = useToast();
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const scrollToInput = useCallback((yOffset: number) => {
+    scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+  }, []);
+
+  const scrollToEnd = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   const [transactionType, setTransactionType] = useState<RecordType>(
     (params.type as RecordType) || 'expense'
@@ -128,12 +138,16 @@ export default function LogExpensesListScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardWrapper}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
           {records.map((record, index) => (
             <ThemedView
@@ -179,7 +193,10 @@ export default function LogExpensesListScreen() {
                     })
                   }
                 >
-                  <ThemedText style={[styles.categoryText, { color: palette.text }]}>
+                  <ThemedText style={[styles.categoryText, { color: palette.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {getFullCategoryLabel(record.category, record.subcategoryId) || record.category}
                   </ThemedText>
                   <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
@@ -207,6 +224,7 @@ export default function LogExpensesListScreen() {
                   placeholderTextColor={palette.icon}
                   value={record.note}
                   onChangeText={(value) => updateRecord(index, 'note', value)}
+                  onFocus={() => scrollToInput(280 + (index * 200))} // Scroll to position that makes current record's note field visible
                 />
               </View>
 
