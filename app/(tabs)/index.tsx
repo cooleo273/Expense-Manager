@@ -3,7 +3,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, ScrollView, TouchableOpacity, View, Pressable } from 'react-native';
+import { Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
