@@ -16,6 +16,7 @@ export const tabLayoutStyles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderTopWidth: 0,
+    zIndex: 100,
     ...Shadows.tabBar,
   },
   tabBarItem: {

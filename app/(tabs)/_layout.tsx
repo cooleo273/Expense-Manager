@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { HeaderRight } from '@/components/HeaderRight';
 import { MenuButton } from '@/components/MenuButton';
@@ -18,7 +18,7 @@ export default function TabLayout() {
       {
         backgroundColor: palette.card,
         borderColor: palette.border,
-        shadowColor: colorScheme === 'dark' ? '#000000' : 'rgba(15,23,42,0.2)',
+        boxShadow: colorScheme === 'dark' ? '0px 8px 12px rgba(0, 0, 0, 0.12)' : '0px 8px 12px rgba(15,23,42,0.2)',
       },
     ],
     [palette.card, palette.border, colorScheme]
@@ -38,7 +38,7 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} accessibilityHint={undefined} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
@@ -63,7 +63,7 @@ export default function TabLayout() {
           name="statistics"
           options={{
             title: 'Statistics',
-            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} accessibilityHint={undefined} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
@@ -71,8 +71,6 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
-      </View>
     </View>
   );
 }

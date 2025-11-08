@@ -2,7 +2,7 @@ import { Colors, IconSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Pressable } from 'react-native';
 import { NavigationDrawer } from './NavigationDrawer';
 import { AccountDropdown } from './AccountDropdown';
 
@@ -13,7 +13,7 @@ export const MenuButton: React.FC = () => {
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         onPress={() => setDrawerVisible(true)}
         style={{ marginLeft: Spacing.lg }}
       >

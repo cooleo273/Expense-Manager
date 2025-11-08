@@ -148,6 +148,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -187,13 +188,13 @@ export default function HomeScreen() {
           footer={(
             <View style={styles.bottomSection}>
               <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => router.push('/statistics')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
                 <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-                <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
-              </TouchableOpacity>
+                <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} accessibilityHint={undefined} />
+              </Pressable>
             </View>
           )}
         />
@@ -233,35 +234,35 @@ export default function HomeScreen() {
             );
           })}
 
-          <TouchableOpacity
+          <Pressable
             onPress={() => router.push('/records')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
           >
             <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
-          </TouchableOpacity>
+            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} accessibilityHint={undefined} />
+          </Pressable>
         </ThemedView>
       </ScrollView>
-      <TouchableOpacity style={[styles.fab, { backgroundColor: palette.tint, bottom: tabBarHeight + 20 }]} onPress={() => setShowOverlay(true)}>
-        <MaterialCommunityIcons name="plus" size={24} color="white" />
-      </TouchableOpacity>
+      <Pressable style={[styles.fab, { backgroundColor: palette.tint, bottom: tabBarHeight + 20 }]} onPress={() => setShowOverlay(true)}>
+        <MaterialCommunityIcons name="plus" size={24} color="white" accessibilityHint={undefined} />
+      </Pressable>
       <Modal transparent visible={showOverlay} onRequestClose={() => setShowOverlay(false)}>
-        <TouchableOpacity style={styles.overlay} onPress={() => setShowOverlay(false)}>
-          <TouchableOpacity
+        <Pressable style={styles.overlay} onPress={() => setShowOverlay(false)}>
+          <Pressable
             style={[styles.fabOption, { bottom: tabBarHeight + 80 }]}
             onPress={() => { setShowOverlay(false); router.push('/log-expenses'); }}
           >
-            <MaterialCommunityIcons name="plus" size={20} color="white" />
+            <MaterialCommunityIcons name="plus" size={20} color="white" accessibilityHint={undefined} />
             <ThemedText style={{ color: 'white', fontWeight: '600' }}>Add Record</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Pressable>
+          <Pressable
             style={[styles.fabOption, { bottom: tabBarHeight + 20 }]}
             onPress={() => { setShowOverlay(false); router.push('/scan'); }}
           >
-            <MaterialCommunityIcons name="camera" size={20} color="white" />
+            <MaterialCommunityIcons name="camera" size={20} color="white" accessibilityHint={undefined} />
             <ThemedText style={{ color: 'white', fontWeight: '600' }}>Scan Receipt</ThemedText>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
