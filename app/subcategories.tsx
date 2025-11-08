@@ -19,6 +19,8 @@ export default function SubcategoriesScreen() {
   const categoryId = params.category as CategoryKey;
   const batchIndex = params.batchIndex as string || '';
   const selectedSubcategory = params.selected as string || '';
+  const returnTo = params.returnTo as string || 'log-expenses';
+  const recordIndex = params.recordIndex as string || '';
 
   const category = getCategoryDefinition(categoryId);
   const subcategories = getSubcategories(categoryId);
@@ -33,7 +35,10 @@ export default function SubcategoriesScreen() {
     if (batchIndex) {
       paramsToPass.batchIndex = batchIndex;
     }
-    router.push({ pathname: '/log-expenses', params: paramsToPass });
+    if (recordIndex) {
+      paramsToPass.recordIndex = recordIndex;
+    }
+    router.push({ pathname: `/${returnTo}` as any, params: paramsToPass });
   };
 
   const handleGeneralSelect = () => {
@@ -43,7 +48,10 @@ export default function SubcategoriesScreen() {
     if (batchIndex) {
       paramsToPass.batchIndex = batchIndex;
     }
-    router.push({ pathname: '/log-expenses', params: paramsToPass });
+    if (recordIndex) {
+      paramsToPass.recordIndex = recordIndex;
+    }
+    router.push({ pathname: `/${returnTo}` as any, params: paramsToPass });
   };
 
   if (!category) {

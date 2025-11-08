@@ -1,7 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,7 +14,8 @@ import { Colors, IconSizes } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
-import { mockRecordsData } from '../mock-data';
+import { mockRecordsData } from '../../constants/mock-data';
+import { StorageService } from '../../services/storage';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -22,6 +24,43 @@ export default function HomeScreen() {
   const { filters } = useFilterContext();
   const tabBarHeight = useBottomTabBarHeight();
   const [showOverlay, setShowOverlay] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await StorageService.getTransactions();
+      // Use mock data if no real data exists
+      const transactionsToUse = data.length > 0 ? data : mockRecordsData;
+      // Transform data to match UI expectations
+      const transformedData = transactionsToUse.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      // Fallback to mock data on error
+      const transformedData = mockRecordsData.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+    }, [loadTransactions])
+  );
 
   const formatCurrency = (value: number) => {
     const amount = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -31,7 +70,7 @@ export default function HomeScreen() {
   const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
 
   const filteredRecords = useMemo(() => {
-    return mockRecordsData.filter((record) => {
+    return transactions.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
         if (!record.title.toLowerCase().includes(search) && !record.subtitle.toLowerCase().includes(search)) {
@@ -56,7 +95,7 @@ export default function HomeScreen() {
 
       return true;
     });
-  }, [filters]);
+  }, [filters, transactions]);
 
   const overallIncome = filteredRecords.reduce((sum, record) => {
     if (record.type === 'income') {

@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,8 +11,9 @@ import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId 
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
+import { mockRecordsData } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
-import { mockRecordsData } from '../mock-data';
+import { StorageService } from '../../services/storage';
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
@@ -82,9 +84,46 @@ export default function RecordsScreen() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await StorageService.getTransactions();
+      // Use mock data if no real data exists
+      const transactionsToUse = data.length > 0 ? data : mockRecordsData;
+      // Transform data to match UI expectations
+      const transformedData = transactionsToUse.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      // Fallback to mock data on error
+      const transformedData = mockRecordsData.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+    }, [loadTransactions])
+  );
 
   const filteredAndSortedData = useMemo(() => {
-    const filtered = mockRecordsData.filter((item) => {
+    const filtered = transactions.filter((item) => {
       if (selectedRecordType !== 'all' && selectedRecordType !== item.type) {
         return false;
       }
@@ -129,7 +168,7 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange]);
+  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, transactions]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 

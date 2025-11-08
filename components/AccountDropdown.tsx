@@ -4,7 +4,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useRef, useState } from 'react';
 import { Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { mockAccounts } from '../app/mock-data';
+import { mockAccounts } from '../constants/mock-data';
 
 const DROPDOWN_MAX_HEIGHT = 240;
 

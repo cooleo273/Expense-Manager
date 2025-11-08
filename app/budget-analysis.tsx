@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { budgetAnalysisStyles } from '@/styles/budget-analysis.styles';
-import { mockBudgetCategories } from './mock-data';
+import { mockBudgetCategories } from '../constants/mock-data';
 
 export default function BudgetAnalysisScreen() {
   const colorScheme = useColorScheme();

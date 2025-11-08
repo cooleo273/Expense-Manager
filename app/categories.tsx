@@ -21,6 +21,8 @@ export default function CategoriesScreen() {
   const currentCategory = params.current as string || '';
   const batchIndex = params.batchIndex as string || '';
   const from = params.from as string || '';
+  const returnTo = params.returnTo as string || 'log-expenses';
+  const recordIndex = params.recordIndex as string || '';
 
   const isFilterMode = from === 'filter';
   const currentSubcategory = params.subcategory as string || '';
@@ -67,6 +69,12 @@ export default function CategoriesScreen() {
     }
     if (currentCategory === categoryId && currentSubcategory) {
       paramsToPass.selected = currentSubcategory;
+    }
+    if (returnTo) {
+      paramsToPass.returnTo = returnTo;
+    }
+    if (recordIndex) {
+      paramsToPass.recordIndex = recordIndex;
     }
     router.push({ pathname: '/subcategories', params: paramsToPass });
   };

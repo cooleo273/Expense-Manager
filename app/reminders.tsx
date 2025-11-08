@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, FontWeights, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { mockInitialReminders } from './mock-data';
+import { mockInitialReminders } from '../constants/mock-data';
 
 export default function RemindersScreen() {
   const colorScheme = useColorScheme();

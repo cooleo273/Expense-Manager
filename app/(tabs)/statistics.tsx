@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
@@ -11,7 +13,8 @@ import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/con
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
-import { mockRecordsData, mockWeeklyAmounts } from '../mock-data';
+import { mockRecordsData } from '../../constants/mock-data';
+import { StorageService } from '../../services/storage';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -20,9 +23,47 @@ export default function Statistics() {
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(windowWidth - 64, 280);
-  const expenseChartSize = Math.min(Math.max(windowWidth * 0.55, 220), 320);
+  const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await StorageService.getTransactions();
+      // Use mock data if no real data exists
+      const transactionsToUse = data.length > 0 ? data : mockRecordsData;
+      // Transform data to match UI expectations
+      const transformedData = transactionsToUse.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      // Fallback to mock data on error
+      const transformedData = mockRecordsData.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+    }, [loadTransactions])
+  );
 
   const handleTypeChange = (next: TransactionTypeValue) => {
     if (next === 'all') {
@@ -31,7 +72,33 @@ export default function Statistics() {
     setSelectedType(next);
   };
 
-  const activeSeries = mockWeeklyAmounts[selectedType];
+  const weeklyAmounts = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    
+    const amounts: Record<'expense' | 'income', number[]> = {
+      expense: [0, 0, 0, 0, 0, 0, 0],
+      income: [0, 0, 0, 0, 0, 0, 0]
+    };
+
+    transactions.forEach((transaction) => {
+      const transactionDate = new Date(transaction.date);
+      const dayDiff = Math.floor((transactionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (dayDiff >= 0 && dayDiff < 7) {
+        if (transaction.type === 'expense') {
+          amounts.expense[dayDiff] += Math.abs(transaction.amount);
+        } else if (transaction.type === 'income') {
+          amounts.income[dayDiff] += transaction.amount;
+        }
+      }
+    });
+
+    return amounts;
+  }, [transactions]);
+
+  const activeSeries = weeklyAmounts[selectedType];
 
   const formatCurrency = (value: number) => `₹${value.toLocaleString()}`;
 
@@ -69,7 +136,7 @@ export default function Statistics() {
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
 
-    mockRecordsData.forEach((record) => {
+    transactions.forEach((record) => {
       if (record.type !== 'expense') {
         return;
       }
@@ -88,7 +155,7 @@ export default function Statistics() {
         };
       })
       .sort((a, b) => b.value - a.value);
-  }, [palette.tint]);
+  }, [transactions, palette.tint]);
 
   const weekendShare = weeklyTotal === 0 ? 0 : Math.round((weekendTotal / weeklyTotal) * 100);
   const dailyAverage = weeklyTotal === 0 ? 0 : Math.round(weeklyTotal / activeSeries.length);
@@ -96,7 +163,7 @@ export default function Statistics() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+        contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         
@@ -185,7 +252,7 @@ export default function Statistics() {
           data={expenseSegments}
           totalLabel={`₹${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
           totalCaption="All time"
-          legendVariant="detailed"
+          legendVariant="simple"
           valueFormatter={(value) => `₹${value.toLocaleString()}`}
           containerStyle={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
           chartSize={expenseChartSize}

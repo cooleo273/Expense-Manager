@@ -48,7 +48,12 @@ export default function TabLayout() {
           name="records"
           options={{
             title: 'Records',
-            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="receipt" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
+                <MaterialCommunityIcons name="dots-vertical" color={color} size={size} />
+                <MaterialCommunityIcons name="menu" color={color} size={size} />
+              </View>
+            ),
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,

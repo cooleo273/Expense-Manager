@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { mockTransactionsList } from './mock-data';
+import { mockTransactionsList } from '../constants/mock-data';
 
 export default function TransactionsScreen() {
   const colorScheme = useColorScheme();
