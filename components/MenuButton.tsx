@@ -18,7 +18,7 @@ export const MenuButton: React.FC = () => {
         style={{ marginLeft: Spacing.lg }}
       >
         <MaterialCommunityIcons name="menu" size={IconSizes.xl} color={palette.text} />
-      </TouchableOpacity>
+      </Pressable>
       <NavigationDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
       <AccountDropdown />
     </>

@@ -17,7 +17,7 @@ export const SearchButton: React.FC = () => {
         style={{ marginHorizontal: Spacing.xsm }}
       >
         <MaterialCommunityIcons name="magnify" size={IconSizes.xl} color={palette.text} />
-      </TouchableOpacity>
+      </Pressable>
       <SearchOverlay visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </>
   );

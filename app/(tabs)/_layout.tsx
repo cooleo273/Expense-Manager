@@ -50,7 +50,6 @@ export default function TabLayout() {
             title: 'Records',
             tabBarIcon: ({ color, size }) => (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
-                <MaterialCommunityIcons name="dots-vertical" color={color} size={size} />
                 <MaterialCommunityIcons name="menu" color={color} size={size} />
               </View>
             ),
