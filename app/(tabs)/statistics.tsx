@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -12,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { StorageService } from '../../services/storage';
+import { mockRecordsData } from '../../constants/mock-data';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -20,29 +23,47 @@ export default function Statistics() {
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(windowWidth - 64, 280);
-  const expenseChartSize = Math.min(Math.max(windowWidth * 0.55, 220), 320);
+  const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
   const [transactions, setTransactions] = useState<any[]>([]);
 
-  useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        const data = await StorageService.getTransactions();
-        // Transform data to match UI expectations
-        const transformedData = data.map(transaction => ({
-          ...transaction,
-          date: new Date(transaction.date), // Convert string to Date
-          dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
-          subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
-        }));
-        setTransactions(transformedData);
-      } catch (error) {
-        console.error('Failed to load transactions:', error);
-      }
-    };
-    loadTransactions();
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await StorageService.getTransactions();
+      // Use mock data if no real data exists
+      const transactionsToUse = data.length > 0 ? data : mockRecordsData;
+      // Transform data to match UI expectations
+      const transformedData = transactionsToUse.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      // Fallback to mock data on error
+      const transformedData = mockRecordsData.map(transaction => ({
+        ...transaction,
+        date: new Date(transaction.date), // Convert string to Date
+        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+      }));
+      setTransactions(transformedData);
+    }
   }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+    }, [loadTransactions])
+  );
 
   const handleTypeChange = (next: TransactionTypeValue) => {
     if (next === 'all') {
@@ -142,7 +163,7 @@ export default function Statistics() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+        contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         
@@ -231,7 +252,7 @@ export default function Statistics() {
           data={expenseSegments}
           totalLabel={`₹${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
           totalCaption="All time"
-          legendVariant="detailed"
+          legendVariant="simple"
           valueFormatter={(value) => `₹${value.toLocaleString()}`}
           containerStyle={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
           chartSize={expenseChartSize}

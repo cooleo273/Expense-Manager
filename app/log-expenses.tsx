@@ -1,16 +1,16 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+﻿import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,59 +21,18 @@ import { TransactionTypeFilter, TransactionTypeValue } from '@/components/Transa
 import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
+import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { StorageService } from '../services/storage';
+import { useToast } from '@/contexts/ToastContext';
 
 export const options = {
   headerShown: true,
   headerTitle: '',
 };
 
-type RecordType = Exclude<TransactionTypeValue, 'all'>;
-
-type SingleDraft = {
-  amount: string;
-  category: string;
-  subcategoryId?: string;
-  payee: string;
-  note: string;
-  labels: string;
-};
-
-type BatchDraft = {
-  id: string;
-  note: string;
-  category: string;
-  subcategoryId?: string;
-  amount: string;
-};
-
-type StoredRecord = {
-  id: string;
-  type: RecordType;
-  amount: number;
-  category: string;
-  subcategoryId?: string;
-  payee?: string;
-  note?: string;
-  labels?: string;
-};
-
-
-const INITIAL_SINGLE_DRAFT: SingleDraft = {
-  amount: '',
-  category: 'housing',
-  payee: '',
-  note: '',
-  labels: '',
-};
-
-const createBatchDraft = (defaultCategory: string = 'housing'): BatchDraft => ({
-  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  note: '',
-  category: defaultCategory,
-  amount: '',
-});
+const styles = logExpensesStyles;
 
 export default function LogExpensesScreen() {
   const colorScheme = useColorScheme();
@@ -81,179 +40,124 @@ export default function LogExpensesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams();
+  const { showToast } = useToast();
 
-  const [transactionType, setTransactionType] = useState<RecordType>('expense');
-  const [singleDraft, setSingleDraft] = useState<SingleDraft>(INITIAL_SINGLE_DRAFT);
-  const [batchDrafts, setBatchDrafts] = useState<BatchDraft[]>([createBatchDraft()]);
+  const [transactionType, setTransactionType] = useState<RecordType>(
+    transactionDraftState.getTransactionType()
+  );
+  const [singleDraft, setSingleDraft] = useState<SingleDraft>(() =>
+    transactionDraftState.getSingleDraft()
+  );
   const [storedRecords, setStoredRecords] = useState<StoredRecord[]>([]);
-  const [isBatchMode, setIsBatchMode] = useState(false);
-  const [lastSelectedCategory, setLastSelectedCategory] = useState('housing');
+  const [lastSelectedCategory, setLastSelectedCategoryState] = useState(
+    transactionDraftState.getLastSelectedCategory()
+  );
   const [showMenu, setShowMenu] = useState(false);
 
   const singleAmountRef = useRef<TextInput>(null);
-  const firstBatchAmountRef = useRef<TextInput>(null);
+
+  const updateLastSelectedCategory = useCallback((category: string) => {
+    setLastSelectedCategoryState(category);
+    transactionDraftState.setLastSelectedCategory(category);
+  }, []);
+
+  const handleSingleChange = useCallback(
+    (key: keyof SingleDraft, value?: string) => {
+      setSingleDraft((prev) => {
+        const next: SingleDraft = { ...prev };
+
+        if (key === 'subcategoryId') {
+          if (value) {
+            next.subcategoryId = value;
+          } else {
+            delete next.subcategoryId;
+          }
+        } else {
+          (next as any)[key] = value ?? '';
+          if (key === 'category') {
+            updateLastSelectedCategory(value ?? next.category);
+            if (!value) {
+              delete next.subcategoryId;
+            }
+          }
+        }
+
+        transactionDraftState.setSingleDraft(next);
+        return next;
+      });
+    },
+    [updateLastSelectedCategory]
+  );
 
   useEffect(() => {
-    if (params.category || params.subcategory) {
-      if (params.batchIndex !== undefined) {
-        // Only switch to batch mode if not already in batch mode
-        if (!isBatchMode) {
-          setIsBatchMode(true);
-        }
-        // Update the specific batch draft by index
-        setBatchDrafts(currentDrafts => {
-          const index = parseInt(params.batchIndex as string);
-          if (index >= 0 && index < currentDrafts.length) {
-            return currentDrafts.map((draft, i) =>
-              i === index
-                ? {
-                    ...draft,
-                    category: params.category as string,
-                    subcategoryId: params.subcategory as string || undefined
-                  }
-                : draft
-            );
-          }
-          return currentDrafts;
-        });
-      } else {
-        handleSingleChange('category', params.category as string);
-        if (params.subcategory) {
-          handleSingleChange('subcategoryId', params.subcategory as string);
-        }
-      }
-      setLastSelectedCategory(params.category as string);
+    const categoryParam = typeof params.category === 'string' ? params.category : undefined;
+    const subcategoryParam = typeof params.subcategory === 'string' ? params.subcategory : undefined;
+
+    if (!categoryParam && !subcategoryParam) {
+      return;
     }
-  }, [params.category, params.subcategory, params.batchIndex]);
+
+    if (categoryParam) {
+      handleSingleChange('category', categoryParam);
+      updateLastSelectedCategory(categoryParam);
+    }
+
+    if (categoryParam && !subcategoryParam) {
+      handleSingleChange('subcategoryId', undefined);
+    } else if (subcategoryParam) {
+      handleSingleChange('subcategoryId', subcategoryParam);
+    }
+  }, [handleSingleChange, params.category, params.subcategory, updateLastSelectedCategory]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (isBatchMode) {
-        firstBatchAmountRef.current?.focus();
-      } else {
-        singleAmountRef.current?.focus();
-      }
+      singleAmountRef.current?.focus();
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [isBatchMode]);
+  }, []);
 
-  const batchTotal = useMemo(() => {
-    return batchDrafts.reduce((sum, draft) => {
-      const value = Number(draft.amount);
-      if (!Number.isFinite(value)) {
-        return sum;
-      }
-      return sum + value;
-    }, 0);
-  }, [batchDrafts]);
+  const resetDrafts = useCallback(() => {
+    const next = transactionDraftState.resetSingleDraft(lastSelectedCategory);
+    setSingleDraft(next);
+  }, [lastSelectedCategory]);
 
-  const handleSingleChange = (key: keyof SingleDraft, value: string) => {
-    setSingleDraft((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleBatchChange = (id: string, key: keyof Omit<BatchDraft, 'id'>, value: string) => {
-    setBatchDrafts((prev) =>
-      prev.map((draft) => (draft.id === id ? { ...draft, [key]: value } : draft))
-    );
-  };
-
-  const handleRemoveBatchDraft = (id: string) => {
-    setBatchDrafts((prev) => {
-      if (prev.length === 1) {
-        return prev;
-      }
-      return prev.filter((draft) => draft.id !== id);
-    });
-  };
-
-  const activateBatchMode = () => {
-    if (isBatchMode) {
-      return;
-    }
-    setIsBatchMode(true);
-    setBatchDrafts([createBatchDraft(lastSelectedCategory), createBatchDraft(lastSelectedCategory)]);
-  };
-
-  const appendBatchDraft = () => {
-    setBatchDrafts((prev) => [...prev, createBatchDraft(lastSelectedCategory)]);
-  };
-
-  const returnToSingleMode = () => {
-    if (!isBatchMode) {
-      return;
-    }
-    setIsBatchMode(false);
-    resetDrafts();
-  };
-
-  const resetDrafts = () => {
-    setSingleDraft({ ...INITIAL_SINGLE_DRAFT, category: lastSelectedCategory });
-    setBatchDrafts([createBatchDraft(lastSelectedCategory)]);
-  };
-
-  const persistRecords = async (records: StoredRecord[], stayOnScreen: boolean) => {
+    const persistRecords = useCallback(async (records: StoredRecord[], stayOnScreen: boolean) => {
     try {
-      // Save to local storage
-      await StorageService.addBatchTransactions(records.map(record => ({
-        id: record.id,
-        title: record.note || 'Transaction', // Use note as title if available
-        account: 'Default Account', // Default account since it's not specified in the form
-        note: record.note || '',
-        amount: record.type === 'expense' ? -Math.abs(record.amount) : record.amount,
-        date: new Date().toISOString(), // Convert to ISO string
-        type: record.type,
-        icon: 'cash', // Default icon
-        categoryId: record.category,
-        subcategoryId: record.subcategoryId,
-        userId: 'default-user' // Default user ID
-      })));
+      await StorageService.addBatchTransactions(
+        records.map((record) => ({
+          id: record.id,
+          title: record.note || 'Transaction',
+          account: 'Default Account',
+          note: record.note || '',
+          amount: record.type === 'expense' ? -Math.abs(record.amount) : record.amount,
+          date: new Date().toISOString(),
+          type: record.type,
+          icon: 'cash',
+          categoryId: record.category,
+          subcategoryId: record.subcategoryId,
+          userId: 'default-user',
+        }))
+      );
 
-      // Update local state for UI feedback
       setStoredRecords((prev) => [...records, ...prev]);
-      
       resetDrafts();
+
+      showToast('Record saved successfully');
+
       if (stayOnScreen) {
         Alert.alert('Saved', `${records.length} record${records.length > 1 ? 's' : ''} stored.`);
-        if (isBatchMode) {
-          setBatchDrafts([createBatchDraft(lastSelectedCategory), createBatchDraft(lastSelectedCategory)]);
-        }
         return;
       }
-      router.back();
+
+      router.push('/(tabs)');
     } catch (error) {
       console.error('Failed to save transactions:', error);
       Alert.alert('Error', 'Failed to save transactions. Please try again.');
     }
-  };
+  }, [resetDrafts, router, showToast]);
 
-  const buildRecords = (): StoredRecord[] | null => {
-    if (isBatchMode) {
-      const validDrafts = batchDrafts.filter((draft) => draft.amount.trim().length > 0);
-      if (validDrafts.length === 0) {
-        Alert.alert('Amount missing', 'Add at least one amount to save.');
-        return null;
-      }
-
-      const records: StoredRecord[] = [];
-      for (const draft of validDrafts) {
-        const numeric = Number(draft.amount);
-        if (!Number.isFinite(numeric)) {
-          Alert.alert('Invalid amount', 'Amounts must be numeric to save records.');
-          return null;
-        }
-        records.push({
-          id: `${Date.now()}-${draft.id}`,
-          type: transactionType,
-          amount: numeric,
-          category: draft.category || 'Uncategorised',
-          subcategoryId: draft.subcategoryId,
-          note: draft.note,
-        });
-      }
-      return records;
-    }
-
+  const buildRecords = useCallback((): StoredRecord[] | null => {
     if (!singleDraft.amount.trim()) {
       Alert.alert('Amount missing', 'Enter an amount before saving.');
       return null;
@@ -277,19 +181,29 @@ export default function LogExpensesScreen() {
         labels: singleDraft.labels,
       },
     ];
-  };
+  }, [singleDraft, transactionType]);
 
-  const handleScanReceipt = () => {
-    router.push('/scan');
-  };
+  const handleSave = useCallback(
+    (stayOnScreen: boolean) => {
+      const records = buildRecords();
+      if (!records) {
+        return;
+      }
+      persistRecords(records, stayOnScreen);
+    },
+    [buildRecords, persistRecords]
+  );
 
-  const handleSave = (stayOnScreen: boolean) => {
-    const records = buildRecords();
-    if (!records) {
-      return;
-    }
-    persistRecords(records, stayOnScreen);
-  };
+  const handleTransactionTypeChange = useCallback(
+    (value: TransactionTypeValue) => {
+      if (value === 'all') {
+        return;
+      }
+      setTransactionType(value);
+      transactionDraftState.setTransactionType(value);
+    },
+    []
+  );
 
   useEffect(() => {
     navigation.setOptions({
@@ -304,30 +218,16 @@ export default function LogExpensesScreen() {
       ),
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {!isBatchMode ? (
-            <>
-              <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
-                <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowMenu(true)}
-                style={{ padding: 8 }}
-              >
-                <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              onPress={() => handleSave(false)}
-              style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: palette.tint, borderRadius: 6 }}
-            >
-              <ThemedText style={{ color: 'white', fontWeight: '600' }}>Next</ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
+            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
+            <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
+          </TouchableOpacity>
         </View>
       ),
     });
-  }, [navigation, palette.icon, palette.tint, handleSave, isBatchMode]);
+  }, [handleSave, navigation, palette.icon, palette.tint]);
 
   const totalSaved = storedRecords.length;
 
@@ -345,184 +245,110 @@ export default function LogExpensesScreen() {
             <TransactionTypeFilter
               options={['expense', 'income']}
               value={transactionType}
-              onChange={(value) => {
-                if (value !== 'all') {
-                  setTransactionType(value);
-                }
-              }}
+              onChange={handleTransactionTypeChange}
             />
-            {!isBatchMode ? (
-              <TouchableOpacity
-                onPress={activateBatchMode}
-                style={[styles.addListButton, { borderColor: palette.border }]}
-              >
-                <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
-                <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>Add List</ThemedText>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={returnToSingleMode}
-                style={[styles.addListButton, { borderColor: palette.border }]}
-              >
-                <MaterialCommunityIcons name="numeric-1-circle" size={18} color={palette.icon} />
-                <ThemedText style={[styles.addListLabel, { color: palette.icon }]}>Single entry</ThemedText>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: '/log-expenses-list',
+                  params: {
+                    type: transactionType,
+                    defaultCategory: lastSelectedCategory,
+                  },
+                })
+              }
+              style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+            >
+              <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
+              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>Add List</ThemedText>
+            </TouchableOpacity>
           </View>
 
-          {!isBatchMode ? (
-            <ThemedView
-              style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
-            >
-              <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.amountLabel, { color: palette.icon }]}>Amount</ThemedText>
-                <View style={styles.amountRow}>
-                  <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
-                  <TextInput
-                    ref={singleAmountRef}
-                    style={[styles.amountInput, { color: palette.text }]}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor={palette.icon}
-                    value={singleDraft.amount}
-                    onChangeText={(value) => handleSingleChange('amount', value)}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
-                <TouchableOpacity
-                  style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                  onPress={() => router.push({ pathname: '/categories', params: { current: singleDraft.category, currentSubcategory: singleDraft.subcategoryId } })}
-                >
-                  <ThemedText style={[styles.categoryText, { color: palette.text }]}>{getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}</ThemedText>
-                  <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>{transactionType === 'income' ? 'Payer' : 'Payee'}</ThemedText>
+          <ThemedView
+            style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
+          >
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.amountLabel, { color: palette.icon }]}>Amount</ThemedText>
+              <View style={styles.amountRow}>
+                <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
                 <TextInput
-                  style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                  ref={singleAmountRef}
+                  style={[styles.amountInput, { color: palette.text }]}
+                  keyboardType="numeric"
+                  placeholder="0.00"
                   placeholderTextColor={palette.icon}
-                  value={singleDraft.payee}
-                  onChangeText={(value) => handleSingleChange('payee', value)}
+                  value={singleDraft.amount}
+                  onChangeText={(value) => handleSingleChange('amount', value)}
                 />
               </View>
+            </View>
 
-              <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Note</ThemedText>
-                <TextInput
-                  style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                  placeholder="Add a note"
-                  placeholderTextColor={palette.icon}
-                  value={singleDraft.note}
-                  onChangeText={(value) => handleSingleChange('note', value)}
-                />
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
-                <TextInput
-                  style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                  placeholder="Eg: groceries, weekend"
-                  placeholderTextColor={palette.icon}
-                  value={singleDraft.labels}
-                  onChangeText={(value) => handleSingleChange('labels', value)}
-                />
-              </View>
-            </ThemedView>
-          ) : (
-            <ThemedView
-              style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
-            >
-              <View style={styles.batchSummary}>
-                <View>
-                  <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Total Amount</ThemedText>
-                  <ThemedText style={[styles.batchTotal, { color: palette.text }]}>
-                    ${batchTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                  </ThemedText>
-                </View>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  onPress={handleScanReceipt}
-                  style={[styles.cameraButton, { borderColor: palette.border, backgroundColor: palette.tint }]}
-                >
-                  <MaterialCommunityIcons name="camera-outline" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.batchList}>
-                {batchDrafts.map((draft, index) => {
-                  const amountRef = index === 0 ? firstBatchAmountRef : undefined;
-                  return (
-                    <View
-                      key={draft.id}
-                      style={[styles.batchCard, { borderColor: palette.border, backgroundColor: palette.surface }]}
-                    >
-                      <View style={styles.batchHeader}>
-                        <ThemedText style={[styles.batchTitle, { color: palette.text }]}>
-                          Record {index + 1}
-                        </ThemedText>
-                        <TouchableOpacity
-                          onPress={() => handleRemoveBatchDraft(draft.id)}
-                          style={styles.removeButton}
-                        >
-                          <MaterialCommunityIcons name="trash-can-outline" size={18} color={palette.error} />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={styles.fieldGroup}>
-                        <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Note</ThemedText>
-                        <TextInput
-                          style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                          placeholder="Eg: Banana 2Kg"
-                          placeholderTextColor={palette.icon}
-                          value={draft.note}
-                          onChangeText={(value) => handleBatchChange(draft.id, 'note', value)}
-                        />
-                      </View>
-
-                      <View style={styles.batchInputs}>
-                        <View style={[styles.fieldGroup, styles.batchField]}>
-                          <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
-                          <TouchableOpacity
-                            style={[styles.inputField, { borderColor: palette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                            onPress={() => router.push({ pathname: '/categories', params: { current: draft.category, currentSubcategory: draft.subcategoryId, batchIndex: index } })}
-                          >
-                            <ThemedText style={[styles.categoryText, { color: palette.text }]}>{getFullCategoryLabel(draft.category, draft.subcategoryId) || draft.category}</ThemedText>
-                            <MaterialCommunityIcons name="chevron-down" size={16} color={palette.icon} />
-                          </TouchableOpacity>
-                        </View>
-                        <View style={[styles.fieldGroup, styles.batchField]}>
-                          <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Amount</ThemedText>
-                          <TextInput
-                            ref={amountRef as React.RefObject<TextInput>}
-                            style={[styles.batchAmountInput, { borderColor: palette.border, color: palette.text }]}
-                            keyboardType="numeric"
-                            placeholder="0.00"
-                            placeholderTextColor={palette.icon}
-                            value={draft.amount}
-                            onChangeText={(value) => handleBatchChange(draft.id, 'amount', value)}
-                          />
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
               <TouchableOpacity
-                onPress={appendBatchDraft}
-                style={[styles.addRecordButton, { borderColor: palette.border, backgroundColor: palette.surface }]}
+                style={[
+                  styles.inputField,
+                  {
+                    borderColor: palette.border,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/categories',
+                    params: {
+                      current: singleDraft.category,
+                      currentSubcategory: singleDraft.subcategoryId,
+                      returnTo: 'log-expenses',
+                    },
+                  })
+                }
               >
-                <MaterialCommunityIcons name="plus-circle" size={18} color={palette.tint} />
-                <ThemedText style={[styles.addRecordText, { color: palette.tint }]}>Add Record +</ThemedText>
+                <ThemedText style={[styles.categoryText, { color: palette.text }]}
+                >
+                  {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
+                </ThemedText>
+                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
               </TouchableOpacity>
-            </ThemedView>
-          )}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>
+                {transactionType === 'income' ? 'Payer' : 'Payee'}
+              </ThemedText>
+              <TextInput
+                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
+                placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                placeholderTextColor={palette.icon}
+                value={singleDraft.payee}
+                onChangeText={(value) => handleSingleChange('payee', value)}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Note</ThemedText>
+              <TextInput
+                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
+                placeholder="Add a note"
+                placeholderTextColor={palette.icon}
+                value={singleDraft.note}
+                onChangeText={(value) => handleSingleChange('note', value)}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
+              <TextInput
+                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
+                placeholder="Eg: groceries, weekend"
+                placeholderTextColor={palette.icon}
+                value={singleDraft.labels}
+                onChangeText={(value) => handleSingleChange('labels', value)}
+              />
+            </View>
+          </ThemedView>
 
           {totalSaved > 0 ? (
             <ThemedView
@@ -539,7 +365,6 @@ export default function LogExpensesScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Menu Modal */}
       <Modal
         visible={showMenu}
         transparent={true}
@@ -551,60 +376,43 @@ export default function LogExpensesScreen() {
           activeOpacity={1}
           onPress={() => setShowMenu(false)}
         >
-          <View style={{
-            position: 'absolute',
-            top: 100,
-            right: 20,
-            backgroundColor: palette.card,
-            borderRadius: 8,
-            padding: 8,
-            minWidth: 150,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 5,
-          }}>
-            {!isBatchMode ? (
-              <>
-                <TouchableOpacity
-                  onPress={() => {
-                    handleSave(true);
-                    // Reset the form for new input
-                    setSingleDraft({ ...INITIAL_SINGLE_DRAFT, category: lastSelectedCategory });
-                    setShowMenu(false);
-                  }}
-                  style={{ padding: 12 }}
-                >
-                  <ThemedText style={{ color: palette.text }}>Save and add new record</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    // Save as template functionality
-                    Alert.alert('Template Saved', 'Record saved as template for future use.');
-                    setShowMenu(false);
-                  }}
-                  style={{ padding: 12 }}
-                >
-                  <ThemedText style={{ color: palette.text }}>Save template</ThemedText>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity
-                onPress={() => {
-                  // For batch mode, maybe save or some other action
-                  setShowMenu(false);
-                }}
-                style={{ padding: 12 }}
-              >
-                <ThemedText style={{ color: palette.text }}>Save</ThemedText>
-              </TouchableOpacity>
-            )}
+          <View
+            style={{
+              position: 'absolute',
+              top: 100,
+              right: 20,
+              backgroundColor: palette.card,
+              borderRadius: 8,
+              padding: 8,
+              minWidth: 150,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleSave(true);
+                setShowMenu(false);
+              }}
+              style={{ padding: 12 }}
+            >
+              <ThemedText style={{ color: palette.text }}>Save and add new record</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert('Template Saved', 'Record saved as template for future use.');
+                setShowMenu(false);
+              }}
+              style={{ padding: 12 }}
+            >
+              <ThemedText style={{ color: palette.text }}>Save template</ThemedText>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
 }
-
-const styles = logExpensesStyles;
