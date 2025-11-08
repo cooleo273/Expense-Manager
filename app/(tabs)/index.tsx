@@ -2,8 +2,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Dimensions, Easing, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
@@ -24,7 +24,48 @@ export default function HomeScreen() {
   const { filters } = useFilterContext();
   const tabBarHeight = useBottomTabBarHeight();
   const [showOverlay, setShowOverlay] = useState(false);
+  const overlayAnim = useRef(new Animated.Value(0)).current;
+  const optionAnim = useRef(new Animated.Value(0)).current;
+  const window = Dimensions.get('window');
+  const FAB_SIZE = 60;
+  const overlayDiameter = Math.sqrt(window.width * window.width + window.height * window.height) * 1.1;
   const [transactions, setTransactions] = useState<any[]>([]);
+
+  const overlayBottom = overlayAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [tabBarHeight + 20, tabBarHeight + 20, 0],
+    extrapolate: 'clamp',
+  });
+  const overlayRight = overlayAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [20, 20, 0],
+    extrapolate: 'clamp',
+  });
+  const overlayWidth = overlayAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [FAB_SIZE, overlayDiameter, window.width + 40],
+    extrapolate: 'clamp',
+  });
+  const overlayHeight = overlayAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [FAB_SIZE, overlayDiameter, window.height + 40],
+    extrapolate: 'clamp',
+  });
+  const overlayTopLeftRadius = overlayAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [FAB_SIZE / 2, overlayDiameter, 0],
+    extrapolate: 'clamp',
+  });
+  const overlayBottomRightRadius = overlayAnim.interpolate({
+    inputRange: [0, 0.9, 1],
+    outputRange: [FAB_SIZE / 2, FAB_SIZE / 2, 0],
+    extrapolate: 'clamp',
+  });
+  const overlayOpacity = overlayAnim.interpolate({
+    inputRange: [0, 0.2, 1],
+    outputRange: [0, 0.85, 0.9],
+    extrapolate: 'clamp',
+  });
 
   const loadTransactions = useCallback(async () => {
     try {
@@ -144,6 +185,45 @@ export default function HomeScreen() {
 
   const displayedRecords = filteredRecords.slice(0, 10);
 
+  useEffect(() => {
+    if (showOverlay) {
+      // Reset animation values to 0 before starting the opening animation
+      overlayAnim.setValue(0);
+      optionAnim.setValue(0);
+
+      // sequence: expand overlay then slide in options with easing
+      Animated.sequence([
+        Animated.timing(overlayAnim, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(optionAnim, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true
+        }),
+      ]).start();
+    } else {
+      // parallel: slide out options and collapse overlay with easing
+      Animated.parallel([
+        Animated.timing(optionAnim, {
+          toValue: 0,
+          duration: 200,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true
+        }),
+        Animated.timing(overlayAnim, {
+          toValue: 0,
+          duration: 260,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false
+        }),
+      ]).start();
+    }
+  }, [showOverlay, overlayAnim, optionAnim]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -248,20 +328,79 @@ export default function HomeScreen() {
       </Pressable>
       <Modal transparent visible={showOverlay} onRequestClose={() => setShowOverlay(false)}>
         <Pressable style={styles.overlay} onPress={() => setShowOverlay(false)}>
-          <Pressable
-            style={[styles.fabOption, { bottom: tabBarHeight + 80 }]}
-            onPress={() => { setShowOverlay(false); router.push('/log-expenses'); }}
+          {/* animated translucent overlay background */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: 'absolute',
+                bottom: overlayBottom,
+                right: overlayRight,
+                width: overlayWidth,
+                height: overlayHeight,
+                borderTopLeftRadius: overlayTopLeftRadius,
+                borderBottomRightRadius: overlayBottomRightRadius,
+                borderTopRightRadius: 0,
+                borderBottomLeftRadius: 0,
+                backgroundColor: 'rgba(0,0,0,0.68)',
+                opacity: overlayOpacity,
+              },
+            ]}
+          />
+
+          {/* Scan (smaller, placed above) */}
+          <Animated.View
+            style={[
+              styles.fabOption,
+              {
+                bottom: tabBarHeight + 80,
+                opacity: optionAnim,
+                transform: [
+                  { translateY: optionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+                  { translateX: optionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+                ],
+              },
+            ]}
           >
-            <MaterialCommunityIcons name="plus" size={20} color="white" accessibilityHint={undefined} />
-            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Add Record</ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.fabOption, { bottom: tabBarHeight + 20 }]}
-            onPress={() => { setShowOverlay(false); router.push('/scan'); }}
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+              onPress={() => { setShowOverlay(false); router.push('/scan'); }}
+            >
+              <View style={[styles.optionTextContainer, { backgroundColor: 'rgba(0,0,0,0.6)', borderColor: 'transparent' }]}> 
+                <ThemedText style={[styles.fabOptionTextSmall, { color: 'white' }]}>Scan Receipt</ThemedText>
+              </View>
+              <View style={[styles.iconCircle, { backgroundColor: palette.accent }]}> 
+                <MaterialCommunityIcons name="camera" size={16} color="white" accessibilityHint={undefined} />
+              </View>
+            </Pressable>
+          </Animated.View>
+
+          {/* Add Record (larger, placed nearer the bottom) */}
+          <Animated.View
+            style={[
+              styles.fabOption,
+              {
+                bottom: tabBarHeight + 20,
+                opacity: optionAnim,
+                transform: [
+                  { translateY: optionAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) },
+                  { translateX: optionAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) },
+                ],
+              },
+            ]}
           >
-            <MaterialCommunityIcons name="camera" size={20} color="white" accessibilityHint={undefined} />
-            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Scan Receipt</ThemedText>
-          </Pressable>
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+              onPress={() => { setShowOverlay(false); router.push('/log-expenses'); }}
+            >
+              <View style={[styles.optionTextContainer, { backgroundColor: 'rgba(0,0,0,0.7)', borderColor: 'transparent' }]}> 
+                <ThemedText style={[styles.fabOptionTextLarge, { color: 'white' }]}>Add Record</ThemedText>
+              </View>
+              <View style={[styles.iconCircleLarge, { backgroundColor: 'white' }]}> 
+                <MaterialCommunityIcons name="plus" size={20} color={palette.tint} accessibilityHint={undefined} />
+              </View>
+            </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
     </SafeAreaView>
