@@ -147,6 +147,17 @@ export default function RecordsScreen() {
         }
       }
 
+      if (filters.searchTerm) {
+        const search = filters.searchTerm.toLowerCase();
+        if (!item.title.toLowerCase().includes(search) && 
+            !item.subtitle.toLowerCase().includes(search) &&
+            !(item.payee && item.payee.toLowerCase().includes(search)) &&
+            !(item.note && item.note.toLowerCase().includes(search)) &&
+            !(item.labels && item.labels.toLowerCase().includes(search))) {
+          return false;
+        }
+      }
+
       return true;
     });
 
@@ -168,7 +179,7 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, transactions]);
+  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 

@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type DateRange = {
   start: Date;
@@ -47,6 +48,34 @@ export const useFilterContext = () => {
 export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [filters, setFilters] = useState<FilterState>(defaultFilterState);
 
+  // Load search history from AsyncStorage on mount
+  useEffect(() => {
+    const loadSearchHistory = async () => {
+      try {
+        const storedHistory = await AsyncStorage.getItem('searchHistory');
+        if (storedHistory) {
+          const parsedHistory = JSON.parse(storedHistory);
+          setFilters(prev => ({ ...prev, searchHistory: parsedHistory }));
+        }
+      } catch (error) {
+        console.error('Failed to load search history:', error);
+      }
+    };
+    loadSearchHistory();
+  }, []);
+
+  // Save search history to AsyncStorage whenever it changes
+  useEffect(() => {
+    const saveSearchHistory = async () => {
+      try {
+        await AsyncStorage.setItem('searchHistory', JSON.stringify(filters.searchHistory));
+      } catch (error) {
+        console.error('Failed to save search history:', error);
+      }
+    };
+    saveSearchHistory();
+  }, [filters.searchHistory]);
+
   const setSelectedAccount = (account: string) => {
     setFilters(prev => ({ ...prev, selectedAccount: account }));
   };
@@ -67,7 +96,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (term.trim() && !filters.searchHistory.includes(term.trim())) {
       setFilters(prev => ({
         ...prev,
-        searchHistory: [term.trim(), ...prev.searchHistory.slice(0, 9)] // Keep last 10
+        searchHistory: [term.trim(), ...prev.searchHistory.slice(0, 4)] // Keep last 5
       }));
     }
   };

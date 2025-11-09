@@ -53,6 +53,9 @@ export default function LogExpensesScreen() {
     transactionDraftState.getLastSelectedCategory()
   );
   const [showMenu, setShowMenu] = useState(false);
+  const [amountError, setAmountError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [payeeError, setPayeeError] = useState('');
 
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -88,6 +91,15 @@ export default function LogExpensesScreen() {
             if (!value) {
               delete next.subcategoryId;
             }
+          }
+          if (key === 'amount') {
+            setAmountError('');
+          }
+          if (key === 'category') {
+            setCategoryError('');
+          }
+          if (key === 'payee') {
+            setPayeeError('');
           }
         }
 
@@ -167,14 +179,43 @@ export default function LogExpensesScreen() {
   }, [resetDrafts, router, showToast]);
 
   const buildRecords = useCallback((): StoredRecord[] | null => {
-    if (!singleDraft.amount.trim()) {
-      Alert.alert('Amount missing', 'Enter an amount before saving.');
-      return null;
+    let hasError = false;
+
+    // Amount validation
+    const amountStr = singleDraft.amount.trim();
+    if (!amountStr) {
+      setAmountError('Amount is required');
+      hasError = true;
+    } else {
+      const numeric = Number(amountStr);
+      if (isNaN(numeric) || !isFinite(numeric)) {
+        setAmountError('Amount must be a valid number');
+        hasError = true;
+      } else if (numeric <= 0) {
+        setAmountError('Amount must be greater than 0');
+        hasError = true;
+      } else {
+        setAmountError('');
+      }
     }
 
-    const numeric = Number(singleDraft.amount);
-    if (!Number.isFinite(numeric)) {
-      Alert.alert('Invalid amount', 'Amount must be numeric.');
+    // Category validation
+    if (!singleDraft.category || singleDraft.category.trim() === '') {
+      setCategoryError('Category is required');
+      hasError = true;
+    } else {
+      setCategoryError('');
+    }
+
+    // Payee validation
+    if (!singleDraft.payee || singleDraft.payee.trim() === '') {
+      setPayeeError('Payee is required');
+      hasError = true;
+    } else {
+      setPayeeError('');
+    }
+
+    if (hasError) {
       return null;
     }
 
@@ -182,10 +223,10 @@ export default function LogExpensesScreen() {
       {
         id: Date.now().toString(),
         type: transactionType,
-        amount: numeric,
-        category: singleDraft.category || 'Uncategorised',
+        amount: Number(amountStr),
+        category: singleDraft.category,
         subcategoryId: singleDraft.subcategoryId,
-        payee: singleDraft.payee,
+        payee: singleDraft.payee.trim(),
         note: singleDraft.note,
         labels: singleDraft.labels,
       },
@@ -294,6 +335,11 @@ export default function LogExpensesScreen() {
                   onChangeText={(value) => handleSingleChange('amount', value)}
                 />
               </View>
+              {amountError ? (
+                <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                  {amountError}
+                </ThemedText>
+              ) : null}
             </View>
 
             <View style={styles.fieldGroup}>
@@ -327,6 +373,11 @@ export default function LogExpensesScreen() {
                 </ThemedText>
                 <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
               </TouchableOpacity>
+              {categoryError ? (
+                <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                  {categoryError}
+                </ThemedText>
+              ) : null}
             </View>
 
             <View style={styles.fieldGroup}>
@@ -340,6 +391,11 @@ export default function LogExpensesScreen() {
                 value={singleDraft.payee}
                 onChangeText={(value) => handleSingleChange('payee', value)}
               />
+              {payeeError ? (
+                <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                  {payeeError}
+                </ThemedText>
+              ) : null}
             </View>
 
             <View style={styles.fieldGroup}>

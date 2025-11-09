@@ -14,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { mockRecordsData } from '../../constants/mock-data';
+import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -25,6 +26,7 @@ export default function Statistics() {
   const chartWidth = Math.max(windowWidth - 64, 280);
   const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
   const tabBarHeight = useBottomTabBarHeight();
+  const { filters } = useFilterContext();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -72,6 +74,29 @@ export default function Statistics() {
     setSelectedType(next);
   };
 
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((record) => {
+      if (filters.dateRange) {
+        if (record.date < filters.dateRange.start || record.date > filters.dateRange.end) {
+          return false;
+        }
+      }
+
+      if (filters.searchTerm) {
+        const search = filters.searchTerm.toLowerCase();
+        if (!record.title.toLowerCase().includes(search) && 
+            !record.subtitle.toLowerCase().includes(search) &&
+            !(record.payee && record.payee.toLowerCase().includes(search)) &&
+            !(record.note && record.note.toLowerCase().includes(search)) &&
+            !(record.labels && record.labels.toLowerCase().includes(search))) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [filters.dateRange, filters.searchTerm, transactions]);
+
   const weeklyAmounts = useMemo(() => {
     const now = new Date();
     const weekStart = new Date(now);
@@ -82,7 +107,7 @@ export default function Statistics() {
       income: [0, 0, 0, 0, 0, 0, 0]
     };
 
-    transactions.forEach((transaction) => {
+    filteredTransactions.forEach((transaction) => {
       const transactionDate = new Date(transaction.date);
       const dayDiff = Math.floor((transactionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
       
@@ -96,11 +121,11 @@ export default function Statistics() {
     });
 
     return amounts;
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const activeSeries = weeklyAmounts[selectedType];
 
-  const formatCurrency = (value: number) => `₹${value.toLocaleString()}`;
+  const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
 
   const maxDataValue = useMemo(
     () => activeSeries.reduce((max, value) => Math.max(max, value), 0),
@@ -136,7 +161,7 @@ export default function Statistics() {
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
 
-    transactions.forEach((record) => {
+    filteredTransactions.forEach((record) => {
       if (record.type !== 'expense') {
         return;
       }
@@ -155,7 +180,7 @@ export default function Statistics() {
         };
       })
       .sort((a, b) => b.value - a.value);
-  }, [transactions, palette.tint]);
+  }, [filteredTransactions, palette.tint]);
 
   const weekendShare = weeklyTotal === 0 ? 0 : Math.round((weekendTotal / weeklyTotal) * 100);
   const dailyAverage = weeklyTotal === 0 ? 0 : Math.round(weeklyTotal / activeSeries.length);
@@ -173,7 +198,12 @@ export default function Statistics() {
             onChange={handleTypeChange}
             options={['expense', 'income']}
           />
-          <ThemedText style={{ color: palette.icon }}>This Week</ThemedText>
+          <ThemedText style={{ color: palette.icon }}>
+            {filters.dateRange 
+              ? `${filters.dateRange.start.toLocaleDateString()} - ${filters.dateRange.end.toLocaleDateString()}`
+              : 'All Time'
+            }
+          </ThemedText>
         </View>
 
           <ThemedView style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -229,7 +259,7 @@ export default function Statistics() {
           <View style={styles.barSummaryRow}>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>₹{weeklyTotal.toLocaleString()}</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>${weeklyTotal.toLocaleString()}</ThemedText>
             </View>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Peak day</ThemedText>
@@ -237,7 +267,7 @@ export default function Statistics() {
             </View>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Daily avg</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>₹{dailyAverage.toLocaleString()}</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>${dailyAverage.toLocaleString()}</ThemedText>
             </View>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Weekend</ThemedText>
@@ -250,10 +280,10 @@ export default function Statistics() {
           title="Expense Structure"
           subtitle="Top categories"
           data={expenseSegments}
-          totalLabel={`₹${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
+          totalLabel={`$${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
           totalCaption="All time"
           legendVariant="simple"
-          valueFormatter={(value) => `₹${value.toLocaleString()}`}
+          valueFormatter={(value) => `$${value.toLocaleString()}`}
           containerStyle={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
           chartSize={expenseChartSize}
         />

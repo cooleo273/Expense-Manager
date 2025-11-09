@@ -114,7 +114,11 @@ export default function HomeScreen() {
     return transactions.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
-        if (!record.title.toLowerCase().includes(search) && !record.subtitle.toLowerCase().includes(search)) {
+        if (!record.title.toLowerCase().includes(search) && 
+            !record.subtitle.toLowerCase().includes(search) &&
+            !(record.payee && record.payee.toLowerCase().includes(search)) &&
+            !(record.note && record.note.toLowerCase().includes(search)) &&
+            !(record.labels && record.labels.toLowerCase().includes(search))) {
           return false;
         }
       }
