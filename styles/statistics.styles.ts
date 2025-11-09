@@ -42,9 +42,7 @@ export const statisticsStyles = StyleSheet.create({
     gap: Spacing.lg,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
   chart: {
     borderRadius: BorderRadius.lg,

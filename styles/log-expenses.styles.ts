@@ -110,7 +110,7 @@ export const logExpensesStyles = StyleSheet.create({
     gap: Spacing.lg,
   },
   categoryText: {
-    fontSize: FontSizes.lg, // Increased from sm (12) to md (14) for better readability
+    fontSize: FontSizes.xl, // Increased from lg (16) to xl (18) for better readability
     fontWeight: FontWeights.medium as any,
   },
   cameraButton: {

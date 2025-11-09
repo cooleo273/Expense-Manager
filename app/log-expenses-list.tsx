@@ -60,11 +60,23 @@ export default function LogExpensesListScreen() {
       labels: '',
     }
   ]);
+  const [recordErrors, setRecordErrors] = useState<string[]>(['']);
+  const [recordCategoryErrors, setRecordCategoryErrors] = useState<string[]>(['']);
+  const [recordPayeeErrors, setRecordPayeeErrors] = useState<string[]>(['']);
 
   const updateRecord = useCallback((index: number, key: keyof SingleDraft, value: string) => {
     setRecords(prev => prev.map((record, i) =>
       i === index ? { ...record, [key]: value } : record
     ));
+    if (key === 'amount') {
+      setRecordErrors(prev => prev.map((err, i) => i === index ? '' : err));
+    }
+    if (key === 'category') {
+      setRecordCategoryErrors(prev => prev.map((err, i) => i === index ? '' : err));
+    }
+    if (key === 'payee') {
+      setRecordPayeeErrors(prev => prev.map((err, i) => i === index ? '' : err));
+    }
   }, []);
 
   const addRecord = useCallback(() => {
@@ -76,27 +88,66 @@ export default function LogExpensesListScreen() {
       note: '',
       labels: '',
     }]);
+    setRecordErrors(prev => [...prev, '']);
+    setRecordCategoryErrors(prev => [...prev, '']);
+    setRecordPayeeErrors(prev => [...prev, '']);
     showToast('Record added successfully');
   }, [params.defaultCategory, showToast]);
 
   const removeRecord = useCallback((index: number) => {
     if (records.length > 1) {
       setRecords(prev => prev.filter((_, i) => i !== index));
+      setRecordErrors(prev => prev.filter((_, i) => i !== index));
+      setRecordCategoryErrors(prev => prev.filter((_, i) => i !== index));
+      setRecordPayeeErrors(prev => prev.filter((_, i) => i !== index));
     }
   }, [records.length]);
 
   const handleNext = useCallback(() => {
-    // Validate records
-    const validRecords = records.filter(record => record.amount.trim());
-    if (validRecords.length === 0) {
-      Alert.alert('No records', 'Please add at least one record with an amount.');
+    let hasErrors = false;
+    const amountErrors = records.map((record) => {
+      const amountStr = record.amount.trim();
+      if (!amountStr) {
+        hasErrors = true;
+        return 'Amount is required';
+      }
+      const numeric = Number(amountStr);
+      if (isNaN(numeric) || !isFinite(numeric)) {
+        hasErrors = true;
+        return 'Amount must be a valid number';
+      }
+      if (numeric <= 0) {
+        hasErrors = true;
+        return 'Amount must be greater than 0';
+      }
+      return '';
+    });
+    const categoryErrors = records.map((record) => {
+      if (!record.category || record.category.trim() === '') {
+        hasErrors = true;
+        return 'Category is required';
+      }
+      return '';
+    });
+    const payeeErrors = records.map((record) => {
+      if (!record.payee || record.payee.trim() === '') {
+        hasErrors = true;
+        return 'Payee is required';
+      }
+      return '';
+    });
+    setRecordErrors(amountErrors);
+    setRecordCategoryErrors(categoryErrors);
+    setRecordPayeeErrors(payeeErrors);
+    if (hasErrors) {
+      showToast('Please fix the errors before proceeding');
       return;
     }
 
     // For now, just show an alert with the count
-    Alert.alert('Next', `Proceeding with ${validRecords.length} records.`);
+    Alert.alert('Next', `Proceeding with ${records.length} records.`);
     // TODO: Navigate to confirmation or save
-  }, [records]);
+  }, [records, showToast]);
 
   useEffect(() => {
     const categoryParam = typeof params.category === 'string' ? params.category : undefined;
@@ -167,6 +218,11 @@ export default function LogExpensesListScreen() {
                     onChangeText={(value) => updateRecord(index, 'amount', value)}
                   />
                 </View>
+                {recordErrors[index] ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                    {recordErrors[index]}
+                  </ThemedText>
+                ) : null}
               </View>
 
               <View style={styles.fieldGroup}>
@@ -201,6 +257,11 @@ export default function LogExpensesListScreen() {
                   </ThemedText>
                   <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
                 </TouchableOpacity>
+                {recordCategoryErrors[index] ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                    {recordCategoryErrors[index]}
+                  </ThemedText>
+                ) : null}
               </View>
 
               <View style={styles.fieldGroup}>
@@ -214,6 +275,11 @@ export default function LogExpensesListScreen() {
                   value={record.payee}
                   onChangeText={(value) => updateRecord(index, 'payee', value)}
                 />
+                {recordPayeeErrors[index] ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                    {recordPayeeErrors[index]}
+                  </ThemedText>
+                ) : null}
               </View>
 
               <View style={styles.fieldGroup}>
