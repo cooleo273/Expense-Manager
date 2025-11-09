@@ -273,8 +273,6 @@ export function ExpenseStructureCard({
                   activeSegment?.id === segment.id && {
                     backgroundColor: `${segment.color}20`,
                     borderRadius: BorderRadius.md,
-                    paddingVertical: Spacing.xs,
-                    paddingHorizontal: Spacing.sm,
                   },
                 ]}
               >
@@ -396,6 +394,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
   },
   legendSwatch: {
     width: 14,

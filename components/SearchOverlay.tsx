@@ -84,7 +84,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                 autoFocus
               />
             </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => {
+              setSearchTerm('');
+              onClose();
+            }}>
               <MaterialCommunityIcons name="close" size={22} color={palette.icon} />
             </TouchableOpacity>
           </View>

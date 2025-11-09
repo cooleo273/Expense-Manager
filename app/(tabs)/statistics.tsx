@@ -17,8 +17,6 @@ import { mockRecordsData } from '../../constants/mock-data';
 import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
-const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 export default function Statistics() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
@@ -98,9 +96,10 @@ export default function Statistics() {
   }, [filters.dateRange, filters.searchTerm, transactions]);
 
   const weeklyAmounts = useMemo(() => {
+    // Get the last 7 days instead of current week to ensure we have data
     const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 6); // Include today, so -6 for 7 total days
     
     const amounts: Record<'expense' | 'income', number[]> = {
       expense: [0, 0, 0, 0, 0, 0, 0],
@@ -109,13 +108,18 @@ export default function Statistics() {
 
     filteredTransactions.forEach((transaction) => {
       const transactionDate = new Date(transaction.date);
-      const dayDiff = Math.floor((transactionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
       
-      if (dayDiff >= 0 && dayDiff < 7) {
-        if (transaction.type === 'expense') {
-          amounts.expense[dayDiff] += Math.abs(transaction.amount);
-        } else if (transaction.type === 'income') {
-          amounts.income[dayDiff] += transaction.amount;
+      // Check if transaction is within the last 7 days
+      if (transactionDate >= sevenDaysAgo && transactionDate <= now) {
+        // Calculate which day of the week (0 = 6 days ago, 6 = today)
+        const dayDiff = Math.floor((transactionDate.getTime() - sevenDaysAgo.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (dayDiff >= 0 && dayDiff < 7) {
+          if (transaction.type === 'expense') {
+            amounts.expense[dayDiff] += Math.abs(transaction.amount);
+          } else if (transaction.type === 'income') {
+            amounts.income[dayDiff] += transaction.amount;
+          }
         }
       }
     });
@@ -132,13 +136,28 @@ export default function Statistics() {
     [activeSeries]
   );
 
+  const weekLabels = useMemo(() => {
+    const labels = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      if (i === 0) {
+        labels.push('Today');
+      } else {
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      }
+    }
+    return labels;
+  }, []);
+
   const weeklyChartData = useMemo(
     () =>
-      WEEK_LABELS.map((label, index) => ({
+      weekLabels.map((label, index) => ({
         x: label,
         y: activeSeries[index],
       })),
-    [activeSeries]
+    [activeSeries, weekLabels]
   );
 
   const yAxisTickValues = useMemo(() => {
@@ -158,6 +177,7 @@ export default function Statistics() {
     }
   });
   const weekendTotal = activeSeries.slice(5).reduce((sum, value) => sum + value, 0);
+  const peakDayLabel = weekLabels[peakIndex];
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
 
@@ -263,7 +283,7 @@ export default function Statistics() {
             </View>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Peak day</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>{WEEK_LABELS[peakIndex]}</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>{peakDayLabel}</ThemedText>
             </View>
             <View style={styles.barSummaryBlock}>
               <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Daily avg</ThemedText>
