@@ -152,19 +152,13 @@ export const CalendarButton: React.FC = () => {
   return (
     <View>
       <TouchableOpacity
-        onPress={() => {
-          if (filters.dateRange) {
-            setDateRange(null);
-          } else {
-            setCalendarVisible(true);
-          }
-        }}
+        onPress={() => setCalendarVisible(true)}
         style={{ marginHorizontal: Spacing.xs, marginRight: Spacing.lg }}
       >
         <MaterialCommunityIcons 
-          name={filters.dateRange ? "close" : "calendar"} 
+          name="calendar" 
           size={IconSizes.xl} 
-          color={palette.text} 
+          color={filters.dateRange ? palette.tint : palette.icon} 
         />
       </TouchableOpacity>
       <Modal
@@ -263,6 +257,14 @@ export const CalendarButton: React.FC = () => {
             >
               <Text style={{ color: palette.background, fontWeight: FontWeights.semibold as any }}>Confirm</Text>
             </TouchableOpacity>
+            {filters.dateRange && (
+              <TouchableOpacity
+                style={[styles.clearButton, { borderColor: palette.error }]}
+                onPress={() => applyRange(null)}
+              >
+                <Text style={{ color: palette.error, fontWeight: FontWeights.semibold as any }}>Clear Filter</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -345,5 +347,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
+  },
+  clearButton: {
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
   },
 });
