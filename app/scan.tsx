@@ -9,6 +9,10 @@ import { ThemedText } from '@/components/themed-text';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+export const options = {
+  headerShown: false,
+};
+
 type FlashMode = 'off' | 'on';
 
 export default function ScanScreen() {
@@ -54,7 +58,7 @@ export default function ScanScreen() {
       const photo = await cameraRef.current.takePictureAsync();
       Alert.alert('Receipt captured', `Photo saved at ${photo?.uri}`);
       router.back();
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to take picture');
     }
   };
@@ -103,10 +107,6 @@ export default function ScanScreen() {
               >
                 <MaterialCommunityIcons name="aspect-ratio" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-              <View style={[styles.iconChip, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-              >
-                <Text style={styles.iconChipText}>12M</Text>
-              </View>
             </View>
           </View>
 

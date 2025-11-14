@@ -1,6 +1,6 @@
 ﻿import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -28,6 +28,7 @@ import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { StorageService } from '../services/storage';
+import { subscribeToCategorySelection } from '@/utils/navigation-events';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 export const options = {
@@ -42,7 +43,6 @@ export default function LogExpensesScreen() {
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const navigation = useNavigation();
-  const params = useLocalSearchParams();
   const { showToast } = useToast();
   const { filters, setSelectedAccount } = useFilterContext();
 
@@ -204,24 +204,22 @@ export default function LogExpensesScreen() {
   );
 
   useEffect(() => {
-    const categoryParam = typeof params.category === 'string' ? params.category : undefined;
-    const subcategoryParam = typeof params.subcategory === 'string' ? params.subcategory : undefined;
-
-    if (!categoryParam && !subcategoryParam) {
-      return;
-    }
-
-    if (categoryParam) {
-      handleSingleChange('category', categoryParam);
-      updateLastSelectedCategory(categoryParam);
-    }
-
-    if (categoryParam && !subcategoryParam) {
-      handleSingleChange('subcategoryId', undefined);
-    } else if (subcategoryParam) {
-      handleSingleChange('subcategoryId', subcategoryParam);
-    }
-  }, [handleSingleChange, params.category, params.subcategory, updateLastSelectedCategory]);
+    const unsubscribe = subscribeToCategorySelection((payload) => {
+      if (payload.target !== 'log-expenses') {
+        return;
+      }
+      if (payload.category) {
+        handleSingleChange('category', payload.category);
+        updateLastSelectedCategory(payload.category);
+      }
+      if (payload.subcategoryId) {
+        handleSingleChange('subcategoryId', payload.subcategoryId);
+      } else {
+        handleSingleChange('subcategoryId', undefined);
+      }
+    });
+    return unsubscribe;
+  }, [handleSingleChange, updateLastSelectedCategory]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -266,7 +264,7 @@ export default function LogExpensesScreen() {
         return;
       }
 
-      router.push('/(tabs)');
+      router.push('/(tabs)/records');
     } catch (error) {
       console.error('Failed to save transactions:', error);
       Alert.alert('Error', 'Failed to save transactions. Please try again.');

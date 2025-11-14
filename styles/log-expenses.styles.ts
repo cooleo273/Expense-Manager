@@ -13,6 +13,43 @@ export const logExpensesStyles = StyleSheet.create({
     paddingBottom: 250, // Increased back to 250 for better keyboard space
     gap: Spacing.lg,
   },
+  summaryContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  accountSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  accountLabel: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+  },
+  summaryAmounts: {
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: FontSizes.sm,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  summaryTotal: {
+    fontSize: FontSizes.huge,
+    fontWeight: FontWeights.bold as any,
+  },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -55,7 +92,7 @@ export const logExpensesStyles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
-    borderWidth: 1,
+    alignSelf: 'flex-end',
   },
   addListLabel: {
     fontWeight: FontWeights.semibold as any,
@@ -66,6 +103,12 @@ export const logExpensesStyles = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.lg,
   },
+  recordCard: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
   fieldGroup: {
     gap: Spacing.xs,
   },
@@ -73,6 +116,25 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.medium as any,
     letterSpacing: 0.4,
+  },
+  iconTouchArea: {
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.md,
+  },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  noteMenuButton: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  noteInput: {
+    flex: 1,
+    fontSize: FontSizes.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: 0,
   },
   amountLabel: {
     fontSize: FontSizes.xs,
@@ -95,6 +157,12 @@ export const logExpensesStyles = StyleSheet.create({
   amountInput: {
     flex: 1,
     fontSize: FontSizes.massive,
+    fontWeight: FontWeights.bold as any,
+    padding: 0,
+  },
+  amountCompactInput: {
+    minWidth: 60,
+    fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     padding: 0,
   },
@@ -126,6 +194,53 @@ export const logExpensesStyles = StyleSheet.create({
   categoryText: {
     fontSize: FontSizes.xl, // Increased from lg (16) to xl (18) for better readability
     fontWeight: FontWeights.medium as any,
+  },
+  recordFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  categoryPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.md,
+  },
+  categoryIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryTextWrapper: {
+    flex: 1,
+  },
+  categoryLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold as any,
+  },
+  amountField: {
+    minWidth: 110,
+    maxWidth: 140,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  amountInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.tiny,
+  },
+  currencyTiny: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold as any,
+  },
+  deleteButton: {
+    padding: Spacing.sm,
   },
   categoryInput: {
     flexDirection: 'row',
