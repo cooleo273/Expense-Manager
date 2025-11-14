@@ -22,6 +22,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft } from '@/types/transactions';
 
+type EditableDraftKey = 'amount' | 'category' | 'subcategoryId' | 'payee' | 'note';
+
 export const options = {
   headerShown: true,
   headerTitle: 'Add Expenses List',
@@ -57,14 +59,14 @@ export default function LogExpensesListScreen() {
       subcategoryId: '',
       payee: '',
       note: '',
-      labels: '',
+      labels: [],
     }
   ]);
   const [recordErrors, setRecordErrors] = useState<string[]>(['']);
   const [recordCategoryErrors, setRecordCategoryErrors] = useState<string[]>(['']);
   const [recordPayeeErrors, setRecordPayeeErrors] = useState<string[]>(['']);
 
-  const updateRecord = useCallback((index: number, key: keyof SingleDraft, value: string) => {
+  const updateRecord = useCallback((index: number, key: EditableDraftKey, value: string) => {
     setRecords(prev => prev.map((record, i) =>
       i === index ? { ...record, [key]: value } : record
     ));
@@ -86,7 +88,7 @@ export default function LogExpensesListScreen() {
       subcategoryId: '',
       payee: '',
       note: '',
-      labels: '',
+      labels: [],
     }]);
     setRecordErrors(prev => [...prev, '']);
     setRecordCategoryErrors(prev => [...prev, '']);

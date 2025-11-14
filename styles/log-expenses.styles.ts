@@ -139,6 +139,37 @@ export const logExpensesStyles = StyleSheet.create({
     lineHeight: FontSizes.huge + 4,
     textAlignVertical: 'center',
   },
+  dateTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  dateTimeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  dateTimeText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.medium as any,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginTop: -Spacing.md,
+  },
+  pickerDoneButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
   batchList: {
     gap: Spacing.md,
   },
@@ -217,5 +248,33 @@ export const logExpensesStyles = StyleSheet.create({
   },
   menuLabel: {
     fontWeight: FontWeights.medium as any,
+  },
+  labelsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  labelChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  labelText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  removeLabelButton: {
+    padding: Spacing.tiny,
+  },
+  addLabelButton: {
+    position: 'absolute',
+    right: Spacing.sm,
+    top: '50%',
+    transform: [{ translateY: -10 }],
   },
 });

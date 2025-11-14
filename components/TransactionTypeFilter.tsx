@@ -83,27 +83,27 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderWidth: 1,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
+    alignSelf: 'flex-start',
   },
   chipContainer: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    flex: 1,
+    flexShrink: 0,
   },
   chip: {
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
+    flexGrow: 0,
   },
   defaultChip: {
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
   },
   compactChip: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.tiny,
+    paddingHorizontal: Spacing.sm,
   },
   label: {
     fontSize: FontSizes.sm,

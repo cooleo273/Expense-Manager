@@ -8,7 +8,7 @@ export type SingleDraft = {
   subcategoryId?: string;
   payee: string;
   note: string;
-  labels: string;
+  labels: string[];
 };
 
 export type BatchDraft = {
@@ -27,7 +27,9 @@ export type StoredRecord = {
   subcategoryId?: string;
   payee?: string;
   note?: string;
-  labels?: string;
+  labels?: string[];
+  accountId: string;
+  occurredAt: string;
 };
 
 export const DEFAULT_CATEGORY = 'housing';
@@ -37,7 +39,7 @@ export const INITIAL_SINGLE_DRAFT: SingleDraft = {
   category: DEFAULT_CATEGORY,
   payee: '',
   note: '',
-  labels: '',
+  labels: [],
 };
 
 export const createBatchDraft = (defaultCategory: string = DEFAULT_CATEGORY): BatchDraft => ({

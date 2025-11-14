@@ -40,13 +40,16 @@ export const recordsStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   chipWrapper: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
+    alignSelf: 'flex-start',
   },
   chip: {
     paddingVertical: Spacing.sm,
@@ -67,10 +70,9 @@ export const recordsStyles = StyleSheet.create({
     position: 'relative',
   },
   actionIcon: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -308,5 +310,17 @@ export const recordsStyles = StyleSheet.create({
   },
   dayText: {
     fontSize: FontSizes.md,
+  },
+  fabBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(6,12,20,0.85)',
+  },
+  fabGroupContainer: {
+    position: 'absolute',
+    right: Spacing.xl,
+  },
+  fabMain: {
+    borderRadius: BorderRadius.round,
+    ...Shadows.heavy,
   },
 });

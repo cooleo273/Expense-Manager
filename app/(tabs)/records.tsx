@@ -1,9 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FAB, Portal } from 'react-native-paper';
+import type { FABGroupProps } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -12,7 +15,7 @@ import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
 import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
-import { mockRecordsData } from '../../constants/mock-data';
+import { getAccountMeta, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
@@ -63,9 +66,20 @@ const formatMonthTitle = (date: Date) =>
 
 const weekDayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
+  if (!labels) {
+    return false;
+  }
+  if (Array.isArray(labels)) {
+    return labels.some((label) => label.toLowerCase().includes(search));
+  }
+  return labels.toLowerCase().includes(search);
+};
+
 export default function RecordsScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const tabBarHeight = useBottomTabBarHeight();
   const accent = palette.tint;
   const router = useRouter();
   const { filters, setSelectedCategories, setDateRange } = useFilterContext();
@@ -79,26 +93,67 @@ export default function RecordsScreen() {
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [fabOpen, setFabOpen] = useState(false);
+  const isFocused = useIsFocused();
+
+  const handleFabNavigate = useCallback(
+    (path: string) => {
+      setFabOpen(false);
+      router.push(path);
+    },
+    [router]
+  );
+
+  const fabActions = useMemo<FABGroupProps['actions']>(
+    () => [
+      {
+        icon: 'camera',
+        label: 'Scan Receipt',
+        labelTextColor: '#FFFFFF',
+        color: palette.accent,
+        style: { backgroundColor: palette.card, borderRadius: 28 },
+        onPress: () => handleFabNavigate('/scan'),
+        small: true,
+      },
+      {
+        icon: 'plus',
+        label: 'Add Record',
+        labelTextColor: '#FFFFFF',
+        color: '#FFFFFF',
+        style: { backgroundColor: palette.tint, transform: [{ scale: 1.1 }], borderRadius: 28 },
+        onPress: () => handleFabNavigate('/log-expenses'),
+        small: false,
+      },
+    ],
+    [handleFabNavigate, palette]
+  );
 
   const loadTransactions = useCallback(async () => {
     try {
       const data = await StorageService.getTransactions();
-      // Use mock data if no real data exists
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      // Transform data to match UI expectations
-      const transformedData = transactionsToUse.map(transaction => ({
-        ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
-      }));
+      const transformedData = transactionsToUse.map(transaction => {
+        const subtitle = transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
+        const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
+        return {
+          ...transaction,
+          accountId: resolveAccountId(transaction.accountId, transaction.account),
+          subtitle,
+          date: dateValue,
+        };
+      });
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      // Fallback to mock data on error
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+        accountId: resolveAccountId(transaction.accountId, transaction.account),
+        date: transaction.date instanceof Date ? transaction.date : new Date(transaction.date),
+        subtitle: transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`,
       }));
       setTransactions(transformedData);
     }
@@ -114,8 +169,20 @@ export default function RecordsScreen() {
     }, [loadTransactions])
   );
 
+  useEffect(() => {
+    if (!isFocused) {
+      setFabOpen(false);
+    }
+  }, [isFocused]);
+
   const filteredAndSortedData = useMemo(() => {
     const filtered = transactions.filter((item) => {
+      if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+        if (item.accountId !== filters.selectedAccount) {
+          return false;
+        }
+      }
+
       if (selectedRecordType !== 'all' && selectedRecordType !== item.type) {
         return false;
       }
@@ -145,7 +212,7 @@ export default function RecordsScreen() {
             !item.subtitle.toLowerCase().includes(search) &&
             !(item.payee && item.payee.toLowerCase().includes(search)) &&
             !(item.note && item.note.toLowerCase().includes(search)) &&
-            !(item.labels && item.labels.toLowerCase().includes(search))) {
+            !matchesLabelsSearch(item.labels, search)) {
           return false;
         }
       }
@@ -171,10 +238,13 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
+  }, [selectedRecordType, sortOption, filters.selectedAccount, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
 
   const appliedFiltersCount = useMemo(() => {
     let count = 0;
+    if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+      count += 1;
+    }
     if (selectedRecordType !== 'all') {
       count += 1;
     }
@@ -295,9 +365,30 @@ export default function RecordsScreen() {
     return `${type === 'income' ? '+' : '-'}$${abs}`;
   };
 
-  const selectedCategoryLabels = filters.selectedCategories
-    .map(id => getNodeDisplayName(id))
-    .filter((name): name is string => Boolean(name));
+  const formatTimePeriod = (range: DateRange | null) => {
+    if (!range) return 'All Time';
+    const start = range.start;
+    const end = range.end;
+    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) {
+      const startDay = start.toLocaleDateString('en-US', { weekday: 'short' });
+      const endDay = end.toLocaleDateString('en-US', { weekday: 'short' });
+      return `${startDay} - ${endDay}`;
+    } else if (diffDays <= 31) {
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      return `${startMonth} - ${endMonth}`;
+    } else {
+      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+    }
+  };
+
+  const selectedCategoryLabels = useMemo(() => 
+    filters.selectedCategories
+      .map(id => getNodeDisplayName(id))
+      .filter((name): name is string => Boolean(name)),
+    [filters.selectedCategories]
+  );
 
   const filterSections = [
     {
@@ -335,15 +426,17 @@ export default function RecordsScreen() {
     },
     {
       id: 'accounts',
-      title: 'Accounts (All)',
-      detail: undefined,
+      title: filters.selectedAccount === 'all'
+        ? 'Accounts (All)'
+        : `Accounts (${getAccountMeta(filters.selectedAccount)?.name ?? 'Custom'})`,
+      detail: filters.selectedAccount === 'all'
+        ? undefined
+        : getAccountMeta(filters.selectedAccount)?.subtitle,
     },
     {
       id: 'timePeriod',
       title: 'Time Period',
-      detail: filters.dateRange 
-        ? `${filters.dateRange.start.toLocaleDateString()} - ${filters.dateRange.end.toLocaleDateString()}`
-        : 'All Time',
+      detail: formatTimePeriod(filters.dateRange),
     },
   ];
 
@@ -701,6 +794,23 @@ export default function RecordsScreen() {
           </View>
         </View>
       </Modal>
+
+      {isFocused && (
+        <Portal>
+          {fabOpen && <Pressable style={styles.fabBackdrop} onPress={() => setFabOpen(false)} />}
+          <FAB.Group
+            open={fabOpen}
+            visible
+            icon={fabOpen ? 'close' : 'plus'}
+            actions={fabActions}
+            onStateChange={({ open }) => setFabOpen(open)}
+            fabStyle={[styles.fabMain, { backgroundColor: palette.tint }]}
+            backdropColor="transparent"
+            color="white"
+            style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}
+          />
+        </Portal>
+      )}
     </SafeAreaView>
   );
 }

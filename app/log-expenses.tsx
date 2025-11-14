@@ -1,7 +1,7 @@
 ﻿import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -20,12 +20,15 @@ import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
+import { mockAccounts } from '@/constants/mock-data';
+import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { StorageService } from '../services/storage';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 export const options = {
   headerShown: true,
@@ -41,6 +44,7 @@ export default function LogExpensesScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const { showToast } = useToast();
+  const { filters, setSelectedAccount } = useFilterContext();
 
   const [transactionType, setTransactionType] = useState<RecordType>(
     transactionDraftState.getTransactionType()
@@ -56,6 +60,9 @@ export default function LogExpensesScreen() {
   const [amountError, setAmountError] = useState('');
   const [categoryError, setCategoryError] = useState('');
   const [payeeError, setPayeeError] = useState('');
+  const [recordDate, setRecordDate] = useState(() => new Date());
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [currentLabelInput, setCurrentLabelInput] = useState('');
 
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -68,6 +75,88 @@ export default function LogExpensesScreen() {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, []);
 
+  const accountOptions = useMemo(() => mockAccounts.filter(acc => acc.id !== 'all'), []);
+  const fallbackAccountId = accountOptions[0]?.id ?? null;
+
+  useEffect(() => {
+    if (filters.selectedAccount === 'all' && fallbackAccountId) {
+      setSelectedAccount(fallbackAccountId);
+    }
+  }, [filters.selectedAccount, fallbackAccountId, setSelectedAccount]);
+
+  const selectedAccountId = filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount;
+
+  const selectedAccount = useMemo(() => {
+    return accountOptions.find(acc => acc.id === selectedAccountId);
+  }, [accountOptions, selectedAccountId]);
+
+  const selectedAccountName = selectedAccount?.name ?? 'Select account';
+
+  const formattedDate = useMemo(
+    () => recordDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+    [recordDate]
+  );
+  const formattedTime = useMemo(
+    () => recordDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    [recordDate]
+  );
+
+  const handleDateTimeChange = useCallback(
+    (_event: DateTimePickerEvent, date?: Date) => {
+      if (!date || !pickerMode) {
+        if (Platform.OS !== 'ios') {
+          setPickerMode(null);
+        }
+        return;
+      }
+      setRecordDate((prev) => {
+        const next = new Date(prev);
+        if (pickerMode === 'date') {
+          next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+        } else {
+          next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+        }
+        return next;
+      });
+      if (Platform.OS !== 'ios') {
+        setPickerMode(null);
+      }
+    },
+    [pickerMode]
+  );
+
+  const addLabel = useCallback(() => {
+    const trimmed = currentLabelInput.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setSingleDraft((prev) => {
+      const labels = Array.isArray(prev.labels) ? prev.labels : [];
+      if (labels.includes(trimmed)) {
+        return prev;
+      }
+      const next = {
+        ...prev,
+        labels: [...labels, trimmed],
+      };
+      transactionDraftState.setSingleDraft(next);
+      return next;
+    });
+    setCurrentLabelInput('');
+  }, [currentLabelInput]);
+
+  const removeLabel = useCallback((labelToRemove: string) => {
+    setSingleDraft((prev) => {
+      const next = {
+        ...prev,
+        labels: (prev.labels ?? []).filter((label) => label !== labelToRemove),
+      };
+      transactionDraftState.setSingleDraft(next);
+      return next;
+    });
+  }, []);
+
   const updateLastSelectedCategory = useCallback((category: string) => {
     setLastSelectedCategoryState(category);
     transactionDraftState.setLastSelectedCategory(category);
@@ -77,6 +166,10 @@ export default function LogExpensesScreen() {
     (key: keyof SingleDraft, value?: string) => {
       setSingleDraft((prev) => {
         const next: SingleDraft = { ...prev };
+
+        if (key === 'labels') {
+          return prev;
+        }
 
         if (key === 'subcategoryId') {
           if (value) {
@@ -143,20 +236,22 @@ export default function LogExpensesScreen() {
     setSingleDraft(next);
   }, [lastSelectedCategory]);
 
-    const persistRecords = useCallback(async (records: StoredRecord[], stayOnScreen: boolean) => {
+  const persistRecords = useCallback(async (records: StoredRecord[], stayOnScreen: boolean) => {
     try {
       await StorageService.addBatchTransactions(
         records.map((record) => ({
           id: record.id,
           title: record.note || 'Transaction',
-          account: 'Default Account',
+          account: accountOptions.find((acc) => acc.id === record.accountId)?.name || selectedAccountName,
+          accountId: record.accountId,
           note: record.note || '',
           amount: record.type === 'expense' ? -Math.abs(record.amount) : record.amount,
-          date: new Date().toISOString(),
+          date: record.occurredAt,
           type: record.type,
           icon: 'cash',
           categoryId: record.category,
           subcategoryId: record.subcategoryId,
+          labels: record.labels,
           userId: 'default-user',
         }))
       );
@@ -176,7 +271,7 @@ export default function LogExpensesScreen() {
       console.error('Failed to save transactions:', error);
       Alert.alert('Error', 'Failed to save transactions. Please try again.');
     }
-  }, [resetDrafts, router, showToast]);
+  }, [accountOptions, resetDrafts, router, selectedAccountName, showToast]);
 
   const buildRecords = useCallback((): StoredRecord[] | null => {
     let hasError = false;
@@ -219,6 +314,11 @@ export default function LogExpensesScreen() {
       return null;
     }
 
+    if (!selectedAccountId) {
+      Alert.alert('Account required', 'Please select an account before saving.');
+      return null;
+    }
+
     return [
       {
         id: Date.now().toString(),
@@ -229,9 +329,11 @@ export default function LogExpensesScreen() {
         payee: singleDraft.payee.trim(),
         note: singleDraft.note,
         labels: singleDraft.labels,
+        accountId: selectedAccountId,
+        occurredAt: recordDate.toISOString(),
       },
     ];
-  }, [singleDraft, transactionType]);
+  }, [recordDate, selectedAccountId, singleDraft, transactionType]);
 
   const handleSave = useCallback(
     (stayOnScreen: boolean) => {
@@ -263,7 +365,7 @@ export default function LogExpensesScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
           </TouchableOpacity>
-          <AccountDropdown />
+          <AccountDropdown allowAll={false} />
         </View>
       ),
       headerRight: () => (
@@ -324,8 +426,8 @@ export default function LogExpensesScreen() {
           >
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
-                  Amount
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  Amount*
                 </ThemedText>
                 <View style={styles.amountRow}>
                   <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
@@ -349,8 +451,8 @@ export default function LogExpensesScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
-                  Category
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  Category*
                 </ThemedText>
                 <TouchableOpacity
                   style={styles.categoryInput}
@@ -383,8 +485,8 @@ export default function LogExpensesScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
-                  {transactionType === 'income' ? 'Payer' : 'Payee'}
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  {transactionType === 'income' ? 'Payer*' : 'Payee*'}
                 </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
@@ -403,7 +505,7 @@ export default function LogExpensesScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
                   Note
                 </ThemedText>
                 <TextInput
@@ -418,21 +520,77 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
+              {singleDraft.labels.length > 0 && (
+                <View style={styles.labelsContainer}>
+                  {singleDraft.labels.map((label) => (
+                    <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
+                      <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
+                      <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                        <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
-                  Labels
-                </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Eg: groceries, weekend"
+                  placeholder="Add a label"
                   placeholderTextColor={palette.icon}
-                  value={singleDraft.labels}
-                  onChangeText={(value) => handleSingleChange('labels', value)}
+                  value={currentLabelInput}
+                  onChangeText={setCurrentLabelInput}
+                  onSubmitEditing={addLabel}
                   onFocus={() => scrollToInput(350)}
                 />
+                <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
+                  <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
+              <View style={styles.dateTimeRow}>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  onPress={() => {
+                    setPickerMode('date');
+                    scrollToEnd();
+                  }}
+                >
+                  <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  onPress={() => {
+                    setPickerMode('time');
+                    scrollToEnd();
+                  }}
+                >
+                  <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
           </ThemedView>
+
+          {pickerMode ? (
+            <View style={[styles.pickerContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <DateTimePicker
+                value={recordDate}
+                mode={pickerMode}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateTimeChange}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity style={styles.pickerDoneButton} onPress={() => setPickerMode(null)}>
+                  <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null}
 
           {totalSaved > 0 ? (
             <ThemedView

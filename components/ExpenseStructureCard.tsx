@@ -1,4 +1,5 @@
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
@@ -18,6 +19,7 @@ export type ExpenseStructureSegment = {
 type ExpenseStructureCardProps = {
   title: string;
   subtitle?: string;
+  icon?: string;
   data: ExpenseStructureSegment[];
   totalLabel?: string;
   totalCaption?: string;
@@ -54,6 +56,7 @@ const formatPercentLabel = (value: number) => {
 export function ExpenseStructureCard({
   title,
   subtitle,
+  icon,
   data,
   totalLabel,
   totalCaption,
@@ -165,7 +168,10 @@ export function ExpenseStructureCard({
       ]}
     >
       <View style={styles.header}>
-        <ThemedText type="subtitle">{title}</ThemedText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          {icon && <MaterialCommunityIcons name={icon as any} size={20} color={palette.tint} />}
+          <ThemedText type="subtitle">{title}</ThemedText>
+        </View>
         {subtitle ? <ThemedText style={[styles.subtitle, { color: palette.icon }]}>{subtitle}</ThemedText> : null}
       </View>
 

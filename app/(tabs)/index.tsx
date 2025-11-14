@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
@@ -17,7 +17,7 @@ import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
 import { formatFriendlyDate } from '@/utils/date';
-import { mockRecordsData } from '../../constants/mock-data';
+import { mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { StorageService } from '../../services/storage';
 
 export default function HomeScreen() {
@@ -28,26 +28,35 @@ export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const [fabOpen, setFabOpen] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const isFocused = useIsFocused();
 
   const loadTransactions = useCallback(async () => {
     try {
       const data = await StorageService.getTransactions();
-      // Use mock data if no real data exists
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      // Transform data to match UI expectations
-      const transformedData = transactionsToUse.map(transaction => ({
-        ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
-      }));
+      const transformedData = transactionsToUse.map(transaction => {
+        const subtitle = transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
+        const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
+        return {
+          ...transaction,
+          accountId: resolveAccountId(transaction.accountId, transaction.account),
+          subtitle,
+          date: dateValue,
+        };
+      });
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
       // Fallback to mock data on error
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+        accountId: resolveAccountId(transaction.accountId, transaction.account),
+        date: transaction.date instanceof Date ? transaction.date : new Date(transaction.date),
+        subtitle: transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`,
       }));
       setTransactions(transformedData);
     }
@@ -62,6 +71,12 @@ export default function HomeScreen() {
       loadTransactions();
     }, [loadTransactions])
   );
+
+  useEffect(() => {
+    if (!isFocused) {
+      setFabOpen(false);
+    }
+  }, [isFocused]);
 
   const handleFabNavigate = useCallback(
     (path: string) => {
@@ -102,15 +117,32 @@ export default function HomeScreen() {
 
   const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
 
+  const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
+    if (!labels) {
+      return false;
+    }
+    if (Array.isArray(labels)) {
+      return labels.some((label) => label.toLowerCase().includes(search));
+    }
+    return labels.toLowerCase().includes(search);
+  };
+
+  const accountFilteredRecords = useMemo(() => {
+    if (!filters.selectedAccount || filters.selectedAccount === 'all') {
+      return transactions;
+    }
+    return transactions.filter((record) => record.accountId === filters.selectedAccount);
+  }, [filters.selectedAccount, transactions]);
+
   const filteredRecords = useMemo(() => {
-    return transactions.filter((record) => {
+    return accountFilteredRecords.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
         if (!record.title.toLowerCase().includes(search) && 
             !record.subtitle.toLowerCase().includes(search) &&
             !(record.payee && record.payee.toLowerCase().includes(search)) &&
             !(record.note && record.note.toLowerCase().includes(search)) &&
-            !(record.labels && record.labels.toLowerCase().includes(search))) {
+            !matchesLabelsSearch(record.labels, search)) {
           return false;
         }
       }
@@ -132,16 +164,16 @@ export default function HomeScreen() {
 
       return true;
     });
-  }, [filters, transactions]);
+  }, [accountFilteredRecords, filters]);
 
-  const overallIncome = filteredRecords.reduce((sum, record) => {
+  const overallIncome = accountFilteredRecords.reduce((sum, record) => {
     if (record.type === 'income') {
       return sum + record.amount;
     }
     return sum;
   }, 0);
 
-  const overallExpenses = filteredRecords.reduce((sum, record) => {
+  const overallExpenses = accountFilteredRecords.reduce((sum, record) => {
     if (record.type === 'expense') {
       return sum + Math.abs(record.amount);
     }
@@ -180,6 +212,49 @@ export default function HomeScreen() {
   );
 
   const displayedRecords = filteredRecords.slice(0, 10);
+
+  const { periodComparisonLabel } = useMemo(() => {
+    if (!accountFilteredRecords.length) {
+      return { periodComparisonLabel: 'No data for selected period' };
+    }
+
+    const DAY_IN_MS = 24 * 60 * 60 * 1000;
+    const range = filters.dateRange;
+    const periodEnd = range ? range.end : new Date();
+    const rawStart = range ? range.start : new Date(periodEnd.getTime() - 30 * DAY_IN_MS);
+    const periodStart = rawStart <= periodEnd ? rawStart : periodEnd;
+    const durationMs = Math.max(DAY_IN_MS, periodEnd.getTime() - periodStart.getTime() || DAY_IN_MS);
+    const previousEnd = new Date(periodStart.getTime());
+    previousEnd.setMilliseconds(previousEnd.getMilliseconds() - 1);
+    const previousStart = new Date(previousEnd.getTime() - durationMs);
+
+    const sumExpensesBetween = (recordsArray: typeof accountFilteredRecords, start: Date, end: Date) => {
+      return recordsArray.reduce((total, record) => {
+        if (record.type !== 'expense') {
+          return total;
+        }
+        const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
+        if (recordDate >= start && recordDate <= end) {
+          return total + Math.abs(record.amount);
+        }
+        return total;
+      }, 0);
+    };
+
+    const currentTotal = sumExpensesBetween(accountFilteredRecords, periodStart, periodEnd);
+    const previousTotal = sumExpensesBetween(accountFilteredRecords, previousStart, previousEnd);
+
+    if (previousTotal === 0) {
+      if (currentTotal === 0) {
+        return { periodComparisonLabel: '0% vs previous period' };
+      }
+      return { periodComparisonLabel: 'New activity vs previous period' };
+    }
+
+    const changePercent = ((currentTotal - previousTotal) / previousTotal) * 100;
+    const formattedChange = `${changePercent >= 0 ? '+' : ''}${Math.round(changePercent)}% vs previous period`;
+    return { periodComparisonLabel: formattedChange };
+  }, [accountFilteredRecords, filters.dateRange]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -223,7 +298,7 @@ export default function HomeScreen() {
           footerSeparator
           footer={(
             <View style={styles.bottomSection}>
-              <ThemedText style={{ color: palette.icon }}>+33% vs previous period</ThemedText>
+              <ThemedText style={{ color: palette.icon }}>{periodComparisonLabel}</ThemedText>
               <TouchableOpacity
                 onPress={() => router.push('/statistics')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
@@ -286,20 +361,22 @@ export default function HomeScreen() {
           </Pressable>
         </ThemedView>
       </ScrollView>
-      <Portal>
-        {fabOpen && <Pressable style={styles.fabBackdrop} onPress={() => setFabOpen(false)} />}
-        <FAB.Group
-          open={fabOpen}
-          visible
-          icon={fabOpen ? 'close' : 'plus'}
-          actions={fabActions}
-          onStateChange={({ open }) => setFabOpen(open)}
-          fabStyle={[styles.fabMain, { backgroundColor: palette.tint }]}
-          backdropColor="transparent"
-          color="white"
-          style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}
-        />
-      </Portal>
+      {isFocused && (
+        <Portal>
+          {fabOpen && <Pressable style={styles.fabBackdrop} onPress={() => setFabOpen(false)} />}
+          <FAB.Group
+            open={fabOpen}
+            visible
+            icon={fabOpen ? 'close' : 'plus'}
+            actions={fabActions}
+            onStateChange={({ open }) => setFabOpen(open)}
+            fabStyle={[styles.fabMain, { backgroundColor: palette.tint }]}
+            backdropColor="transparent"
+            color="white"
+            style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}
+          />
+        </Portal>
+      )}
     </SafeAreaView>
   );
 }
