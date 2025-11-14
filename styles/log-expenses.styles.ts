@@ -84,6 +84,7 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   currencySymbol: {
     fontSize: FontSizes.massive,
@@ -97,11 +98,24 @@ export const logExpensesStyles = StyleSheet.create({
     fontWeight: FontWeights.bold as any,
     padding: 0,
   },
-  inputField: {
+  inputWrapper: {
+    position: 'relative',
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+  },
+  notchedLabel: {
+    position: 'absolute',
+    top: -10,
+    left: Spacing.md,
+    paddingHorizontal: Spacing.xs,
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  notchedInput: {
+    paddingTop: Spacing.sm,
+    fontSize: FontSizes.lg,
   },
   batchSummary: {
     flexDirection: 'row',
@@ -113,13 +127,11 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.xl, // Increased from lg (16) to xl (18) for better readability
     fontWeight: FontWeights.medium as any,
   },
-  cameraButton: {
-    width: 48,
-    height: 48,
-    borderWidth: 1,
-    borderRadius: BorderRadius.round,
+  categoryInput: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.sm,
   },
   batchTotal: {
     fontSize: FontSizes.huge,

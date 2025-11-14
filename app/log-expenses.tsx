@@ -8,10 +8,10 @@ import {
   Modal,
   Platform,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
@@ -300,6 +300,7 @@ export default function LogExpensesScreen() {
               options={['expense', 'income']}
               value={transactionType}
               onChange={handleTransactionTypeChange}
+              style={{ flex: 1 }}
             />
             <TouchableOpacity
               onPress={() =>
@@ -322,18 +323,22 @@ export default function LogExpensesScreen() {
             style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
           >
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.amountLabel, { color: palette.icon }]}>Amount</ThemedText>
-              <View style={styles.amountRow}>
-                <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
-                <TextInput
-                  ref={singleAmountRef}
-                  style={[styles.amountInput, { color: palette.text }]}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                  placeholderTextColor={palette.icon}
-                  value={singleDraft.amount}
-                  onChangeText={(value) => handleSingleChange('amount', value)}
-                />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                  Amount
+                </ThemedText>
+                <View style={styles.amountRow}>
+                  <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
+                  <TextInput
+                    ref={singleAmountRef}
+                    style={[styles.amountInput, { color: palette.text }]}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor={palette.icon}
+                    value={singleDraft.amount}
+                    onChangeText={(value) => handleSingleChange('amount', value)}
+                  />
+                </View>
               </View>
               {amountError ? (
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
@@ -343,36 +348,32 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Category</ThemedText>
-              <TouchableOpacity
-                style={[
-                  styles.inputField,
-                  {
-                    borderColor: palette.border,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  },
-                ]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/categories',
-                    params: {
-                      current: singleDraft.category,
-                      currentSubcategory: singleDraft.subcategoryId,
-                      returnTo: 'log-expenses',
-                    },
-                  })
-                }
-              >
-                <ThemedText style={[styles.categoryText, { color: palette.text }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                  Category
                 </ThemedText>
-                <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.categoryInput}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/categories',
+                      params: {
+                        current: singleDraft.category,
+                        currentSubcategory: singleDraft.subcategoryId,
+                        returnTo: 'log-expenses',
+                      },
+                    })
+                  }
+                >
+                  <ThemedText style={[styles.categoryText, { color: palette.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
+                  </ThemedText>
+                  <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
+                </TouchableOpacity>
+              </View>
               {categoryError ? (
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
                   {categoryError}
@@ -381,16 +382,18 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>
-                {transactionType === 'income' ? 'Payer' : 'Payee'}
-              </ThemedText>
-              <TextInput
-                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
-                placeholderTextColor={palette.icon}
-                value={singleDraft.payee}
-                onChangeText={(value) => handleSingleChange('payee', value)}
-              />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                  {transactionType === 'income' ? 'Payer' : 'Payee'}
+                </ThemedText>
+                <TextInput
+                  style={[styles.notchedInput, { color: palette.text }]}
+                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                  placeholderTextColor={palette.icon}
+                  value={singleDraft.payee}
+                  onChangeText={(value) => handleSingleChange('payee', value)}
+                />
+              </View>
               {payeeError ? (
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
                   {payeeError}
@@ -399,27 +402,35 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Note</ThemedText>
-              <TextInput
-                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                placeholder="Add a note"
-                placeholderTextColor={palette.icon}
-                value={singleDraft.note}
-                onChangeText={(value) => handleSingleChange('note', value)}
-                onFocus={() => scrollToInput(280)} // Scroll to position that properly shows note field
-              />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                  Note
+                </ThemedText>
+                <TextInput
+                  style={[styles.notchedInput, { color: palette.text }]}
+                  placeholder="Add a note"
+                  placeholderTextColor={palette.icon}
+                  value={singleDraft.note}
+                  onChangeText={(value) => handleSingleChange('note', value)}
+                  onFocus={() => scrollToInput(280)}
+                />
+              </View>
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
-              <TextInput
-                style={[styles.inputField, { borderColor: palette.border, color: palette.text }]}
-                placeholder="Eg: groceries, weekend"
-                placeholderTextColor={palette.icon}
-                value={singleDraft.labels}
-                onChangeText={(value) => handleSingleChange('labels', value)}
-                onFocus={() => scrollToInput(350)} // Scroll to position that properly shows labels field
-              />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.background }]}>
+                  Labels
+                </ThemedText>
+                <TextInput
+                  style={[styles.notchedInput, { color: palette.text }]}
+                  placeholder="Eg: groceries, weekend"
+                  placeholderTextColor={palette.icon}
+                  value={singleDraft.labels}
+                  onChangeText={(value) => handleSingleChange('labels', value)}
+                  onFocus={() => scrollToInput(350)}
+                />
+              </View>
             </View>
           </ThemedView>
 
