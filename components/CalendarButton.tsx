@@ -54,6 +54,7 @@ const weekDayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const CalendarButton: React.FC = () => {
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const colorScheme = useColorScheme();
@@ -63,6 +64,7 @@ export const CalendarButton: React.FC = () => {
 
   useEffect(() => {
     if (calendarVisible) {
+      setCalendarMode('presets');
       if (filters.dateRange) {
         setDraftRange({ start: startOfDay(filters.dateRange.start), end: startOfDay(filters.dateRange.end) });
         setMonthCursor(startOfDay(filters.dateRange.start));
@@ -182,88 +184,114 @@ export const CalendarButton: React.FC = () => {
               },
             ]}
           >
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: palette.text }]}>Select Period</Text>
-              <TouchableOpacity onPress={() => setCalendarVisible(false)}>
-                <MaterialCommunityIcons name="close" size={20} color={palette.icon} />
-              </TouchableOpacity>
-            </View>
+            {calendarMode === 'presets' ? (
+              <>
+                <View style={styles.sheetHeader}>
+                  <Text style={[styles.sheetTitle, { color: palette.text }]}>Select Period</Text>
+                  <TouchableOpacity onPress={() => setCalendarVisible(false)}>
+                    <MaterialCommunityIcons name="close" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.quickRow}>
-              <TouchableOpacity
-                style={[styles.quickChip, { borderColor: palette.border }]}
-                onPress={() => quickSelect('week')}
-              >
-                <Text style={{ color: palette.text }}>This Week</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickChip, { borderColor: palette.border }]}
-                onPress={() => quickSelect('month')}
-              >
-                <Text style={{ color: palette.text }}>This Month</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickChip, { borderColor: palette.border }]}
-                onPress={() => quickSelect('all')}
-              >
-                <Text style={{ color: palette.text }}>All Time</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.presetList}>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('week')}
+                  >
+                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Week</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('month')}
+                  >
+                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Month</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('all')}
+                  >
+                    <Text style={[styles.presetLabel, { color: palette.text }]}>All Time</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => setCalendarMode('custom')}
+                  >
+                    <Text style={[styles.presetLabel, { color: palette.text }]}>Custom</Text>
+                    <MaterialCommunityIcons name="calendar-range" size={18} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.sheetHeader}>
+                  <TouchableOpacity onPress={() => setCalendarMode('presets')} style={styles.backButton}>
+                    <MaterialCommunityIcons name="chevron-left" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <Text style={[styles.sheetTitle, { color: palette.text }]}>Custom Range</Text>
+                  <TouchableOpacity onPress={handleConfirm}>
+                    <Text style={{ color: palette.tint, fontWeight: FontWeights.semibold as any }}>Done</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.monthHeader}>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))} style={styles.navButton}>
-                <MaterialCommunityIcons name="chevron-left" size={22} color={palette.icon} />
-              </TouchableOpacity>
-              <Text style={[styles.monthTitle, { color: palette.text }]}>{formatMonthTitle(monthCursor)}</Text>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))} style={styles.navButton}>
-                <MaterialCommunityIcons name="chevron-right" size={22} color={palette.icon} />
-              </TouchableOpacity>
-            </View>
+                <View style={styles.monthHeader}>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))} style={styles.navButton}>
+                    <MaterialCommunityIcons name="chevron-left" size={22} color={palette.icon} />
+                  </TouchableOpacity>
+                  <Text style={[styles.monthTitle, { color: palette.text }]}>{formatMonthTitle(monthCursor)}</Text>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))} style={styles.navButton}>
+                    <MaterialCommunityIcons name="chevron-right" size={22} color={palette.icon} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.weekHeaderRow}>
-              {weekDayLabels.map(label => (
-                <Text key={label} style={[styles.weekHeaderCell, { color: palette.icon }]}>{label}</Text>
-              ))}
-            </View>
+                <View style={styles.weekHeaderRow}>
+                  {weekDayLabels.map(label => (
+                    <Text key={label} style={[styles.weekHeaderCell, { color: palette.icon }]}>{label}</Text>
+                  ))}
+                </View>
 
-            {monthMatrix.map((week, idx) => (
-              <View key={idx} style={styles.weekRow}>
-                {week.map(day => {
-                  const inMonth = day.getMonth() === monthCursor.getMonth();
-                  const isStart = draftRange?.start && isSameDay(draftRange.start, day);
-                  const isEnd = draftRange?.end && isSameDay(draftRange.end, day);
-                  const isActive = isWithinDraftRange(day);
-                  return (
-                    <TouchableOpacity
-                      key={day.toISOString()}
-                      onPress={() => handleDayPress(day)}
-                      style={[
-                        styles.dayCell,
-                        isActive && { backgroundColor: palette.highlight },
-                        (isStart || isEnd) && { backgroundColor: palette.tint },
-                        !inMonth && { opacity: 0.35 },
-                      ]}
-                    >
-                      <Text style={{ color: (isStart || isEnd) ? palette.background : palette.text }}>{day.getDate()}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))}
+                {monthMatrix.map((week, idx) => (
+                  <View key={idx} style={styles.weekRow}>
+                    {week.map(day => {
+                      const inMonth = day.getMonth() === monthCursor.getMonth();
+                      const isStart = draftRange?.start && isSameDay(draftRange.start, day);
+                      const isEnd = draftRange?.end && isSameDay(draftRange.end, day);
+                      const isActive = isWithinDraftRange(day);
+                      return (
+                        <TouchableOpacity
+                          key={day.toISOString()}
+                          onPress={() => handleDayPress(day)}
+                          style={[
+                            styles.dayCell,
+                            isActive && { backgroundColor: palette.highlight },
+                            (isStart || isEnd) && { backgroundColor: palette.tint },
+                            !inMonth && { opacity: 0.35 },
+                          ]}
+                        >
+                          <Text style={{ color: (isStart || isEnd) ? palette.background : palette.text }}>{day.getDate()}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
 
-            <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: palette.tint }]}
-              onPress={handleConfirm}
-            >
-              <Text style={{ color: palette.background, fontWeight: FontWeights.semibold as any }}>Confirm</Text>
-            </TouchableOpacity>
-            {filters.dateRange && (
-              <TouchableOpacity
-                style={[styles.clearButton, { borderColor: palette.error }]}
-                onPress={() => applyRange(null)}
-              >
-                <Text style={{ color: palette.error, fontWeight: FontWeights.semibold as any }}>Clear Filter</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmButton, { backgroundColor: palette.tint }]}
+                  onPress={handleConfirm}
+                >
+                  <Text style={{ color: palette.background, fontWeight: FontWeights.semibold as any }}>Apply Range</Text>
+                </TouchableOpacity>
+                {filters.dateRange && (
+                  <TouchableOpacity
+                    style={[styles.clearButton, { borderColor: palette.error }]}
+                    onPress={() => applyRange(null)}
+                  >
+                    <Text style={{ color: palette.error, fontWeight: FontWeights.semibold as any }}>Clear Filter</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -294,16 +322,24 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xl,
     fontWeight: FontWeights.heavy as any,
   },
-  quickRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.lg,
+  presetList: {
+    gap: Spacing.sm,
   },
-  quickChip: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.sm,
+  presetButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  presetLabel: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.medium as any,
+  },
+  backButton: {
+    padding: Spacing.xs,
     marginRight: Spacing.sm,
   },
   monthHeader: {

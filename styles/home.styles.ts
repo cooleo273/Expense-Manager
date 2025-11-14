@@ -35,13 +35,13 @@ export const homeStyles = StyleSheet.create({
   },
   leftSide: {
     flexDirection: 'column',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     maxWidth: '60%',
   },
   balanceLabel: {
     fontSize: FontSizes.lg,
     color: '#6B7280',
-    marginBottom: Spacing.sm,
+    marginBottom: 0,
   },
   balanceValue: {
     fontSize: FontSizes.huge,
@@ -119,6 +119,10 @@ export const homeStyles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+  },
+  recordDivider: {
+    height: StyleSheet.hairlineWidth,
+    opacity: 0.7,
   },
   recordIcon: {
     width: 44,

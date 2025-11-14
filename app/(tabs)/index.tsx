@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ import { Colors, IconSizes } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
+import { formatFriendlyDate } from '@/utils/date';
 import { mockRecordsData } from '../../constants/mock-data';
 import { StorageService } from '../../services/storage';
 
@@ -76,7 +77,6 @@ export default function HomeScreen() {
       const transformedData = transactionsToUse.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);
@@ -86,7 +86,6 @@ export default function HomeScreen() {
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);
@@ -288,33 +287,40 @@ export default function HomeScreen() {
             <ThemedText type="subtitle">Records</ThemedText>
             <ThemedText style={{ color: palette.icon }}>{displayedRecords.length} of {filteredRecords.length} shown</ThemedText>
           </View>
-          {displayedRecords.map((record) => {
+          {displayedRecords.map((record, index) => {
             const category = getCategoryDefinition(record.categoryId);
             const categoryColor = getCategoryColor(record.categoryId, palette.tint);
             const iconName = getCategoryIcon(record.categoryId, record.type === 'income' ? 'wallet-plus' : 'shape-outline');
             const isIncome = category?.type === 'income' || record.type === 'income';
+            const readableDate = formatFriendlyDate(record.date);
+            const amountColor = isIncome ? palette.success : palette.error;
 
             return (
-              <View key={record.id} style={styles.recordRow}>
-                <View style={[styles.recordIcon, { backgroundColor: `${categoryColor}20` }]}
-                >
-                  <MaterialCommunityIcons
-                    name={iconName}
-                    size={20}
-                    color={categoryColor}
-                  />
+              <Fragment key={record.id}>
+                <View style={styles.recordRow}>
+                  <View style={[styles.recordIcon, { backgroundColor: `${categoryColor}20` }]}
+                  >
+                    <MaterialCommunityIcons
+                      name={iconName}
+                      size={20}
+                      color={categoryColor}
+                    />
+                  </View>
+                  <View style={styles.recordContent}>
+                    <ThemedText style={styles.recordTitle}>{record.title}</ThemedText>
+                    <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
+                  </View>
+                  <View style={styles.recordMeta}>
+                    <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: amountColor }]}>
+                      {isIncome ? '+' : '-'}{formatCurrency(record.amount)}
+                    </ThemedText>
+                    <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{readableDate}</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.recordContent}>
-                  <ThemedText style={styles.recordTitle}>{record.title}</ThemedText>
-                  <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
-                </View>
-                <View style={styles.recordMeta}>
-                  <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: categoryColor }]}>
-                    {isIncome ? '+' : '-'}{formatCurrency(record.amount)}
-                  </ThemedText>
-                  <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{record.dateLabel}</ThemedText>
-                </View>
-              </View>
+                {index < displayedRecords.length - 1 && (
+                  <View style={[styles.recordDivider, { backgroundColor: palette.border }]} />
+                )}
+              </Fragment>
             );
           })}
 

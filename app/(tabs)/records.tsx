@@ -11,6 +11,7 @@ import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId 
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
+import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
 import { mockRecordsData } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
@@ -28,14 +29,6 @@ type DraftRange = {
   start: Date;
   end?: Date;
 };
-
-const startOfDay = (date: Date) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 const addMonths = (date: Date, months: number) => {
   const next = new Date(date);
@@ -82,6 +75,7 @@ export default function RecordsScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -95,7 +89,6 @@ export default function RecordsScreen() {
       const transformedData = transactionsToUse.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);
@@ -105,7 +98,6 @@ export default function RecordsScreen() {
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);
@@ -180,6 +172,31 @@ export default function RecordsScreen() {
 
     return sorted;
   }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
+
+  const appliedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedRecordType !== 'all') {
+      count += 1;
+    }
+    if (filters.selectedCategories.length > 0) {
+      count += 1;
+    }
+    if (filters.dateRange) {
+      count += 1;
+    }
+    if (filters.searchTerm) {
+      count += 1;
+    }
+    if (filters.searchCategory && filters.searchCategory !== 'all') {
+      count += 1;
+    }
+    return count;
+  }, [filters.dateRange, filters.searchCategory, filters.searchTerm, filters.selectedCategories, selectedRecordType]);
+
+  const filterIconColor = appliedFiltersCount > 0 ? palette.tint : palette.icon;
+  const sortIconColor = sortOption === 'date-desc' ? palette.icon : palette.tint;
+  const filterLabel = appliedFiltersCount > 0 ? `${appliedFiltersCount} filter${appliedFiltersCount > 1 ? 's' : ''} applied` : 'All filters';
+  const sortLabel = SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Date (desc)';
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 
@@ -259,6 +276,7 @@ export default function RecordsScreen() {
 
   useEffect(() => {
     if (showCalendarModal) {
+      setCalendarMode('presets');
       if (filters.dateRange) {
         setDraftRange({ start: startOfDay(filters.dateRange.start), end: startOfDay(filters.dateRange.end) });
         setMonthCursor(startOfDay(filters.dateRange.start));
@@ -269,12 +287,12 @@ export default function RecordsScreen() {
     }
   }, [showCalendarModal, filters.dateRange]);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, type: 'income' | 'expense') => {
     const abs = Math.abs(value).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-    return `${value >= 0 ? '+' : '-'}$${abs}`;
+    return `${type === 'income' ? '+' : '-'}$${abs}`;
   };
 
   const selectedCategoryLabels = filters.selectedCategories
@@ -332,86 +350,98 @@ export default function RecordsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={{ flex: 1, overflow: 'visible' }}>
-        <FlatList
-          contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
-          ListHeaderComponent={
-          <View style={styles.header}>
-            <View style={styles.filterRow}>
+        <View style={styles.header}>
+          <View style={styles.filterRow}>
+            <View style={styles.chipWrapper}>
               <TransactionTypeFilter
                 value={selectedRecordType}
                 onChange={setSelectedRecordType}
                 options={['expense', 'income', 'all']}
                 style={styles.chipRow}
                 variant="compact"
+                labelSize="small"
               />
-              <View style={styles.actionIcons}>
-                <View style={{ alignItems: 'center' }}>
+            </View>
+            <View style={styles.actionIcons}>
+              <View style={{ alignItems: 'center' }}>
+                <TouchableOpacity
+                  style={[styles.actionIcon, { borderColor: filterIconColor }]}
+                  onPress={() => setShowFilters(true)}
+                >
+                  <MaterialCommunityIcons name="tune-variant" size={18} color={filterIconColor} />
+                </TouchableOpacity>
+                <ThemedText style={{ fontSize: FontSizes.xs, color: filterIconColor, marginTop: 2 }}>
+                  {filterLabel}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <View style={styles.sortContainer}>
                   <TouchableOpacity
-                    style={[styles.actionIcon, { borderColor: palette.border }]}
-                    onPress={() => setShowFilters(true)}
+                    style={[styles.actionIcon, { borderColor: sortIconColor }]}
+                    onPress={() => setShowSortDropdown(!showSortDropdown)}
                   >
-                    <MaterialCommunityIcons name="tune-variant" size={18} color={palette.icon} />
+                    <MaterialCommunityIcons name="swap-vertical" size={18} color={sortIconColor} />
                   </TouchableOpacity>
-                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
-                    {selectedRecordType.toUpperCase()}
-                  </ThemedText>
                 </View>
-                <View style={{ alignItems: 'center' }}>
-                  <View style={styles.sortContainer}>
-                    <TouchableOpacity
-                      style={[styles.actionIcon, { borderColor: palette.border }]}
-                      onPress={() => setShowSortDropdown(!showSortDropdown)}
-                    >
-                      <MaterialCommunityIcons name="swap-vertical" size={18} color={palette.icon} />
-                    </TouchableOpacity>
-                  </View>
-                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
-                    {SORT_OPTIONS.find(o => o.value === sortOption)?.label}
-                  </ThemedText>
-                </View>
+                <ThemedText style={{ fontSize: FontSizes.xs, color: sortIconColor, marginTop: 2 }}>
+                  {sortLabel}
+                </ThemedText>
               </View>
             </View>
           </View>
-        }
-        data={filteredAndSortedData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.itemRow}>
-            <View
-              style={[
-                styles.iconBadge,
-                {
-                  backgroundColor: `${getCategoryColor(item.categoryId, palette.tint)}15`,
-                },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline')}
-                size={20}
-                color={getCategoryColor(item.categoryId, palette.tint)}
-              />
-            </View>
-            <View style={styles.itemContent}>
-              <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
-              <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
-              <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
-            </View>
-            <View style={styles.itemMeta}>
-              <ThemedText
-                style={[
-                  styles.itemAmount,
-                  { color: item.amount >= 0 ? palette.success : palette.error },
-                ]}
-              >
-                {formatCurrency(item.amount)}
-              </ThemedText>
-              <ThemedText style={[styles.itemDate, { color: palette.icon }]}>{item.dateLabel}</ThemedText>
-            </View>
-          </View>
-        )}
-        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: palette.border }]} />}
-        ListFooterComponent={<View style={{ height: 40 }} />}
-      />
+        </View>
+
+        <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+          <FlatList
+            data={filteredAndSortedData}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => {
+              const isLast = index === filteredAndSortedData.length - 1;
+              const amountColor = item.type === 'income' ? palette.success : palette.error;
+
+              return (
+                <View style={styles.itemContainer}>
+                  <View style={styles.itemRow}>
+                    <View
+                      style={[
+                        styles.iconBadge,
+                        {
+                          backgroundColor: `${getCategoryColor(item.categoryId, palette.tint)}15`,
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline')}
+                        size={20}
+                        color={getCategoryColor(item.categoryId, palette.tint)}
+                      />
+                    </View>
+                    <View style={styles.itemContent}>
+                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
+                      <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
+                    </View>
+                    <View style={styles.itemMeta}>
+                      <ThemedText
+                        style={[
+                          styles.itemAmount,
+                          { color: amountColor },
+                        ]}
+                      >
+                        {formatCurrency(item.amount, item.type)}
+                      </ThemedText>
+                      <ThemedText style={[styles.itemDate, { color: palette.icon }]}>{formatFriendlyDate(item.date)}</ThemedText>
+                    </View>
+                  </View>
+                  {!isLast && <View style={[styles.listSeparator, { backgroundColor: palette.border }]} />}
+                </View>
+              );
+            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: Spacing.lg }}
+            ListFooterComponent={<View style={{ height: Spacing.md }} />}
+          />
+        </View>
       </View>
 
       <Modal transparent visible={showSortDropdown} animationType="none" onRequestClose={() => setShowSortDropdown(false)}>
@@ -509,6 +539,7 @@ export default function RecordsScreen() {
                             onChange={setSelectedRecordType}
                             options={['expense', 'income', 'all']}
                             variant="compact"
+                              labelSize="small"
                             style={{ marginTop: Spacing.sm }}
                           />
                         )}
@@ -562,78 +593,111 @@ export default function RecordsScreen() {
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowCalendarModal(false)} />
           <View style={[styles.calendarSheet, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <View style={styles.calendarHeader}>
-              <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
-              </TouchableOpacity>
-              <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Select Date Range</ThemedText>
-              <TouchableOpacity onPress={handleConfirm}>
-                <ThemedText style={{ color: accent, fontWeight: '600' }}>DONE</ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.quickSelectRow}>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('all')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>All Time</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('week')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>This Week</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('month')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>This Month</ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.monthHeader}>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))}>
-                <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
-              </TouchableOpacity>
-              <ThemedText style={[styles.monthTitle, { color: palette.text }]}>
-                {formatMonthTitle(monthCursor)}
-              </ThemedText>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))}>
-                <MaterialCommunityIcons name="chevron-right" size={24} color={palette.icon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.weekDayHeader}>
-              {weekDayLabels.map((day) => (
-                <ThemedText key={day} style={[styles.weekDayLabel, { color: palette.icon }]}>
-                  {day}
-                </ThemedText>
-              ))}
-            </View>
-            <View style={styles.calendarGrid}>
-              {monthMatrix.map((week, weekIndex) => (
-                <View key={weekIndex} style={styles.weekRow}>
-                  {week.map((date, dayIndex) => {
-                    const isCurrentMonth = date.getMonth() === monthCursor.getMonth();
-                    const isSelected = isWithinDraftRange(date);
-                    const isToday = isSameDay(date, new Date());
-                    return (
-                      <TouchableOpacity
-                        key={dayIndex}
-                        style={[
-                          styles.dayCell,
-                          isSelected && { backgroundColor: `${accent}20` },
-                          isToday && { borderColor: accent, borderWidth: 1 },
-                        ]}
-                        onPress={() => handleDayPress(date)}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.dayText,
-                            {
-                              color: isCurrentMonth ? palette.text : palette.icon,
-                              fontWeight: isSelected ? '600' : '400',
-                            },
-                          ]}
-                        >
-                          {date.getDate()}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
+            {calendarMode === 'presets' ? (
+              <>
+                <View style={styles.calendarHeader}>
+                  <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
+                    <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Select Time Period</ThemedText>
+                  <View style={{ width: 24 }} />
                 </View>
-              ))}
-            </View>
+                <View style={styles.calendarPresetList}>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('week')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>This Week</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('month')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>This Month</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('all')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>All Time</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => setCalendarMode('custom')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>Custom</ThemedText>
+                    <MaterialCommunityIcons name="calendar-range" size={20} color={accent} />
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.calendarHeader}>
+                  <TouchableOpacity onPress={() => setCalendarMode('presets')}>
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Custom Range</ThemedText>
+                  <TouchableOpacity onPress={handleConfirm}>
+                    <ThemedText style={{ color: accent, fontWeight: '600' }}>DONE</ThemedText>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.monthHeader}>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))}>
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.monthTitle, { color: palette.text }]}>
+                    {formatMonthTitle(monthCursor)}
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))}>
+                    <MaterialCommunityIcons name="chevron-right" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.weekDayHeader}>
+                  {weekDayLabels.map((day) => (
+                    <ThemedText key={day} style={[styles.weekDayLabel, { color: palette.icon }]}>
+                      {day}
+                    </ThemedText>
+                  ))}
+                </View>
+                <View style={styles.calendarGrid}>
+                  {monthMatrix.map((week, weekIndex) => (
+                    <View key={weekIndex} style={styles.weekRow}>
+                      {week.map((date, dayIndex) => {
+                        const isCurrentMonth = date.getMonth() === monthCursor.getMonth();
+                        const isSelected = isWithinDraftRange(date);
+                        const isToday = isSameDay(date, new Date());
+                        return (
+                          <TouchableOpacity
+                            key={dayIndex}
+                            style={[
+                              styles.dayCell,
+                              isSelected && { backgroundColor: `${accent}20` },
+                              isToday && { borderColor: accent, borderWidth: 1 },
+                            ]}
+                            onPress={() => handleDayPress(date)}
+                          >
+                            <ThemedText
+                              style={[
+                                styles.dayText,
+                                {
+                                  color: isCurrentMonth ? palette.text : palette.icon,
+                                  fontWeight: isSelected ? '600' : '400',
+                                },
+                              ]}
+                            >
+                              {date.getDate()}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
