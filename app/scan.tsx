@@ -1,13 +1,15 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { mapReceiptToExpense } from '@/utils/receipt-mapper';
 
 export const options = {
   headerShown: false,
@@ -23,7 +25,84 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
   const [permission, requestPermission] = useCameraPermissions();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { showToast } = useToast();
   const cameraRef = useRef<CameraView>(null);
+  const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+
+  const toggleCameraFacing = () => {
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
+  };
+
+  const toggleFlash = () => {
+    setFlash((current) => (current === 'off' ? 'on' : 'off'));
+  };
+
+  const uploadReceipt = useCallback(async (uri: string) => {
+    const endpoint = `${apiBaseUrl}/api/receipt/parse`;
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      name: 'receipt.jpg',
+      type: 'image/jpeg',
+    } as any);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let message = 'Receipt upload failed';
+      try {
+        const errorPayload = await response.json();
+        if (errorPayload?.error) {
+          message = errorPayload.error;
+        }
+      } catch {
+        // ignore
+      }
+      throw new Error(message);
+    }
+
+    return response.json();
+  }, [apiBaseUrl]);
+
+  const takePicture = async () => {
+    if (!cameraRef.current || isProcessing) {
+      return;
+    }
+    try {
+      setIsProcessing(true);
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, base64: false });
+      if (!photo?.uri) {
+        throw new Error('Unable to capture photo');
+      }
+
+      const proxyResponse = await uploadReceipt(photo.uri);
+      const mappedExpense = mapReceiptToExpense(proxyResponse?.fields);
+      if (!mappedExpense) {
+        throw new Error('Receipt fields unavailable');
+      }
+      const encodedFields = encodeURIComponent(JSON.stringify(mappedExpense));
+
+      showToast('Receipt imported');
+      router.replace({
+        pathname: '/log-expenses-list',
+        params: { parsed: encodedFields },
+      });
+    } catch (error) {
+      console.error('Receipt processing failed', error);
+      showToast('Could not process receipt');
+      Alert.alert('Receipt scan failed', 'Please try again or upload another file.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleOpenGallery = () => {
+    Alert.alert('Coming soon', 'Importing receipts from the gallery will arrive in a future update.');
+  };
 
   if (!permission) {
     return <View style={[styles.container, { backgroundColor: palette.background }]} />;
@@ -41,31 +120,6 @@ export default function ScanScreen() {
       </View>
     );
   }
-
-  const toggleCameraFacing = () => {
-    setFacing((current) => (current === 'back' ? 'front' : 'back'));
-  };
-
-  const toggleFlash = () => {
-    setFlash((current) => (current === 'off' ? 'on' : 'off'));
-  };
-
-  const takePicture = async () => {
-    if (!cameraRef.current) {
-      return;
-    }
-    try {
-      const photo = await cameraRef.current.takePictureAsync();
-      Alert.alert('Receipt captured', `Photo saved at ${photo?.uri}`);
-      router.back();
-    } catch (_error) {
-      Alert.alert('Error', 'Failed to take picture');
-    }
-  };
-
-  const handleOpenGallery = () => {
-    Alert.alert('Coming soon', 'Importing receipts from the gallery will arrive in a future update.');
-  };
 
   return (
     <View style={styles.container}>
@@ -129,7 +183,15 @@ export default function ScanScreen() {
             </TouchableOpacity>
             <View style={styles.captureSection}>
               <Text style={styles.zoomLabel}>1x</Text>
-              <TouchableOpacity accessibilityRole="button" onPress={takePicture} style={styles.captureOuter}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={takePicture}
+                style={[
+                  styles.captureOuter,
+                  isProcessing && { opacity: 0.6 },
+                ]}
+                disabled={isProcessing}
+              >
                 <View style={styles.captureInner} />
               </TouchableOpacity>
             </View>
@@ -143,6 +205,12 @@ export default function ScanScreen() {
           </View>
         </View>
       </CameraView>
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.processingText}>Processing receipt…</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -278,5 +346,16 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: BorderRadius.round,
     backgroundColor: '#FFFFFF',
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  processingText: {
+    color: '#FFFFFF',
+    marginTop: Spacing.md,
+    fontWeight: '600',
   },
 });

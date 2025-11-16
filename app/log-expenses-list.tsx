@@ -24,10 +24,19 @@ import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
+import { ReceiptImportResult } from '@/types/receipt';
 import { RecordType, SingleDraft } from '@/types/transactions';
 import { subscribeToCategorySelection, subscribeToRecordDetailUpdates } from '@/utils/navigation-events';
 
 type EditableDraftKey = 'amount' | 'category' | 'subcategoryId' | 'payee' | 'note';
+
+const isReceiptImportResult = (payload: unknown): payload is ReceiptImportResult => {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+  const candidate = payload as { draftPatch?: unknown };
+  return candidate.draftPatch !== undefined && candidate.draftPatch !== null && typeof candidate.draftPatch === 'object';
+};
 
 export const options = {
   headerShown: true,
@@ -46,6 +55,7 @@ export default function LogExpensesListScreen() {
   const { filters } = useFilterContext();
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const scanPrefillRef = useRef<string | null>(null);
 
   const scrollToInput = useCallback((yOffset: number) => {
     scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
@@ -220,6 +230,53 @@ export default function LogExpensesListScreen() {
       },
     ]);
   }, [records, saveRecords, showToast]);
+
+  useEffect(() => {
+    const parsedParam = params.parsed;
+    if (typeof parsedParam !== 'string' || parsedParam.length === 0) {
+      scanPrefillRef.current = null;
+      return;
+    }
+    if (scanPrefillRef.current === parsedParam) {
+      return;
+    }
+
+    try {
+      const decoded = decodeURIComponent(parsedParam);
+      const payload = JSON.parse(decoded);
+      if (!isReceiptImportResult(payload)) {
+        return;
+      }
+
+      const { draftPatch } = payload;
+
+      setRecords((prev) => {
+        if (prev.length === 0) {
+          return prev;
+        }
+        const [first, ...rest] = prev;
+        const nextFirst: SingleDraft = {
+          ...first,
+          amount: draftPatch.amount ?? first.amount,
+          payee: draftPatch.payee ?? first.payee,
+          note: draftPatch.note ?? first.note,
+          category: draftPatch.category ?? first.category,
+          subcategoryId: draftPatch.subcategoryId ?? first.subcategoryId,
+        };
+
+        return [nextFirst, ...rest];
+      });
+
+      setRecordErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
+      setRecordNoteErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
+      setRecordCategoryErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
+
+      showToast('Receipt fields imported');
+      scanPrefillRef.current = parsedParam;
+    } catch (error) {
+      console.error('Failed to import scan payload', error);
+    }
+  }, [params.parsed, showToast]);
 
   useEffect(() => {
     const unsubscribeCategory = subscribeToCategorySelection((payload) => {
