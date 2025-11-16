@@ -50,7 +50,7 @@ export default function TabLayout() {
             title: 'Records',
             tabBarIcon: ({ color, size }) => (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
-                <MaterialCommunityIcons name="menu" color={color} size={size} />
+                <MaterialCommunityIcons name="format-list-bulleted" color={color} size={size} />
               </View>
             ),
             headerLeft: () => <MenuButton />,

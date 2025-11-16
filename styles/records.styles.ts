@@ -14,6 +14,13 @@ export const recordsStyles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.md,
   },
+  recordsCard: {
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.sm,
+    overflow: 'hidden',
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -33,10 +40,16 @@ export const recordsStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  chipWrapper: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
+    alignSelf: 'flex-start',
   },
   chip: {
     paddingVertical: Spacing.sm,
@@ -57,10 +70,9 @@ export const recordsStyles = StyleSheet.create({
     position: 'relative',
   },
   actionIcon: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -71,7 +83,11 @@ export const recordsStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.lg,
+  },
+  itemContainer: {
+    backgroundColor: 'transparent',
   },
   iconBadge: {
     width: 44,
@@ -85,11 +101,11 @@ export const recordsStyles = StyleSheet.create({
     gap: 0,
   },
   itemTitle: {
-    fontSize: FontSizes.md,
+    fontSize: FontSizes.lg,
     fontWeight: FontWeights.semibold as any,
   },
   itemSubtitle: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
   },
   itemNote: {
     fontSize: FontSizes.xs,
@@ -99,7 +115,7 @@ export const recordsStyles = StyleSheet.create({
     gap: Spacing.sm,
   },
   itemAmount: {
-    fontSize: FontSizes.lg,
+    fontSize: FontSizes.md,
     fontWeight: FontWeights.bold as any,
   },
   itemDate: {
@@ -107,6 +123,27 @@ export const recordsStyles = StyleSheet.create({
   },
   separator: {
     height: StyleSheet.hairlineWidth,
+  },
+  listSeparator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: Spacing.lg,
+    marginRight: Spacing.lg,
+  },
+  calendarPresetList: {
+    gap: Spacing.md,
+  },
+  presetButton: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  presetButtonText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.medium as any,
   },
   modalOverlay: {
     flex: 1,
@@ -237,20 +274,6 @@ export const recordsStyles = StyleSheet.create({
     fontSize: FontSizes.xxxl,
     fontWeight: FontWeights.bold as any,
   },
-  quickSelectRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: Spacing.lg,
-  },
-  quickSelectButton: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  quickSelectText: {
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.medium as any,
-  },
   monthHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,5 +310,17 @@ export const recordsStyles = StyleSheet.create({
   },
   dayText: {
     fontSize: FontSizes.md,
+  },
+  fabBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(6,12,20,0.85)',
+  },
+  fabGroupContainer: {
+    position: 'absolute',
+    right: Spacing.xl,
+  },
+  fabMain: {
+    borderRadius: BorderRadius.round,
+    ...Shadows.heavy,
   },
 });

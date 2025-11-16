@@ -1,9 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FAB, Portal } from 'react-native-paper';
+import type { FABGroupProps } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -11,7 +14,8 @@ import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId 
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles } from '@/styles/records.styles';
-import { mockRecordsData } from '../../constants/mock-data';
+import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
+import { getAccountMeta, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
@@ -28,14 +32,6 @@ type DraftRange = {
   start: Date;
   end?: Date;
 };
-
-const startOfDay = (date: Date) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 const addMonths = (date: Date, months: number) => {
   const next = new Date(date);
@@ -70,9 +66,20 @@ const formatMonthTitle = (date: Date) =>
 
 const weekDayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
+  if (!labels) {
+    return false;
+  }
+  if (Array.isArray(labels)) {
+    return labels.some((label) => label.toLowerCase().includes(search));
+  }
+  return labels.toLowerCase().includes(search);
+};
+
 export default function RecordsScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const tabBarHeight = useBottomTabBarHeight();
   const accent = palette.tint;
   const router = useRouter();
   const { filters, setSelectedCategories, setDateRange } = useFilterContext();
@@ -82,31 +89,71 @@ export default function RecordsScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [fabOpen, setFabOpen] = useState(false);
+  const isFocused = useIsFocused();
+
+  const handleFabNavigate = useCallback(
+    (path: string) => {
+      setFabOpen(false);
+      router.push(path);
+    },
+    [router]
+  );
+
+  const fabActions = useMemo<FABGroupProps['actions']>(
+    () => [
+      {
+        icon: 'camera',
+        label: 'Scan Receipt',
+        labelTextColor: '#FFFFFF',
+        color: palette.accent,
+        style: { backgroundColor: palette.card, borderRadius: 28 },
+        onPress: () => handleFabNavigate('/scan'),
+        small: true,
+      },
+      {
+        icon: 'plus',
+        label: 'Add Record',
+        labelTextColor: '#FFFFFF',
+        color: '#FFFFFF',
+        style: { backgroundColor: palette.tint, transform: [{ scale: 1.1 }], borderRadius: 28 },
+        onPress: () => handleFabNavigate('/log-expenses'),
+        small: false,
+      },
+    ],
+    [handleFabNavigate, palette]
+  );
 
   const loadTransactions = useCallback(async () => {
     try {
       const data = await StorageService.getTransactions();
-      // Use mock data if no real data exists
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      // Transform data to match UI expectations
-      const transformedData = transactionsToUse.map(transaction => ({
-        ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
-      }));
+      const transformedData = transactionsToUse.map(transaction => {
+        const subtitle = transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
+        const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
+        return {
+          ...transaction,
+          accountId: resolveAccountId(transaction.accountId, transaction.account),
+          subtitle,
+          date: dateValue,
+        };
+      });
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      // Fallback to mock data on error
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
-        subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
+        accountId: resolveAccountId(transaction.accountId, transaction.account),
+        date: transaction.date instanceof Date ? transaction.date : new Date(transaction.date),
+        subtitle: transaction.subtitle
+          ? transaction.subtitle
+          : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`,
       }));
       setTransactions(transformedData);
     }
@@ -122,8 +169,20 @@ export default function RecordsScreen() {
     }, [loadTransactions])
   );
 
+  useEffect(() => {
+    if (!isFocused) {
+      setFabOpen(false);
+    }
+  }, [isFocused]);
+
   const filteredAndSortedData = useMemo(() => {
     const filtered = transactions.filter((item) => {
+      if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+        if (item.accountId !== filters.selectedAccount) {
+          return false;
+        }
+      }
+
       if (selectedRecordType !== 'all' && selectedRecordType !== item.type) {
         return false;
       }
@@ -153,7 +212,7 @@ export default function RecordsScreen() {
             !item.subtitle.toLowerCase().includes(search) &&
             !(item.payee && item.payee.toLowerCase().includes(search)) &&
             !(item.note && item.note.toLowerCase().includes(search)) &&
-            !(item.labels && item.labels.toLowerCase().includes(search))) {
+            !matchesLabelsSearch(item.labels, search)) {
           return false;
         }
       }
@@ -179,7 +238,35 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
+  }, [selectedRecordType, sortOption, filters.selectedAccount, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
+
+  const appliedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+      count += 1;
+    }
+    if (selectedRecordType !== 'all') {
+      count += 1;
+    }
+    if (filters.selectedCategories.length > 0) {
+      count += 1;
+    }
+    if (filters.dateRange) {
+      count += 1;
+    }
+    if (filters.searchTerm) {
+      count += 1;
+    }
+    if (filters.searchCategory && filters.searchCategory !== 'all') {
+      count += 1;
+    }
+    return count;
+  }, [filters.dateRange, filters.searchCategory, filters.searchTerm, filters.selectedCategories, selectedRecordType]);
+
+  const filterIconColor = appliedFiltersCount > 0 ? palette.tint : palette.icon;
+  const sortIconColor = sortOption === 'date-desc' ? palette.icon : palette.tint;
+  const filterLabel = appliedFiltersCount > 0 ? `${appliedFiltersCount} filter${appliedFiltersCount > 1 ? 's' : ''} applied` : 'All filters';
+  const sortLabel = SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Date (desc)';
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 
@@ -259,6 +346,7 @@ export default function RecordsScreen() {
 
   useEffect(() => {
     if (showCalendarModal) {
+      setCalendarMode('presets');
       if (filters.dateRange) {
         setDraftRange({ start: startOfDay(filters.dateRange.start), end: startOfDay(filters.dateRange.end) });
         setMonthCursor(startOfDay(filters.dateRange.start));
@@ -269,17 +357,38 @@ export default function RecordsScreen() {
     }
   }, [showCalendarModal, filters.dateRange]);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, type: 'income' | 'expense') => {
     const abs = Math.abs(value).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-    return `${value >= 0 ? '+' : '-'}$${abs}`;
+    return `${type === 'income' ? '+' : '-'}$${abs}`;
   };
 
-  const selectedCategoryLabels = filters.selectedCategories
-    .map(id => getNodeDisplayName(id))
-    .filter((name): name is string => Boolean(name));
+  const formatTimePeriod = (range: DateRange | null) => {
+    if (!range) return 'All Time';
+    const start = range.start;
+    const end = range.end;
+    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) {
+      const startDay = start.toLocaleDateString('en-US', { weekday: 'short' });
+      const endDay = end.toLocaleDateString('en-US', { weekday: 'short' });
+      return `${startDay} - ${endDay}`;
+    } else if (diffDays <= 31) {
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      return `${startMonth} - ${endMonth}`;
+    } else {
+      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+    }
+  };
+
+  const selectedCategoryLabels = useMemo(() => 
+    filters.selectedCategories
+      .map(id => getNodeDisplayName(id))
+      .filter((name): name is string => Boolean(name)),
+    [filters.selectedCategories]
+  );
 
   const filterSections = [
     {
@@ -317,101 +426,115 @@ export default function RecordsScreen() {
     },
     {
       id: 'accounts',
-      title: 'Accounts (All)',
-      detail: undefined,
+      title: filters.selectedAccount === 'all'
+        ? 'Accounts (All)'
+        : `Accounts (${getAccountMeta(filters.selectedAccount)?.name ?? 'Custom'})`,
+      detail: filters.selectedAccount === 'all'
+        ? undefined
+        : getAccountMeta(filters.selectedAccount)?.subtitle,
     },
     {
       id: 'timePeriod',
       title: 'Time Period',
-      detail: filters.dateRange 
-        ? `${filters.dateRange.start.toLocaleDateString()} - ${filters.dateRange.end.toLocaleDateString()}`
-        : 'All Time',
+      detail: formatTimePeriod(filters.dateRange),
     },
   ];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={{ flex: 1, overflow: 'visible' }}>
-        <FlatList
-          contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
-          ListHeaderComponent={
-          <View style={styles.header}>
-            <View style={styles.filterRow}>
+        <View style={styles.header}>
+          <View style={styles.filterRow}>
+            <View style={styles.chipWrapper}>
               <TransactionTypeFilter
                 value={selectedRecordType}
                 onChange={setSelectedRecordType}
                 options={['expense', 'income', 'all']}
                 style={styles.chipRow}
                 variant="compact"
+                labelSize="small"
               />
-              <View style={styles.actionIcons}>
-                <View style={{ alignItems: 'center' }}>
+            </View>
+            <View style={styles.actionIcons}>
+              <View style={{ alignItems: 'center' }}>
+                <TouchableOpacity
+                  style={[styles.actionIcon, { borderColor: filterIconColor }]}
+                  onPress={() => setShowFilters(true)}
+                >
+                  <MaterialCommunityIcons name="tune-variant" size={18} color={filterIconColor} />
+                </TouchableOpacity>
+                <ThemedText style={{ fontSize: FontSizes.xs, color: filterIconColor, marginTop: 2 }}>
+                  {filterLabel}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <View style={styles.sortContainer}>
                   <TouchableOpacity
-                    style={[styles.actionIcon, { borderColor: palette.border }]}
-                    onPress={() => setShowFilters(true)}
+                    style={[styles.actionIcon, { borderColor: sortIconColor }]}
+                    onPress={() => setShowSortDropdown(!showSortDropdown)}
                   >
-                    <MaterialCommunityIcons name="tune-variant" size={18} color={palette.icon} />
+                    <MaterialCommunityIcons name="swap-vertical" size={18} color={sortIconColor} />
                   </TouchableOpacity>
-                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
-                    {selectedRecordType.toUpperCase()}
-                  </ThemedText>
                 </View>
-                <View style={{ alignItems: 'center' }}>
-                  <View style={styles.sortContainer}>
-                    <TouchableOpacity
-                      style={[styles.actionIcon, { borderColor: palette.border }]}
-                      onPress={() => setShowSortDropdown(!showSortDropdown)}
-                    >
-                      <MaterialCommunityIcons name="swap-vertical" size={18} color={palette.icon} />
-                    </TouchableOpacity>
-                  </View>
-                  <ThemedText style={{ fontSize: FontSizes.xs, color: palette.icon, marginTop: 2 }}>
-                    {SORT_OPTIONS.find(o => o.value === sortOption)?.label}
-                  </ThemedText>
-                </View>
+                <ThemedText style={{ fontSize: FontSizes.xs, color: sortIconColor, marginTop: 2 }}>
+                  {sortLabel}
+                </ThemedText>
               </View>
             </View>
           </View>
-        }
-        data={filteredAndSortedData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.itemRow}>
-            <View
-              style={[
-                styles.iconBadge,
-                {
-                  backgroundColor: `${getCategoryColor(item.categoryId, palette.tint)}15`,
-                },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline')}
-                size={20}
-                color={getCategoryColor(item.categoryId, palette.tint)}
-              />
-            </View>
-            <View style={styles.itemContent}>
-              <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
-              <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
-              <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
-            </View>
-            <View style={styles.itemMeta}>
-              <ThemedText
-                style={[
-                  styles.itemAmount,
-                  { color: item.amount >= 0 ? palette.success : palette.error },
-                ]}
-              >
-                {formatCurrency(item.amount)}
-              </ThemedText>
-              <ThemedText style={[styles.itemDate, { color: palette.icon }]}>{item.dateLabel}</ThemedText>
-            </View>
-          </View>
-        )}
-        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: palette.border }]} />}
-        ListFooterComponent={<View style={{ height: 40 }} />}
-      />
+        </View>
+
+        <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+          <FlatList
+            data={filteredAndSortedData}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => {
+              const isLast = index === filteredAndSortedData.length - 1;
+              const amountColor = item.type === 'income' ? palette.success : palette.error;
+
+              return (
+                <View style={styles.itemContainer}>
+                  <View style={styles.itemRow}>
+                    <View
+                      style={[
+                        styles.iconBadge,
+                        {
+                          backgroundColor: `${getCategoryColor(item.categoryId, palette.tint)}15`,
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline')}
+                        size={20}
+                        color={getCategoryColor(item.categoryId, palette.tint)}
+                      />
+                    </View>
+                    <View style={styles.itemContent}>
+                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
+                      <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
+                    </View>
+                    <View style={styles.itemMeta}>
+                      <ThemedText
+                        style={[
+                          styles.itemAmount,
+                          { color: amountColor },
+                        ]}
+                      >
+                        {formatCurrency(item.amount, item.type)}
+                      </ThemedText>
+                      <ThemedText style={[styles.itemDate, { color: palette.icon }]}>{formatFriendlyDate(item.date)}</ThemedText>
+                    </View>
+                  </View>
+                  {!isLast && <View style={[styles.listSeparator, { backgroundColor: palette.border }]} />}
+                </View>
+              );
+            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: Spacing.lg }}
+            ListFooterComponent={<View style={{ height: Spacing.md }} />}
+          />
+        </View>
       </View>
 
       <Modal transparent visible={showSortDropdown} animationType="none" onRequestClose={() => setShowSortDropdown(false)}>
@@ -509,6 +632,7 @@ export default function RecordsScreen() {
                             onChange={setSelectedRecordType}
                             options={['expense', 'income', 'all']}
                             variant="compact"
+                              labelSize="small"
                             style={{ marginTop: Spacing.sm }}
                           />
                         )}
@@ -562,81 +686,131 @@ export default function RecordsScreen() {
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowCalendarModal(false)} />
           <View style={[styles.calendarSheet, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <View style={styles.calendarHeader}>
-              <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
-              </TouchableOpacity>
-              <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Select Date Range</ThemedText>
-              <TouchableOpacity onPress={handleConfirm}>
-                <ThemedText style={{ color: accent, fontWeight: '600' }}>DONE</ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.quickSelectRow}>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('all')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>All Time</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('week')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>This Week</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickSelectButton} onPress={() => quickSelect('month')}>
-                <ThemedText style={[styles.quickSelectText, { color: palette.icon }]}>This Month</ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.monthHeader}>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))}>
-                <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
-              </TouchableOpacity>
-              <ThemedText style={[styles.monthTitle, { color: palette.text }]}>
-                {formatMonthTitle(monthCursor)}
-              </ThemedText>
-              <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))}>
-                <MaterialCommunityIcons name="chevron-right" size={24} color={palette.icon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.weekDayHeader}>
-              {weekDayLabels.map((day) => (
-                <ThemedText key={day} style={[styles.weekDayLabel, { color: palette.icon }]}>
-                  {day}
-                </ThemedText>
-              ))}
-            </View>
-            <View style={styles.calendarGrid}>
-              {monthMatrix.map((week, weekIndex) => (
-                <View key={weekIndex} style={styles.weekRow}>
-                  {week.map((date, dayIndex) => {
-                    const isCurrentMonth = date.getMonth() === monthCursor.getMonth();
-                    const isSelected = isWithinDraftRange(date);
-                    const isToday = isSameDay(date, new Date());
-                    return (
-                      <TouchableOpacity
-                        key={dayIndex}
-                        style={[
-                          styles.dayCell,
-                          isSelected && { backgroundColor: `${accent}20` },
-                          isToday && { borderColor: accent, borderWidth: 1 },
-                        ]}
-                        onPress={() => handleDayPress(date)}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.dayText,
-                            {
-                              color: isCurrentMonth ? palette.text : palette.icon,
-                              fontWeight: isSelected ? '600' : '400',
-                            },
-                          ]}
-                        >
-                          {date.getDate()}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
+            {calendarMode === 'presets' ? (
+              <>
+                <View style={styles.calendarHeader}>
+                  <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
+                    <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Select Time Period</ThemedText>
+                  <View style={{ width: 24 }} />
                 </View>
-              ))}
-            </View>
+                <View style={styles.calendarPresetList}>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('week')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>This Week</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('month')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>This Month</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('all')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>All Time</ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => setCalendarMode('custom')}
+                  >
+                    <ThemedText style={[styles.presetButtonText, { color: palette.text }]}>Custom</ThemedText>
+                    <MaterialCommunityIcons name="calendar-range" size={20} color={accent} />
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.calendarHeader}>
+                  <TouchableOpacity onPress={() => setCalendarMode('presets')}>
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.calendarTitle, { color: palette.text }]}>Custom Range</ThemedText>
+                  <TouchableOpacity onPress={handleConfirm}>
+                    <ThemedText style={{ color: accent, fontWeight: '600' }}>DONE</ThemedText>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.monthHeader}>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, -1))}>
+                    <MaterialCommunityIcons name="chevron-left" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.monthTitle, { color: palette.text }]}>
+                    {formatMonthTitle(monthCursor)}
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => setMonthCursor(prev => addMonths(prev, 1))}>
+                    <MaterialCommunityIcons name="chevron-right" size={24} color={palette.icon} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.weekDayHeader}>
+                  {weekDayLabels.map((day) => (
+                    <ThemedText key={day} style={[styles.weekDayLabel, { color: palette.icon }]}>
+                      {day}
+                    </ThemedText>
+                  ))}
+                </View>
+                <View style={styles.calendarGrid}>
+                  {monthMatrix.map((week, weekIndex) => (
+                    <View key={weekIndex} style={styles.weekRow}>
+                      {week.map((date, dayIndex) => {
+                        const isCurrentMonth = date.getMonth() === monthCursor.getMonth();
+                        const isSelected = isWithinDraftRange(date);
+                        const isToday = isSameDay(date, new Date());
+                        return (
+                          <TouchableOpacity
+                            key={dayIndex}
+                            style={[
+                              styles.dayCell,
+                              isSelected && { backgroundColor: `${accent}20` },
+                              isToday && { borderColor: accent, borderWidth: 1 },
+                            ]}
+                            onPress={() => handleDayPress(date)}
+                          >
+                            <ThemedText
+                              style={[
+                                styles.dayText,
+                                {
+                                  color: isCurrentMonth ? palette.text : palette.icon,
+                                  fontWeight: isSelected ? '600' : '400',
+                                },
+                              ]}
+                            >
+                              {date.getDate()}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
+
+      {isFocused && (
+        <Portal>
+          {fabOpen && <Pressable style={styles.fabBackdrop} onPress={() => setFabOpen(false)} />}
+          <FAB.Group
+            open={fabOpen}
+            visible
+            icon={fabOpen ? 'close' : 'plus'}
+            actions={fabActions}
+            onStateChange={({ open }) => setFabOpen(open)}
+            fabStyle={[styles.fabMain, { backgroundColor: palette.tint }]}
+            backdropColor="transparent"
+            color="white"
+            style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}
+          />
+        </Portal>
+      )}
     </SafeAreaView>
   );
 }

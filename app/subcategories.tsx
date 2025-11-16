@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import { StackActions, useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useMemo } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,11 +10,12 @@ import { ThemedView } from '@/components/themed-view';
 import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, type CategoryKey } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { emitCategorySelection } from '@/utils/navigation-events';
 
 export default function SubcategoriesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
 
   const categoryId = params.category as CategoryKey;
@@ -27,31 +29,38 @@ export default function SubcategoriesScreen() {
   const categoryColor = getCategoryColor(categoryId, palette.tint);
   const iconName = getCategoryIcon(categoryId);
 
-  const handleSubcategorySelect = (subcategoryId: string) => {
-    const paramsToPass: Record<string, string> = {
+  const parsedRecordIndex = useMemo(() => {
+    if (typeof recordIndex === 'string') {
+      const parsed = parseInt(recordIndex, 10);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    }
+    return undefined;
+  }, [recordIndex]);
+
+  const exitToReturn = useCallback(() => {
+    if (returnTo) {
+      navigation.dispatch(StackActions.pop(2));
+      return;
+    }
+    navigation.goBack();
+  }, [navigation, returnTo]);
+
+  const handleEmitSelection = useCallback((subcategoryId?: string) => {
+    emitCategorySelection({
+      target: returnTo ?? '',
       category: categoryId,
-      subcategory: subcategoryId,
-    };
-    if (batchIndex) {
-      paramsToPass.batchIndex = batchIndex;
-    }
-    if (recordIndex) {
-      paramsToPass.recordIndex = recordIndex;
-    }
-    router.push({ pathname: `/${returnTo}` as any, params: paramsToPass });
+      subcategoryId,
+      recordIndex: parsedRecordIndex,
+    });
+    exitToReturn();
+  }, [categoryId, exitToReturn, parsedRecordIndex, returnTo]);
+
+  const handleSubcategorySelect = (subcategoryId: string) => {
+    handleEmitSelection(subcategoryId);
   };
 
   const handleGeneralSelect = () => {
-    const paramsToPass: Record<string, string> = {
-      category: categoryId,
-    };
-    if (batchIndex) {
-      paramsToPass.batchIndex = batchIndex;
-    }
-    if (recordIndex) {
-      paramsToPass.recordIndex = recordIndex;
-    }
-    router.push({ pathname: `/${returnTo}` as any, params: paramsToPass });
+    handleEmitSelection();
   };
 
   if (!category) {
