@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,7 +11,7 @@ import { TransactionTypeFilter, TransactionTypeValue } from '@/components/Transa
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/constants/categories';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { mockRecordsData } from '../../constants/mock-data';
@@ -18,6 +19,55 @@ import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const formatDateRange = (range: { start: Date; end: Date } | null) => {
+  if (!range) {
+    return 'All Time';
+  }
+
+  const { start, end } = range;
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 7) {
+    // Assume it's a week, show day names
+    const startDay = start.toLocaleDateString('en-US', { weekday: 'short' });
+    const endDay = end.toLocaleDateString('en-US', { weekday: 'short' });
+    return `${startDay} - ${endDay}`;
+  }
+
+  // Check if it's a full month
+  const startOfMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  if (start.getTime() === startOfMonth.getTime() && end.getTime() === endOfMonth.getTime()) {
+    return start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
+  }
+
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear !== endYear) {
+    return `${startMonth} ${start.getDate()}, ${startYear} - ${endMonth} ${end.getDate()}, ${endYear}`;
+  }
+
+  if (startMonth !== endMonth) {
+    return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${endYear}`;
+  } else {
+    return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${endYear}`;
+  }
+};
+
+const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
+  if (!labels) {
+    return false;
+  }
+  if (Array.isArray(labels)) {
+    return labels.some((label) => label.toLowerCase().includes(search));
+  }
+  return labels.toLowerCase().includes(search);
+};
 
 export default function Statistics() {
   const colorScheme = useColorScheme();
@@ -88,7 +138,7 @@ export default function Statistics() {
             !record.subtitle.toLowerCase().includes(search) &&
             !(record.payee && record.payee.toLowerCase().includes(search)) &&
             !(record.note && record.note.toLowerCase().includes(search)) &&
-            !(record.labels && record.labels.toLowerCase().includes(search))) {
+            !matchesLabelsSearch(record.labels, search)) {
           return false;
         }
       }
@@ -199,16 +249,16 @@ export default function Statistics() {
             options={['expense', 'income']}
           />
           <ThemedText style={{ color: palette.icon }}>
-            {filters.dateRange 
-              ? `${filters.dateRange.start.toLocaleDateString()} - ${filters.dateRange.end.toLocaleDateString()}`
-              : 'All Time'
-            }
+            {formatDateRange(filters.dateRange)}
           </ThemedText>
         </View>
 
           <ThemedView style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="subtitle">Weekly Breakdown</ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <MaterialCommunityIcons name="chart-bar" size={20} color={palette.tint} />
+              <ThemedText type="subtitle">Weekly Breakdown</ThemedText>
+            </View>
             <ThemedText style={{ color: palette.icon }}>
               {selectedType === 'income' ? 'Income overview' : 'Expense overview'}
             </ThemedText>
@@ -279,6 +329,7 @@ export default function Statistics() {
         <ExpenseStructureCard
           title="Expense Structure"
           subtitle="Top categories"
+          icon="chart-pie"
           data={expenseSegments}
           totalLabel={`$${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
           totalCaption="All time"

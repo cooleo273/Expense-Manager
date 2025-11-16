@@ -2,13 +2,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } fro
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
+import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 
 import { CartProvider } from '@/contexts/CartContext';
 import { FilterProvider } from '@/contexts/FilterContext';
 import { ThemeProvider as AppThemeProvider, useThemeContext } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -28,6 +30,23 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
   const { colorScheme } = useThemeContext();
+  const palette = Colors[colorScheme];
+
+  const paperTheme = useMemo(() => {
+    const baseTheme = colorScheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
+    return {
+      ...baseTheme,
+      colors: {
+        ...baseTheme.colors,
+        primary: palette.tint,
+        secondary: palette.accent,
+        background: palette.background,
+        surface: palette.card,
+        onSurface: palette.text,
+        onPrimary: '#FFFFFF',
+      },
+    };
+  }, [colorScheme, palette]);
 
   useEffect(() => {
     SplashScreen.hideAsync();
@@ -35,13 +54,15 @@ function RootLayoutContent() {
 
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <CartProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      </CartProvider>
+      <PaperProvider theme={paperTheme}>
+        <CartProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        </CartProvider>
+      </PaperProvider>
     </NavigationThemeProvider>
   );
 }

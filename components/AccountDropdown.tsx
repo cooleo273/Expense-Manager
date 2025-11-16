@@ -2,21 +2,41 @@ import { BorderRadius, Colors, Shadows, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { mockAccounts } from '../constants/mock-data';
 
 const DROPDOWN_MAX_HEIGHT = 240;
 
-export const AccountDropdown: React.FC = () => {
+type AccountDropdownProps = {
+  allowAll?: boolean;
+};
+
+export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = true }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [anchorLayout, setAnchorLayout] = useState<{ top: number; left: number; width: number } | null>(null);
   const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
+  const palette = Colors[colorScheme ?? 'light'];
   const { filters, setSelectedAccount } = useFilterContext();
   const anchorRef = useRef<View | null>(null);
 
-      const selectedAccount = mockAccounts.find(acc => acc.id === filters.selectedAccount) || mockAccounts[0];
+  const accountOptions = useMemo(
+    () => (allowAll ? mockAccounts : mockAccounts.filter(acc => acc.id !== 'all')),
+    [allowAll]
+  );
+
+  const fallbackAccount = accountOptions[0];
+  const selectedAccount = accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount;
+
+  useEffect(() => {
+    if (!selectedAccount && fallbackAccount) {
+      setSelectedAccount(fallbackAccount.id);
+    }
+  }, [selectedAccount, fallbackAccount, setSelectedAccount]);
+
+  if (!accountOptions.length) {
+    return null;
+  }
 
   const handleSelect = (accountId: string) => {
     setSelectedAccount(accountId);
@@ -46,11 +66,19 @@ export const AccountDropdown: React.FC = () => {
   return (
     <View ref={anchorRef} collapsable={false}>
       <TouchableOpacity
-        style={[styles.dropdown, { borderColor: palette.border }]}
+        style={[styles.anchorButton, { backgroundColor: palette.card }]}
         onPress={openDropdown}
+        activeOpacity={0.8}
       >
-        <Text style={{ color: palette.text, fontSize: 16, fontWeight: '600' }}>{selectedAccount.name}</Text>
-        <MaterialCommunityIcons name="chevron-down" size={20} color={palette.icon} style={{ marginLeft: 4 }} />
+        <View style={styles.anchorTextWrapper}>
+          <Text style={[styles.anchorTitle, { color: palette.text }]}>{selectedAccount.name}</Text>
+          {selectedAccount.subtitle ? (
+            <Text style={[styles.anchorSubtitle, { color: palette.icon }]} numberOfLines={1}>
+              {selectedAccount.subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
       </TouchableOpacity>
       <Modal
         visible={dropdownVisible}
@@ -77,18 +105,43 @@ export const AccountDropdown: React.FC = () => {
                 ]}
               >
                 <FlatList
-                                    data={mockAccounts}
+                  data={accountOptions}
                   keyExtractor={(item) => item.id}
                   style={{ maxHeight: DROPDOWN_MAX_HEIGHT }}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.dropdownItem}
-                      onPress={() => handleSelect(item.id)}
-                    >
-                      <Text style={{ color: palette.text }}>{item.name}</Text>
-                    </TouchableOpacity>
+                  ItemSeparatorComponent={() => (
+                    <View style={[styles.dropdownDivider, { backgroundColor: palette.border }]} />
                   )}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item }) => {
+                    const isSelected = item.id === selectedAccount.id;
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdownItem,
+                          { backgroundColor: isSelected ? `${palette.tint}10` : 'transparent' },
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={() => handleSelect(item.id)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.dropdownTitle, { color: palette.text }]}>{item.name}</Text>
+                          {item.subtitle ? (
+                            <Text style={[styles.dropdownSubtitle, { color: palette.icon }]} numberOfLines={1}>
+                              {item.subtitle}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {isSelected && (
+                          <MaterialCommunityIcons
+                            name="check-circle"
+                            size={18}
+                            color={palette.tint}
+                            style={{ marginLeft: Spacing.sm }}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -100,14 +153,24 @@ export const AccountDropdown: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  dropdown: {
+  anchorButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderWidth: 0,
-    // borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.xl,
     marginHorizontal: Spacing.sm,
+    minWidth: 180,
+  },
+  anchorTextWrapper: {
+    flex: 1,
+  },
+  anchorTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  anchorSubtitle: {
+    fontSize: 12,
   },
   overlay: {
     flex: 1,
@@ -116,15 +179,27 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     position: 'absolute',
     borderWidth: 1,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.xl,
     maxHeight: DROPDOWN_MAX_HEIGHT,
     overflow: 'hidden',
     ...Shadows.medium,
     zIndex: 10,
   },
   dropdownItem: {
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  dropdownTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dropdownSubtitle: {
+    fontSize: 12,
+  },
+  dropdownDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: Spacing.md,
   },
 });

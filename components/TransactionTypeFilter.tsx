@@ -13,6 +13,7 @@ type TransactionTypeFilterProps = {
   options?: TransactionTypeValue[];
   style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'compact';
+  labelSize?: 'default' | 'small';
 };
 
 const DEFAULT_OPTIONS: TransactionTypeValue[] = ['expense', 'income', 'all'];
@@ -23,6 +24,7 @@ export function TransactionTypeFilter({
   options = DEFAULT_OPTIONS,
   style,
   variant = 'default',
+  labelSize = 'default',
 }: TransactionTypeFilterProps) {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
@@ -62,6 +64,7 @@ export function TransactionTypeFilter({
                 style={[
                   styles.label,
                   variant === 'compact' ? styles.compactLabel : undefined,
+                  labelSize === 'small' && styles.smallLabel,
                   { color: isActive ? palette.tint : palette.icon },
                 ]}
               >
@@ -80,25 +83,27 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderWidth: 1,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
+    alignSelf: 'flex-start',
   },
   chipContainer: {
     flexDirection: 'row',
     alignItems: 'stretch',
+    flexShrink: 0,
   },
   chip: {
     justifyContent: 'center',
     alignItems: 'center',
+    flexGrow: 0,
   },
   defaultChip: {
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
   },
   compactChip: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.tiny,
+    paddingHorizontal: Spacing.sm,
   },
   label: {
     fontSize: FontSizes.sm,
@@ -107,6 +112,9 @@ const styles = StyleSheet.create({
   },
   compactLabel: {
     fontSize: FontSizes.sm,
+  },
+  smallLabel: {
+    fontSize: FontSizes.xs,
   },
   separator: {
     width: StyleSheet.hairlineWidth,

@@ -1,6 +1,9 @@
 import { BatchDraft, INITIAL_SINGLE_DRAFT, RecordType, SingleDraft, createBatchDraft } from '@/types/transactions';
 
-const cloneSingle = (draft: SingleDraft): SingleDraft => ({ ...draft });
+const cloneSingle = (draft: SingleDraft): SingleDraft => ({
+  ...draft,
+  labels: Array.isArray(draft.labels) ? [...draft.labels] : [],
+});
 const cloneBatch = (draft: BatchDraft): BatchDraft => ({ ...draft });
 const cloneBatchArray = (drafts: BatchDraft[]): BatchDraft[] => drafts.map(cloneBatch);
 
@@ -27,7 +30,12 @@ export const transactionDraftState = {
 
   resetSingleDraft(category?: string): SingleDraft {
     const nextCategory = ensureCategory(category);
-    const next = cloneSingle({ ...INITIAL_SINGLE_DRAFT, category: nextCategory });
+    const baseDraft: SingleDraft = {
+      ...INITIAL_SINGLE_DRAFT,
+      category: nextCategory,
+      labels: [],
+    };
+    const next = cloneSingle(baseDraft);
     singleDraftMemory = next;
     return cloneSingle(next);
   },
@@ -71,7 +79,12 @@ export const transactionDraftState = {
 
   resetAll(category?: string) {
     const baseCategory = ensureCategory(category);
-    singleDraftMemory = cloneSingle({ ...INITIAL_SINGLE_DRAFT, category: baseCategory });
+    const baseSingle: SingleDraft = {
+      ...INITIAL_SINGLE_DRAFT,
+      category: baseCategory,
+      labels: [],
+    };
+    singleDraftMemory = cloneSingle(baseSingle);
     batchDraftsMemory = createInitialBatchDrafts(baseCategory);
   },
 };
