@@ -20,7 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getFullCategoryLabel } from '@/constants/categories';
 import { mockAccounts } from '@/constants/mock-data';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -458,12 +458,12 @@ export default function LogExpensesScreen() {
                   />
                 </View>
               </View>
+            </View>
               {amountError ? (
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
                   {amountError}
                 </ThemedText>
               ) : null}
-            </View>
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
@@ -536,9 +536,12 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
-              {singleDraft.labels.length > 0 && (
-                <View style={styles.labelsContainer}>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  Labels
+                </ThemedText>
+                {singleDraft.labels.length > 0 && (
+                  <View style={styles.labelsContainer}>
                   {singleDraft.labels.map((label) => (
                     <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
                       <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
@@ -547,23 +550,24 @@ export default function LogExpensesScreen() {
                       </TouchableOpacity>
                     </View>
                   ))}
+                  </View>
+                )}
+                <View style={{ marginTop: singleDraft.labels.length > 0 ? Spacing.sm : 0 }}>
+                  <TextInput
+                    style={[styles.notchedInput, { color: palette.text }]}
+                    placeholder="Add a label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                    onFocus={() => scrollToInput(350)}
+                  />
+                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
+                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
+                  </TouchableOpacity>
                 </View>
-              )}
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <TextInput
-                  style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Add a label"
-                  placeholderTextColor={palette.icon}
-                  value={currentLabelInput}
-                  onChangeText={setCurrentLabelInput}
-                  onSubmitEditing={addLabel}
-                  onFocus={() => scrollToInput(350)}
-                />
-                <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
-                  <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
 
             <View style={styles.fieldGroup}>
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>

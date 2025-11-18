@@ -160,12 +160,16 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.massive,
     fontWeight: FontWeights.bold as any,
     padding: 0,
+    lineHeight: FontSizes.massive + 4,
+    textAlignVertical: 'center',
   },
   amountCompactInput: {
     minWidth: 60,
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     padding: 0,
+    lineHeight: FontSizes.lg + 4,
+    textAlignVertical: 'center',
   },
   inputWrapper: {
     position: 'relative',
@@ -239,6 +243,10 @@ export const logExpensesStyles = StyleSheet.create({
   currencyTiny: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold as any,
+    // Align to the larger compact amount line (FontSizes.lg) so the dollar sign
+    // sits on the same baseline as the numeric input.
+    lineHeight: FontSizes.lg + 4,
+    textAlignVertical: 'center',
   },
   deleteButton: {
     padding: Spacing.sm,

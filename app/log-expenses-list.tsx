@@ -394,7 +394,7 @@ export default function LogExpensesListScreen() {
               >
                 <View style={styles.noteRow}>
                   <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}>
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note*</ThemedText>
                     <TextInput
                       style={[styles.noteInput, styles.notchedInput, { color: palette.text }]}
                       placeholder="Add a note"
@@ -415,9 +415,11 @@ export default function LogExpensesListScreen() {
                 ) : null}
 
                 <View style={styles.recordFooter}>
-                  <TouchableOpacity
-                    style={[styles.categoryPill, { borderColor: palette.border }]}
-                    onPress={() =>
+                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1, padding: 0 }]}> 
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
+                    <TouchableOpacity
+                      style={[styles.categoryPill, { borderWidth: 0 }]}
+                      onPress={() =>
                       router.push({
                         pathname: '/Category',
                         params: {
@@ -427,8 +429,8 @@ export default function LogExpensesListScreen() {
                           recordIndex: index.toString(),
                         },
                       })
-                    }
-                  >
+                      }
+                    >
                     <View style={[styles.categoryIconBadge, { backgroundColor: `${categoryColor}22` }]}> 
                       <MaterialCommunityIcons name={categoryIcon} size={16} color={categoryColor} /> 
                     </View>
@@ -439,8 +441,9 @@ export default function LogExpensesListScreen() {
                     </View>
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
+                </View>
                   <View style={[styles.inputWrapper, styles.amountField, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
                     <View style={styles.amountInputRow}>
                       <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
                       <TextInput
