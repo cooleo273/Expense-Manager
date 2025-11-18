@@ -1,8 +1,12 @@
 import { TransactionTypeFilter } from '@/components/TransactionTypeFilter';
+import { getNodeDisplayName } from '@/constants/categories';
+import { getAccountMeta } from '@/constants/mock-data';
 import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -31,6 +35,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   const palette = Colors[colorScheme];
   const { filters, setSearchTerm, addToSearchHistory, setSearchCategory } = useFilterContext();
   const [tempSearch, setTempSearch] = useState(filters.searchTerm);
+  const [results, setResults] = useState<any[]>([]);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const router = useRouter();
+  const displayResults = results.slice(0, 5);
   const insets = useSafeAreaInsets();
   const drawerTranslate = useRef(new Animated.Value(-DRAWER_MAX_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -90,18 +98,63 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
     });
   };
 
-  const handleSearch = () => {
-    setSearchTerm(tempSearch);
-    if (tempSearch.trim()) {
-      addToSearchHistory(tempSearch);
-    }
-    animateClose();
-  };
+  // Live search logic: find matching transactions as the user types.
+  useEffect(() => {
+    let canceled = false;
+    const doSearch = async () => {
+      setLoadingResults(true);
+      try {
+        const txns = await StorageService.getTransactions();
+        const query = tempSearch.trim().toLowerCase();
+        // tokens-based match: every token must appear somewhere in the record
+        const queryTokens = query.split(/\s+/).filter(Boolean);
+        const filtered = txns.filter((t: any) => {
+          if (filters.searchCategory && filters.searchCategory !== 'all' && t.type !== filters.searchCategory) {
+            return false;
+          }
+          if (!query) {
+            return false;
+          }
+          // Build a single searchable string per token check
+          const categoryName = getNodeDisplayName(t.subcategoryId) ?? getNodeDisplayName(t.categoryId) ?? '';
+          const accountName = (t.account || '').toLowerCase();
+          const title = (t.title || '').toLowerCase();
+          const note = (t.note || '').toLowerCase();
+          const payee = (t.payee || '').toLowerCase();
+          const labels = ((t.labels || []) as string[]).map((l) => l.toLowerCase()).join(' ');
+          // Check every token is in any of the searchable fields
+          const matchesToken = (token: string) => {
+            return (
+              title.includes(token) ||
+              note.includes(token) ||
+              payee.includes(token) ||
+              accountName.includes(token) ||
+              categoryName.toLowerCase().includes(token) ||
+              labels.includes(token)
+            );
+          };
+          return queryTokens.every(matchesToken);
+        });
+        if (!canceled) setResults(filtered);
+      } catch (err) {
+        console.error('Search failed', err);
+        if (!canceled) setResults([]);
+      } finally {
+        if (!canceled) setLoadingResults(false);
+      }
+    };
+
+    const timer = setTimeout(doSearch, 200);
+    return () => {
+      canceled = true;
+      clearTimeout(timer);
+    };
+  }, [tempSearch, filters.searchCategory]);
 
   const handleSelectHistory = (term: string) => {
     setTempSearch(term);
     setSearchTerm(term);
-    animateClose();
+    // keep overlay open and show results
   };
 
   const handleSelectCategory = (category: 'all' | 'income' | 'expense') => {
@@ -111,6 +164,13 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   const handleClearSearch = () => {
     setTempSearch('');
     setSearchTerm('');
+  };
+
+  const openRecordDetail = (record: any) => {
+    // Pass payload to record detail similar to other navigation helpers
+    const payload = encodeURIComponent(JSON.stringify(record));
+    router.push({ pathname: '/record-detail', params: { payload } });
+    animateClose();
   };
 
   return (
@@ -151,7 +211,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                 placeholderTextColor={palette.icon}
                 value={tempSearch}
                 onChangeText={setTempSearch}
-                onSubmitEditing={handleSearch}
+                // Do not set the shared searchTerm on enter — keep the overlay results local.
+                // Still add it to recent history so users can find it later.
+                onSubmitEditing={() => {
+                  if (tempSearch.trim()) addToSearchHistory(tempSearch);
+                }}
                 autoFocus
                 returnKeyType="search"
               />
@@ -174,39 +238,82 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
             style={styles.typeFilter}
           />
 
-          {filters.searchHistory.length > 0 && (
-            <View style={styles.historyContainer}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.historyTitle, { color: palette.text }]}>Recent searches</Text>
-                <MaterialCommunityIcons name="history" size={18} color={palette.icon} />
-              </View>
-              <FlatList
-                data={filters.searchHistory}
-                keyExtractor={(item, index) => index.toString()}
+          {/* Live results replace recent searches */}
+          <View style={styles.historyContainer}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.historyTitle, { color: palette.text }]}>
+                {tempSearch.trim().length === 0 ? 'Recent searches' : 'Results'}
+              </Text>
+              {loadingResults ? <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} /> : null}
+            </View>
+            {tempSearch.trim().length === 0 ? (
+                // Show recent searches when the field is empty
+                filters.searchHistory.length > 0 ? (
+                  <FlatList
+                    data={filters.searchHistory}
+                    keyExtractor={(item, idx) => `${item}-${idx}`}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.historyItem, { borderColor: palette.border, backgroundColor: palette.surface }]}
+                        onPress={() => handleSelectHistory(item)}
+                      >
+                        <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
+                          <MaterialCommunityIcons name="magnify" size={16} color={palette.icon} />
+                        </View>
+                        <Text style={{ color: palette.text, flex: 1 }}>{item}</Text>
+                        <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                      </TouchableOpacity>
+                    )}
+                  />
+                ) : (
+                  <Text style={{ color: palette.icon }}>Start typing to see results</Text>
+                )
+              ) : results.length === 0 ? (
+              <Text style={{ color: palette.icon }}>No results available for "{tempSearch}"</Text>
+            ) : (
+              <>
+                <FlatList
+                  data={displayResults}
+                keyExtractor={(item) => item.id}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[styles.historyItem, { borderColor: palette.border, backgroundColor: palette.surface }]}
-                    onPress={() => handleSelectHistory(item)}
+                    onPress={() => openRecordDetail(item)}
                   >
                     <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
-                      <MaterialCommunityIcons name="magnify" size={16} color={palette.icon} />
+                      <MaterialCommunityIcons name="file-document" size={16} color={palette.icon} />
                     </View>
-                    <Text style={{ color: palette.text, flex: 1 }}>{item}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: palette.text, fontWeight: '600' }}>
+                        {getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}
+                      </Text>
+                      <Text style={{ color: palette.icon, fontSize: 12 }}>{getAccountMeta(item.accountId)?.name ?? item.account}</Text>
+                    </View>
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
                 )}
-              />
-            </View>
-          )}
+                />
+                {results.length > 5 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchTerm(tempSearch);
+                  if (tempSearch.trim()) addToSearchHistory(tempSearch);
+                  router.push('/(tabs)/records');
+                }}
+                style={{ marginTop: Spacing.sm }}
+              >
+                <Text style={{ color: palette.tint, fontWeight: '600' }}>Show more</Text>
+              </TouchableOpacity>
+                  )}
+              </>
+            )}
+          </View>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: palette.tint }]}
-            onPress={handleSearch}
-          >
-            <Text style={[styles.primaryButtonText, { color: palette.background }]}>Apply search</Text>
-          </TouchableOpacity>
+          {/* Remove apply search: results update live */}
         </Animated.View>
       </View>
     </Modal>

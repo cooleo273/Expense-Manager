@@ -115,16 +115,21 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
-  const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => pieData[0]?.segment?.id);
+  // Default to 'all' so the center shows total amount on first render
+  const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => 'all');
 
   useEffect(() => {
+    // If activeSegmentId is 'all' (special state) keep it — don't overwrite.
+    if (activeSegmentId === 'all') {
+      return;
+    }
     if (!pieData.some((entry) => entry.segment?.id === activeSegmentId)) {
       setActiveSegmentId(pieData[0]?.segment?.id);
     }
   }, [activeSegmentId, pieData]);
 
   const activeSegment = useMemo(() => {
-    if (!activeSegmentId) {
+    if (!activeSegmentId || activeSegmentId === 'all') {
       return undefined;
     }
     return segments.find((segment) => segment.id === activeSegmentId);
@@ -152,7 +157,12 @@ export function ExpenseStructureCard({
   const centerValueText = activeSegment
     ? formatValue(activeSegment.value, activeSegment)
     : formattedTotalValue;
-  const centerCaptionText = activeSegment ? activeSegment.label : totalCaption ?? title;
+  // When all is active, the caption should say ALL and the percent should be unchecked
+  const centerCaptionText = activeSegment
+    ? activeSegment.label
+    : activeSegmentId === 'all'
+    ? 'Total Expenses'
+    : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
   // Make small screens adapt by reducing the chart size and switching to vertical layout
   const window = useWindowDimensions();
@@ -161,7 +171,11 @@ export function ExpenseStructureCard({
   const innerRadius = Math.max(effectiveChartSize * 0.2, 40);
   const outerRadius = Math.max(chartSize / 2 - 8, 80);
   const labelRadius = (innerRadius + outerRadius) / 2;
-  const chartCenterBorderColor = activeSegment ? `${activeSegment.color}55` : palette.border;
+  const chartCenterBorderColor = activeSegment
+    ? `${activeSegment.color}55`
+    : activeSegmentId === 'all'
+    ? palette.tint
+    : palette.border;
 
   return (
     <ThemedView
@@ -210,7 +224,8 @@ export function ExpenseStructureCard({
             style={{
               data: {
                 fill: ({ datum }) => datum.color,
-                opacity: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 1 : 0.35),
+                opacity: ({ datum }) =>
+                  activeSegmentId === 'all' ? 1 : (datum.segment?.id === activeSegment?.id ? 1 : 0.35),
                 stroke: ({ datum }) => (datum.segment?.id === activeSegment?.id ? palette.card : 'transparent'),
                 strokeWidth: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 2 : 0),
               },
@@ -271,7 +286,12 @@ export function ExpenseStructureCard({
         </View>
 
         <View style={[styles.legendContainer, isNarrow && { width: '100%' }]}>
-          {segments.map((segment) => {
+          {[{
+            id: 'all',
+            label: 'ALL',
+            value: totalValue,
+            color: palette.tint,
+          } as ExpenseStructureSegment, ...segments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
             const formattedValue = valueFormatter
@@ -285,7 +305,7 @@ export function ExpenseStructureCard({
                 onPress={() => setActiveSegmentId(segment.id)}
                 style={[
                   styles.legendItem,
-                  activeSegment?.id === segment.id && {
+                  activeSegmentId === segment.id && {
                     backgroundColor: `${segment.color}20`,
                     borderRadius: BorderRadius.md,
                     paddingVertical: Spacing.xs,

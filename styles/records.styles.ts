@@ -82,7 +82,7 @@ export const recordsStyles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.lg,
     gap: Spacing.lg,
   },
