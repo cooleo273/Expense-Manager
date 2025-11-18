@@ -7,9 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { categoryList, getCategoryColor, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
-import { Colors } from '@/constants/theme';
+import { mockRecordsData } from '@/constants/mock-data';
+import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 
 export default function CategoriesScreen() {
   const colorScheme = useColorScheme();
@@ -28,6 +30,38 @@ export default function CategoriesScreen() {
   const currentSubcategory = params.subcategory as string || '';
   const [selectedIds, setSelectedIds] = useState<string[]>(filters.selectedCategories);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [mostFrequent, setMostFrequent] = useState<string[]>([]);
+
+  // Load persisted category usage when the screen mounts so MOST FREQUENT can show
+  // categories the user has recently used. If no persisted usage exists, seed
+  // it from stored transactions (or mock data) so the user sees a sensible list.
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        let usage = await StorageService.getCategoryUsage();
+        if (!usage || Object.keys(usage).length === 0) {
+          const txns = await StorageService.getTransactions();
+          const source = txns.length > 0 ? txns : mockRecordsData;
+          const counts: Record<string, number> = {};
+          source.forEach((t: any) => {
+            const id = t.subcategoryId ?? t.categoryId ?? t.category;
+            if (!id) return;
+            counts[id] = (counts[id] ?? 0) + 1;
+          });
+          if (Object.keys(counts).length > 0) {
+            await StorageService.setCategoryUsage(counts);
+            usage = counts;
+          }
+        }
+        const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+        if (mounted) setMostFrequent(sorted.slice(0, 5));
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const toggleCategorySelection = (categoryId: CategoryKey) => {
     setSelectedIds(prev => {
@@ -60,7 +94,7 @@ export default function CategoriesScreen() {
     });
   };
 
-  const navigateToSubcategories = (categoryId: CategoryKey) => {
+  const navigateToSubcategories = async (categoryId: CategoryKey) => {
     const paramsToPass: Record<string, string> = {
       category: categoryId,
     };
@@ -76,6 +110,31 @@ export default function CategoriesScreen() {
     if (recordIndex) {
       paramsToPass.recordIndex = recordIndex;
     }
+    // Increment usage for most-frequent list (persist locally)
+    try {
+      await StorageService.incrementCategoryUsage(categoryId);
+        let usage = await StorageService.getCategoryUsage();
+        // try to read persisted usage. If none exists seed it from transactions
+          if (!usage || Object.keys(usage).length === 0) {
+            const txns = await StorageService.getTransactions();
+            const source = txns.length > 0 ? txns : mockRecordsData;
+            const counts: Record<string, number> = {};
+            source.forEach((t: any) => {
+              const id = t.subcategoryId ?? t.categoryId;
+              if (!id) return;
+              counts[id] = (counts[id] ?? 0) + 1;
+            });
+            if (Object.keys(counts).length > 0) {
+              await StorageService.setCategoryUsage(counts);
+              usage = counts;
+            }
+          }
+          const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+          setMostFrequent(sorted.slice(0, 5));
+    } catch (err) {
+      // ignore
+    }
+
     router.push({ pathname: '/subcategories', params: paramsToPass });
   };
 
@@ -86,15 +145,55 @@ export default function CategoriesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['top']}>
-      <ThemedView style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <ThemedText type="subtitle" style={{ color: palette.text }}>{isFilterMode ? 'Select Categories' : 'Select Category'}</ThemedText>
-        {isFilterMode && (
+              {isFilterMode && (
+
+      <ThemedView style={{ paddingHorizontal: Spacing.lg, paddingVertical: 0, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <TouchableOpacity onPress={handleDone}>
             <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>DONE</ThemedText>
           </TouchableOpacity>
-        )}
+        
       </ThemedView>
+      )}
+      <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.tiny, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
+        <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>MOST FREQUENT</ThemedText>
+        {mostFrequent.length > 0 ? (
+          <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center' }}>
+            {mostFrequent.map((id) => {
+              const cat = categoryList.find((c) => c.id === id);
+              if (!cat) return null;
+              const categoryColor = getCategoryColor(cat.id, palette.tint);
+              const iconName = getCategoryIcon(cat.id);
+              return (
+                <TouchableOpacity
+                  key={id}
+                  onPress={() => navigateToSubcategories(cat.id)}
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: palette.card,
+                    paddingVertical: Spacing.sm,
+                    paddingHorizontal: Spacing.md,
+                    borderRadius: 12,
+                  }}
+                >
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: `${categoryColor}20`, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name={iconName as any} size={20} color={categoryColor} />
+                  </View>
+                  <ThemedText style={{ color: palette.text, marginTop: 8 }}>{cat.name}</ThemedText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <ThemedText style={{ color: palette.icon }}>No categories selected</ThemedText>
+        )}
+      </View>
+
       <FlatList
+        ListHeaderComponent={() => (
+          <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
+            <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600' }}>ALL CATEGORIES</ThemedText>
+          </View>
+        )}
         data={categoryList}
         keyExtractor={(item) => item.id}
         style={{ backgroundColor: palette.card }}
@@ -131,7 +230,6 @@ export default function CategoriesScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <ThemedText style={{ color: palette.text, fontWeight: '600' }}>{item.name}</ThemedText>
-                      <ThemedText style={{ color: palette.icon, fontSize: 12 }}>{item.type}</ThemedText>
                       {selectedSubCount > 0 && (
                         <ThemedText style={{ color: palette.icon, fontSize: 12 }}>{selectedSubCount} subcategory{selectedSubCount > 1 ? ' items' : ' item'}</ThemedText>
                       )}
@@ -212,9 +310,8 @@ export default function CategoriesScreen() {
               >
                 <MaterialCommunityIcons name={iconName as any} size={20} color={categoryColor} />
               </View>
-              <View style={{ flex: 1 }}>
+                <View style={{ flex: 1 }}>
                 <ThemedText style={{ color: palette.text, fontWeight: '600' }}>{item.name}</ThemedText>
-                <ThemedText style={{ color: palette.icon, fontSize: 12 }}>{item.type}</ThemedText>
               </View>
               {isSelected && <MaterialCommunityIcons name="check" size={20} color={categoryColor} />}
             </TouchableOpacity>
@@ -224,3 +321,7 @@ export default function CategoriesScreen() {
     </SafeAreaView>
   );
 }
+
+export const options = {
+  headerShown: false,
+};

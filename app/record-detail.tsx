@@ -184,7 +184,7 @@ export default function RecordDetailScreen() {
                   style={styles.categoryInput}
                   onPress={() =>
                     router.push({
-                      pathname: '/categories',
+                      pathname: '/Category',
                       params: {
                         current: draft.category,
                         currentSubcategory: draft.subcategoryId,

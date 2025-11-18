@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -154,7 +154,11 @@ export function ExpenseStructureCard({
     : formattedTotalValue;
   const centerCaptionText = activeSegment ? activeSegment.label : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
-  const innerRadius = Math.max(chartSize * 0.2, 40);
+  // Make small screens adapt by reducing the chart size and switching to vertical layout
+  const window = useWindowDimensions();
+  const isNarrow = window.width <= 360;
+  const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
+  const innerRadius = Math.max(effectiveChartSize * 0.2, 40);
   const outerRadius = Math.max(chartSize / 2 - 8, 80);
   const labelRadius = (innerRadius + outerRadius) / 2;
   const chartCenterBorderColor = activeSegment ? `${activeSegment.color}55` : palette.border;
@@ -175,13 +179,18 @@ export function ExpenseStructureCard({
         {subtitle ? <ThemedText style={[styles.subtitle, { color: palette.icon }]}>{subtitle}</ThemedText> : null}
       </View>
 
-      <View style={styles.contentRow}>
-        <View style={[styles.chartWrapper, { width: chartSize, height: chartSize }]}>
+      <View
+        style={[
+          styles.contentRow,
+          isNarrow && { flexDirection: 'column', alignItems: 'center', gap: Spacing.md },
+        ]}
+      >
+        <View style={[styles.chartWrapper, { width: effectiveChartSize, height: effectiveChartSize }]}>
           <VictoryPie
             animate={false}
             data={pieData}
-            width={chartSize}
-            height={chartSize}
+            width={effectiveChartSize}
+            height={effectiveChartSize}
             innerRadius={innerRadius}
             padAngle={pieData.length > 1 ? 2 : 0}
             radius={outerRadius}
@@ -261,7 +270,7 @@ export function ExpenseStructureCard({
           )}
         </View>
 
-        <View style={styles.legendContainer}>
+        <View style={[styles.legendContainer, isNarrow && { width: '100%' }]}>
           {segments.map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
@@ -395,8 +404,9 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     flex: 1,
-    minWidth: 120,
     gap: Spacing.md,
+    // Allow the legend to shrink on small phones / narrow widths so it doesn't overflow
+    minWidth: 0,
   },
   legendItem: {
     flexDirection: 'row',

@@ -4,15 +4,20 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { mockAccounts } from '../constants/mock-data';
+import { mockAccounts, type MockAccount } from '../constants/mock-data';
 
 const DROPDOWN_MAX_HEIGHT = 240;
 
-type AccountDropdownProps = {
+ type AccountDropdownProps = {
   allowAll?: boolean;
-};
+  // when false the dropdown uses local state and does not update the global filter
+  useGlobalState?: boolean;
+  // optional callback for when an account is selected. Useful when using local
+  // state (useGlobalState=false) but parent still wants to react to selection.
+  onSelect?: (accountId: string) => void;
+ };
 
-export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = true }) => {
+export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = true, useGlobalState = true, onSelect }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [anchorLayout, setAnchorLayout] = useState<{ top: number; left: number; width: number } | null>(null);
   const colorScheme = useColorScheme();
@@ -25,21 +30,34 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
     [allowAll]
   );
 
-  const fallbackAccount = accountOptions[0];
-  const selectedAccount = accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount;
+  const fallbackAccount = accountOptions[0] as MockAccount | undefined;
+  const selectedAccount = useGlobalState
+    ? accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount!
+    : fallbackAccount!;
 
   useEffect(() => {
-    if (!selectedAccount && fallbackAccount) {
-      setSelectedAccount(fallbackAccount.id);
+    // If for some reason no account is selected and there are options available,
+    // default to the first available account.
+    if (useGlobalState && !selectedAccount && accountOptions.length > 0) {
+      setSelectedAccount(accountOptions[0].id);
     }
-  }, [selectedAccount, fallbackAccount, setSelectedAccount]);
+  }, [selectedAccount, accountOptions, setSelectedAccount]);
 
   if (!accountOptions.length) {
     return null;
   }
 
+  const [localSelection, setLocalSelection] = useState<string | undefined>(
+    () => (fallbackAccount ? fallbackAccount.id : undefined)
+  );
+
   const handleSelect = (accountId: string) => {
-    setSelectedAccount(accountId);
+    if (useGlobalState) {
+      setSelectedAccount(accountId);
+    } else {
+      setLocalSelection(accountId);
+      onSelect?.(accountId);
+    }
     setDropdownVisible(false);
   };
 
@@ -71,10 +89,16 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
         activeOpacity={0.8}
       >
         <View style={styles.anchorTextWrapper}>
-          <Text style={[styles.anchorTitle, { color: palette.text }]}>{selectedAccount.name}</Text>
-          {selectedAccount.subtitle ? (
+          <Text
+            style={[styles.anchorTitle, { color: palette.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {(useGlobalState ? selectedAccount?.name : accountOptions.find(a => a.id === localSelection)?.name) ?? selectedAccount?.name}
+          </Text>
+          {((useGlobalState ? selectedAccount : accountOptions.find(a => a.id === localSelection))?.subtitle) ? (
             <Text style={[styles.anchorSubtitle, { color: palette.icon }]} numberOfLines={1}>
-              {selectedAccount.subtitle}
+              {(useGlobalState ? selectedAccount : accountOptions.find(a => a.id === localSelection))?.subtitle}
             </Text>
           ) : null}
         </View>
@@ -113,7 +137,7 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
                   )}
                   showsVerticalScrollIndicator={false}
                   renderItem={({ item }) => {
-                    const isSelected = item.id === selectedAccount.id;
+                    const isSelected = item.id === (useGlobalState ? selectedAccount.id : localSelection);
                     return (
                       <TouchableOpacity
                         style={[
@@ -131,7 +155,7 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
                             </Text>
                           ) : null}
                         </View>
-                        {isSelected && (
+                          {isSelected && (
                           <MaterialCommunityIcons
                             name="check-circle"
                             size={18}
@@ -163,7 +187,10 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   anchorTextWrapper: {
-    flex: 1,
+    // allow the text block to shrink so the chevron sits closer to the end
+    // of the text instead of being pushed to the far-right edge
+    flexShrink: 1,
+    marginRight: Spacing.sm,
   },
   anchorTitle: {
     fontSize: 15,

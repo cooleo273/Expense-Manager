@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, type CategoryKey } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 import { emitCategorySelection } from '@/utils/navigation-events';
 
 export default function SubcategoriesScreen() {
@@ -46,6 +47,12 @@ export default function SubcategoriesScreen() {
   }, [navigation, returnTo]);
 
   const handleEmitSelection = useCallback((subcategoryId?: string) => {
+    // persist that the user selected this category
+    try {
+      StorageService.incrementCategoryUsage(categoryId);
+    } catch (err) {
+      // ignore errors
+    }
     emitCategorySelection({
       target: returnTo ?? '',
       category: categoryId,

@@ -4,15 +4,17 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FAB, Portal } from 'react-native-paper';
 import type { FABGroupProps } from 'react-native-paper';
+import { FAB, Portal } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+// imports consolidated below
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId } from '@/constants/categories';
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { Transaction } from '@/services/storage';
 import { recordsStyles } from '@/styles/records.styles';
 import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
 import { getAccountMeta, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
@@ -97,9 +99,9 @@ export default function RecordsScreen() {
   const isFocused = useIsFocused();
 
   const handleFabNavigate = useCallback(
-    (path: string) => {
+    (path: Parameters<typeof router.push>[0]) => {
       setFabOpen(false);
-      router.push(path);
+      router.push(path as Parameters<typeof router.push>[0]);
     },
     [router]
   );
@@ -132,17 +134,18 @@ export default function RecordsScreen() {
     try {
       const data = await StorageService.getTransactions();
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      const transformedData = transactionsToUse.map(transaction => {
+      type UiTransaction = Transaction & { subtitle?: string; date: Date; dateLabel?: string };
+      const transformedData = (transactionsToUse as any[]).map((transaction: any) => {
         const subtitle = transaction.subtitle
           ? transaction.subtitle
           : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
         const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
         return {
-          ...transaction,
+          ...(transaction as UiTransaction),
           accountId: resolveAccountId(transaction.accountId, transaction.account),
           subtitle,
           date: dateValue,
-        };
+        } as UiTransaction;
       });
       setTransactions(transformedData);
     } catch (error) {
@@ -510,9 +513,12 @@ export default function RecordsScreen() {
                       />
                     </View>
                     <View style={styles.itemContent}>
-                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
-                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
-                      <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
+                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{getAccountMeta(item.accountId)?.name ?? item.account}</ThemedText>
+                      {/* show note or first label (only one) */}
+                      { (item.note || (item.labels && item.labels.length > 0)) ? (
+                        <ThemedText style={[styles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>{item.note ? item.note : (item.labels && item.labels.length > 0 ? item.labels[0] : '')}</ThemedText>
+                      ) : null}
                     </View>
                     <View style={styles.itemMeta}>
                       <ThemedText
@@ -596,7 +602,7 @@ export default function RecordsScreen() {
               {filterSections.map((section) => (
                 <View key={section.id}>
                   {section.id === 'categories' ? (
-                    <TouchableOpacity onPress={() => router.push('/categories?from=filter')}>
+                    <TouchableOpacity onPress={() => router.push('/Category?from=filter')}>
                       <View style={[styles.filterRowItem]}> 
                         <View style={styles.filterRowText}>
                           <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>

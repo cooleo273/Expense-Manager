@@ -8,10 +8,10 @@ import {
   Modal,
   Platform,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
-import { TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
@@ -19,17 +19,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getFullCategoryLabel } from '@/constants/categories';
-import { Colors } from '@/constants/theme';
 import { mockAccounts } from '@/constants/mock-data';
+import { Colors } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
-import { StorageService } from '../services/storage';
 import { subscribeToCategorySelection } from '@/utils/navigation-events';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { StorageService } from '../services/storage';
 
 export const options = {
   headerShown: true,
@@ -78,13 +78,16 @@ export default function LogExpensesScreen() {
   const accountOptions = useMemo(() => mockAccounts.filter(acc => acc.id !== 'all'), []);
   const fallbackAccountId = accountOptions[0]?.id ?? null;
 
+  const [localSelectedAccount, setLocalSelectedAccount] = useState<string | null>(fallbackAccountId);
   useEffect(() => {
-    if (filters.selectedAccount === 'all' && fallbackAccountId) {
-      setSelectedAccount(fallbackAccountId);
-    }
+    // Do not force a fallback account here — allow the dropdown to show 'All'
+    // when opening Log Expenses. Users expect 'All' as default when adding a record.
+    // if (filters.selectedAccount === 'all' && fallbackAccountId) {
+    //   setSelectedAccount(fallbackAccountId);
+    // }
   }, [filters.selectedAccount, fallbackAccountId, setSelectedAccount]);
 
-  const selectedAccountId = filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount;
+  const selectedAccountId = localSelectedAccount ?? (filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount);
 
   const selectedAccount = useMemo(() => {
     return accountOptions.find(acc => acc.id === selectedAccountId);
@@ -255,6 +258,16 @@ export default function LogExpensesScreen() {
       );
 
       setStoredRecords((prev) => [...records, ...prev]);
+      // Persist usage counts for categories (and subcategories) so "MOST FREQUENT"
+      // shows the selected items after saving a record.
+      try {
+        await Promise.all(
+          records.map((record) => StorageService.incrementCategoryUsage(record.subcategoryId ?? record.category))
+        );
+      } catch (err) {
+        // not fatal; just log
+        console.error('Failed to increment category usage:', err);
+      }
       resetDrafts();
 
       showToast('Record saved successfully');
@@ -264,6 +277,8 @@ export default function LogExpensesScreen() {
         return;
       }
 
+      // Ensure records page shows All Accounts by default after adding a record.
+      setSelectedAccount('all');
       router.push('/(tabs)/records');
     } catch (error) {
       console.error('Failed to save transactions:', error);
@@ -358,12 +373,12 @@ export default function LogExpensesScreen() {
   useEffect(() => {
     navigation.setOptions({
       headerTitle: '',
-      headerLeft: () => (
+        headerLeft: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
           </TouchableOpacity>
-          <AccountDropdown allowAll={false} />
+          <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
         </View>
       ),
       headerRight: () => (
@@ -378,6 +393,10 @@ export default function LogExpensesScreen() {
       ),
     });
   }, [handleSave, navigation, palette.icon, palette.tint]);
+
+  // Dont force global selection when adding a record; keep log-expenses local so
+  // it won't affect Records filters. After saving we will set the record page's
+  // global selection to 'all' so the account dropdown there shows All Accounts.
 
   const totalSaved = storedRecords.length;
 
@@ -400,7 +419,6 @@ export default function LogExpensesScreen() {
               options={['expense', 'income']}
               value={transactionType}
               onChange={handleTransactionTypeChange}
-              style={{ flex: 1 }}
             />
             <TouchableOpacity
               onPress={() =>
@@ -415,7 +433,7 @@ export default function LogExpensesScreen() {
               style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
             >
               <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
-              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>Add List</ThemedText>
+              <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -456,7 +474,7 @@ export default function LogExpensesScreen() {
                   style={styles.categoryInput}
                   onPress={() =>
                     router.push({
-                      pathname: '/categories',
+                      pathname: '/Category',
                       params: {
                         current: singleDraft.category,
                         currentSubcategory: singleDraft.subcategoryId,
@@ -518,7 +536,7 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
+              <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
               {singleDraft.labels.length > 0 && (
                 <View style={styles.labelsContainer}>
                   {singleDraft.labels.map((label) => (

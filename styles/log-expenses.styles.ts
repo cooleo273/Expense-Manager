@@ -89,13 +89,14 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignSelf: 'flex-end',
   },
   addListLabel: {
     fontWeight: FontWeights.semibold as any,
+    fontSize: FontSizes.sm,
   },
   sectionCard: {
     borderWidth: 1,

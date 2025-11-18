@@ -52,7 +52,7 @@ export default function LogExpensesListScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const { showToast } = useToast();
-  const { filters } = useFilterContext();
+  const { filters, setSelectedAccount } = useFilterContext();
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scanPrefillRef = useRef<string | null>(null);
@@ -62,11 +62,12 @@ export default function LogExpensesListScreen() {
   }, []);
 
   const fallbackAccount = useMemo(() => mockAccounts.find((acc) => acc.id !== 'all'), []);
+  const [localSelectedAccount, setLocalSelectedAccount] = useState<string | null>(fallbackAccount?.id ?? null);
   const selectedAccountId = useMemo(() => {
     if (filters.selectedAccount && filters.selectedAccount !== 'all') {
       return filters.selectedAccount;
     }
-    return fallbackAccount?.id ?? 'rbc';
+    return localSelectedAccount ?? fallbackAccount?.id ?? 'rbc';
   }, [fallbackAccount, filters.selectedAccount]);
   const accountMeta = useMemo(() => getAccountMeta(selectedAccountId) ?? fallbackAccount, [selectedAccountId, fallbackAccount]);
   const accountName = accountMeta?.name ?? 'RBC Account';
@@ -172,6 +173,13 @@ export default function LogExpensesListScreen() {
       );
 
       showToast(`Added ${drafts.length} record${drafts.length > 1 ? 's' : ''}`);
+      try {
+        await Promise.all(drafts.map(d => StorageService.incrementCategoryUsage(d.subcategoryId ?? d.category)));
+      } catch (err) {
+        console.error('Failed to increment category usage for batch', err);
+      }
+      // Switch the record list to All Accounts after saving from this screen
+      setSelectedAccount('all');
       router.replace('/(tabs)/records');
     } catch (error) {
       console.error('Failed to save batch records', error);
@@ -316,7 +324,7 @@ export default function LogExpensesListScreen() {
   useEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <AccountDropdown allowAll={false} />
+        <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
       ),
       headerLeft: () => (
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
@@ -411,7 +419,7 @@ export default function LogExpensesListScreen() {
                     style={[styles.categoryPill, { borderColor: palette.border }]}
                     onPress={() =>
                       router.push({
-                        pathname: '/categories',
+                        pathname: '/Category',
                         params: {
                           current: record.category,
                           currentSubcategory: record.subcategoryId,
