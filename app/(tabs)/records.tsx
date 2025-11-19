@@ -17,7 +17,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Transaction } from '@/services/storage';
 import { recordsStyles } from '@/styles/records.styles';
 import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
-import { getAccountMeta, mockRecordsData, mockAccounts, resolveAccountId } from '../../constants/mock-data';
+import { getAccountMeta, mockAccounts, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
 // @ts-ignore - optional dependency, install with `npm install @react-native-community/slider`
 // prefer a dual-handle slider; if the dependency isn't installed fallback to two single sliders
