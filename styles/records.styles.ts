@@ -181,6 +181,10 @@ export const recordsStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  filterRowActive: {
+    borderWidth: 1,
+    // color will be applied inline from palette
+  },
   filterRowText: {
     flex: 1,
     gap: Spacing.sm,

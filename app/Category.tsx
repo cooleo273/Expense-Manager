@@ -44,7 +44,7 @@ export default function CategoriesScreen() {
           const txns = await StorageService.getTransactions();
           const source = txns.length > 0 ? txns : mockRecordsData;
           const counts: Record<string, number> = {};
-          source.forEach((t: any) => {
+          source.forEach((t: { categoryId?: string; subcategoryId?: string; category?: string }) => {
             const id = t.subcategoryId ?? t.categoryId ?? t.category;
             if (!id) return;
             counts[id] = (counts[id] ?? 0) + 1;
@@ -76,7 +76,8 @@ export default function CategoriesScreen() {
         const sub = getSubcategoryDefinition(id);
         return !sub || sub.parentId !== categoryId;
       });
-      return [...withoutChildren, categoryId];
+      // When adding a parent category for filters, also select all its subcategories
+      return [...withoutChildren, categoryId, ...subIds];
     });
   };
 
@@ -89,8 +90,17 @@ export default function CategoriesScreen() {
       if (!sub) {
         return prev;
       }
+      // Add subcategory; if after adding all sibling subcategories are selected,
+      // collapse selection to parent.
       const withoutParent = prev.filter(id => id !== sub.parentId);
-      return [...withoutParent, subcategoryId];
+      const newSelected = [...withoutParent, subcategoryId];
+      const siblingIds = getSubcategories(sub.parentId).map(s => s.id);
+      const allSiblingsSelected = siblingIds.every(id => newSelected.includes(id));
+      if (allSiblingsSelected) {
+        // if all subcategories selected, also add the parent but keep children checked
+        return [...new Set([...newSelected, sub.parentId])];
+      }
+      return newSelected;
     });
   };
 
@@ -119,8 +129,8 @@ export default function CategoriesScreen() {
             const txns = await StorageService.getTransactions();
             const source = txns.length > 0 ? txns : mockRecordsData;
             const counts: Record<string, number> = {};
-            source.forEach((t: any) => {
-              const id = t.subcategoryId ?? t.categoryId;
+            source.forEach((t: { categoryId?: string; subcategoryId?: string; category?: string }) => {
+              const id = t.subcategoryId ?? t.categoryId ?? t.category;
               if (!id) return;
               counts[id] = (counts[id] ?? 0) + 1;
             });
