@@ -40,16 +40,16 @@ type ReviewPayload = {
 type PickerMode = 'date' | 'time' | null;
 
 type ParsedParams = {
-  payload?: string;
+  payload?: string | string[];
 };
 
-const parsePayload = (raw: ParsedParams): ReviewPayload | null => {
-  if (!raw.payload || typeof raw.payload !== 'string') {
+const parsePayload = (raw: string | null | undefined): ReviewPayload | null => {
+  if (!raw) {
     return null;
   }
 
   try {
-    const decoded = decodeURIComponent(raw.payload);
+    const decoded = decodeURIComponent(raw);
     const parsed = JSON.parse(decoded) as Partial<ReviewPayload>;
     if (!parsed.records || !Array.isArray(parsed.records) || parsed.records.length === 0) {
       return null;
@@ -82,7 +82,8 @@ export const options = {
 
 export default function LogExpensesReviewScreen() {
   const params = useLocalSearchParams<ParsedParams>();
-  const payload = useMemo(() => parsePayload(params), [params]);
+  const payloadKey = Array.isArray(params.payload) ? params.payload[0] ?? '' : params.payload ?? '';
+  const payload = useMemo(() => parsePayload(payloadKey), [payloadKey]);
 
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
@@ -231,7 +232,7 @@ export default function LogExpensesReviewScreen() {
 
   useEffect(() => {
     if (!payload || !payload.records || payload.records.length === 0) {
-      setReviewRecords([]);
+      setReviewRecords((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -292,15 +293,14 @@ export default function LogExpensesReviewScreen() {
       return 0;
     }
 
-    const sharedSet = new Set(sharedLabels);
     return reviewRecords.reduce((count, record) => {
       const labels = Array.isArray(record.labels) ? record.labels : [];
-      const individual = labels
+      const trimmed = labels
         .map((label) => (typeof label === 'string' ? label.trim() : ''))
-        .filter((label) => !!label && !sharedSet.has(label));
-      return count + individual.length;
+        .filter((label): label is string => Boolean(label));
+      return count + trimmed.length;
     }, 0);
-  }, [reviewRecords, sharedLabels]);
+  }, [reviewRecords]);
 
   const categoriesSummary = useMemo(() => {
     const orderedNames: string[] = [];
