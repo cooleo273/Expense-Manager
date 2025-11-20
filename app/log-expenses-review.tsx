@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -113,6 +113,7 @@ export default function LogExpensesReviewScreen() {
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const headerClearedRef = useRef(false);
 
   const handlePersist = useCallback(
     async (stayOnScreen: boolean) => {
@@ -195,12 +196,21 @@ export default function LogExpensesReviewScreen() {
     },
     [accountName, fallbackAccount, localAccountId, payload, recordDate, reviewRecords, router, setSelectedAccount, showToast, transactionType]
   );
+    const handlePersistRef = useRef(handlePersist);
+    useEffect(() => {
+      handlePersistRef.current = handlePersist;
+    }, [handlePersist]);
 
   useEffect(() => {
     if (!payload) {
-      navigation.setOptions({ headerLeft: () => null, headerRight: () => null });
+      if (!headerClearedRef.current) {
+        navigation.setOptions({ headerLeft: () => null, headerRight: () => null, headerTitle: '' });
+        headerClearedRef.current = true;
+      }
       return;
     }
+
+    headerClearedRef.current = false;
 
     navigation.setOptions({
       headerTitle: '',
@@ -219,7 +229,7 @@ export default function LogExpensesReviewScreen() {
       ),
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => handlePersist(false)} style={{ padding: 8, marginRight: 8 }}>
+          <TouchableOpacity onPress={() => handlePersistRef.current(false)} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
@@ -228,7 +238,7 @@ export default function LogExpensesReviewScreen() {
         </View>
       ),
     });
-  }, [handlePersist, localAccountId, navigation, palette.icon, palette.tint, payload]);
+  }, [localAccountId, navigation, palette.icon, palette.tint, payload]);
 
   useEffect(() => {
     if (!payload || !payload.records || payload.records.length === 0) {
@@ -607,11 +617,11 @@ export default function LogExpensesReviewScreen() {
           <View
             style={[styles.menuContainer, { backgroundColor: palette.card, borderColor: palette.border }]}
           >
-            <TouchableOpacity
-              onPress={() => {
-                handlePersist(true);
-                setShowMenu(false);
-              }}
+              <TouchableOpacity
+                onPress={() => {
+                  handlePersistRef.current(true);
+                  setShowMenu(false);
+                }}
               style={styles.menuItem}
             >
               <MaterialCommunityIcons name="content-save" size={20} color={palette.icon} />
