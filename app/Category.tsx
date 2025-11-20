@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { FlatList, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -59,6 +59,23 @@ export default function CategoriesScreen() {
     return [last, ...mostFrequentFiltered];
   }, [mostFrequentFiltered, typeParam]);
 
+  const toUniqueCategoryIds = useCallback((ids: string[]): string[] => {
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    ids.forEach((id) => {
+      const def = getCategoryDefinition(id);
+      if (!def) {
+        return;
+      }
+      if (seen.has(def.id)) {
+        return;
+      }
+      seen.add(def.id);
+      unique.push(def.id);
+    });
+    return unique;
+  }, []);
+
   // Load persisted category usage when the screen mounts so MOST FREQUENT can show
   // categories the user has recently used. If no persisted usage exists, seed
   // it from stored transactions (or mock data) so the user sees a sensible list.
@@ -82,13 +99,14 @@ export default function CategoriesScreen() {
           }
         }
         const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-        if (mounted) setMostFrequent(sorted.slice(0, 5));
+        const unique = toUniqueCategoryIds(sorted);
+        if (mounted) setMostFrequent(unique.slice(0, 5));
       } catch (err) {
         // ignore
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [toUniqueCategoryIds]);
 
   const toggleCategorySelection = (categoryId: CategoryKey) => {
     setSelectedIds(prev => {
@@ -152,24 +170,25 @@ export default function CategoriesScreen() {
     // Increment usage for most-frequent list (persist locally)
     try {
       await StorageService.incrementCategoryUsage(categoryId);
-        let usage = await StorageService.getCategoryUsage();
-        // try to read persisted usage. If none exists seed it from transactions
-          if (!usage || Object.keys(usage).length === 0) {
-            const txns = await StorageService.getTransactions();
-            const source = txns.length > 0 ? txns : mockRecordsData;
-            const counts: Record<string, number> = {};
-            source.forEach((t: { categoryId?: string; subcategoryId?: string; category?: string }) => {
-              const id = t.subcategoryId ?? t.categoryId ?? t.category;
-              if (!id) return;
-              counts[id] = (counts[id] ?? 0) + 1;
-            });
-            if (Object.keys(counts).length > 0) {
-              await StorageService.setCategoryUsage(counts);
-              usage = counts;
-            }
-          }
-          const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-          setMostFrequent(sorted.slice(0, 5));
+      let usage = await StorageService.getCategoryUsage();
+      // try to read persisted usage. If none exists seed it from transactions
+      if (!usage || Object.keys(usage).length === 0) {
+        const txns = await StorageService.getTransactions();
+        const source = txns.length > 0 ? txns : mockRecordsData;
+        const counts: Record<string, number> = {};
+        source.forEach((t: { categoryId?: string; subcategoryId?: string; category?: string }) => {
+          const id = t.subcategoryId ?? t.categoryId ?? t.category;
+          if (!id) return;
+          counts[id] = (counts[id] ?? 0) + 1;
+        });
+        if (Object.keys(counts).length > 0) {
+          await StorageService.setCategoryUsage(counts);
+          usage = counts;
+        }
+      }
+      const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+      const unique = toUniqueCategoryIds(sorted);
+      setMostFrequent(unique.slice(0, 5));
     } catch (err) {
       // ignore
     }
@@ -210,16 +229,21 @@ export default function CategoriesScreen() {
       <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.tiny, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
         <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>MOST FREQUENT</ThemedText>
         {mostFrequentWithLastUsed.length > 0 ? (
-          <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center' }}>
-            {mostFrequentWithLastUsed.map((id: string) => {
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: Spacing.lg }}
+          >
+            {mostFrequentWithLastUsed.map((id: string, index: number) => {
               const catDef = getCategoryDefinition(id);
               const cat = catDef ? categoryList.find((c) => c.id === catDef.id) : undefined;
               if (!cat) return null;
               const categoryColor = getCategoryColor(cat.id, palette.tint);
               const iconName = getCategoryIcon(cat.id);
+              const isLast = index === mostFrequentWithLastUsed.length - 1;
               return (
                 <TouchableOpacity
-                  key={id}
+                  key={cat.id}
                   onPress={() => navigateToSubcategories(cat.id)}
                   style={{
                     alignItems: 'center',
@@ -227,6 +251,7 @@ export default function CategoriesScreen() {
                     paddingVertical: Spacing.sm,
                     paddingHorizontal: Spacing.md,
                     borderRadius: 12,
+                    marginRight: isLast ? 0 : Spacing.md,
                   }}
                 >
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: `${categoryColor}20`, alignItems: 'center', justifyContent: 'center' }}>
@@ -236,7 +261,7 @@ export default function CategoriesScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         ) : (
           <ThemedText style={{ color: palette.icon }}>No categories selected</ThemedText>
         )}

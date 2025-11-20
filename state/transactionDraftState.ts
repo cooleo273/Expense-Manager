@@ -36,6 +36,7 @@ export const transactionDraftState = {
       ...INITIAL_SINGLE_DRAFT,
       category: nextCategory,
       labels: [],
+      occurredAt: undefined,
     };
     const next = cloneSingle(baseDraft);
     singleDraftMemory = next;
@@ -89,6 +90,7 @@ export const transactionDraftState = {
       ...INITIAL_SINGLE_DRAFT,
       category: baseCategory,
       labels: [],
+      occurredAt: undefined,
     };
     singleDraftMemory = cloneSingle(baseSingle);
     batchDraftsMemory = createInitialBatchDrafts(baseCategory);

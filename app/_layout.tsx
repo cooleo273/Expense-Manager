@@ -3,14 +3,14 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
-import 'react-native-reanimated';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
+import 'react-native-reanimated';
 
+import { Colors } from '@/constants/theme';
 import { CartProvider } from '@/contexts/CartContext';
 import { FilterProvider } from '@/contexts/FilterContext';
 import { ThemeProvider as AppThemeProvider, useThemeContext } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
-import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -18,13 +18,13 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <ToastProvider>
-      <AppThemeProvider>
+    <AppThemeProvider>
+      <ToastProvider>
         <FilterProvider>
           <RootLayoutContent />
         </FilterProvider>
-      </AppThemeProvider>
-    </ToastProvider>
+      </ToastProvider>
+    </AppThemeProvider>
   );
 }
 

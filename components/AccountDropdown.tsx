@@ -15,9 +15,15 @@ const DROPDOWN_MAX_HEIGHT = 240;
   // optional callback for when an account is selected. Useful when using local
   // state (useGlobalState=false) but parent still wants to react to selection.
   onSelect?: (accountId: string) => void;
+  selectedId?: string;
  };
 
-export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = true, useGlobalState = true, onSelect }) => {
+export const AccountDropdown: React.FC<AccountDropdownProps> = ({
+  allowAll = true,
+  useGlobalState = true,
+  onSelect,
+  selectedId,
+}) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [anchorLayout, setAnchorLayout] = useState<{ top: number; left: number; width: number } | null>(null);
   const colorScheme = useColorScheme();
@@ -31,25 +37,29 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
   );
 
   const fallbackAccount = accountOptions[0] as MockAccount | undefined;
-  const selectedAccount = useGlobalState
-    ? accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount!
-    : fallbackAccount!;
+  const globalSelection = accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount!;
 
   useEffect(() => {
     // If for some reason no account is selected and there are options available,
     // default to the first available account.
-    if (useGlobalState && !selectedAccount && accountOptions.length > 0) {
+    if (useGlobalState && !globalSelection && accountOptions.length > 0) {
       setSelectedAccount(accountOptions[0].id);
     }
-  }, [selectedAccount, accountOptions, setSelectedAccount]);
+  }, [globalSelection, accountOptions, setSelectedAccount, useGlobalState]);
 
   if (!accountOptions.length) {
     return null;
   }
 
   const [localSelection, setLocalSelection] = useState<string | undefined>(
-    () => (fallbackAccount ? fallbackAccount.id : undefined)
+    () => selectedId ?? fallbackAccount?.id
   );
+
+  useEffect(() => {
+    if (!useGlobalState && selectedId && selectedId !== localSelection) {
+      setLocalSelection(selectedId);
+    }
+  }, [localSelection, selectedId, useGlobalState]);
 
   const handleSelect = (accountId: string) => {
     if (useGlobalState) {
@@ -94,11 +104,13 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {(useGlobalState ? selectedAccount?.name : accountOptions.find(a => a.id === localSelection)?.name) ?? selectedAccount?.name}
+            {(useGlobalState
+              ? globalSelection?.name
+              : accountOptions.find(a => a.id === localSelection)?.name) ?? globalSelection?.name}
           </Text>
-          {((useGlobalState ? selectedAccount : accountOptions.find(a => a.id === localSelection))?.subtitle) ? (
+          {((useGlobalState ? globalSelection : accountOptions.find(a => a.id === localSelection))?.subtitle) ? (
             <Text style={[styles.anchorSubtitle, { color: palette.icon }]} numberOfLines={1}>
-              {(useGlobalState ? selectedAccount : accountOptions.find(a => a.id === localSelection))?.subtitle}
+              {(useGlobalState ? globalSelection : accountOptions.find(a => a.id === localSelection))?.subtitle}
             </Text>
           ) : null}
         </View>
@@ -137,7 +149,7 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({ allowAll = tru
                   )}
                   showsVerticalScrollIndicator={false}
                   renderItem={({ item }) => {
-                    const isSelected = item.id === (useGlobalState ? selectedAccount.id : localSelection);
+                    const isSelected = item.id === (useGlobalState ? globalSelection.id : localSelection);
                     return (
                       <TouchableOpacity
                         style={[

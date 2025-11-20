@@ -18,7 +18,7 @@ import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { getFullCategoryLabel } from '@/constants/categories';
+import { getCategoryDefinition, getFullCategoryLabel } from '@/constants/categories';
 import { mockAccounts } from '@/constants/mock-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
@@ -160,10 +160,19 @@ export default function LogExpensesScreen() {
     });
   }, []);
 
-  const updateLastSelectedCategory = useCallback((category: string) => {
-    setLastSelectedCategoryState(category);
-    transactionDraftState.setLastSelectedCategory(category, transactionType);
-  }, []);
+  const updateLastSelectedCategory = useCallback(
+    (category: string | undefined, overrideType?: RecordType) => {
+      if (!category) {
+        return;
+      }
+      const categoryType = getCategoryDefinition(category)?.type ?? overrideType ?? transactionType;
+      if (categoryType === 'expense') {
+        setLastSelectedCategoryState(category);
+      }
+      transactionDraftState.setLastSelectedCategory(category, categoryType);
+    },
+    [transactionType]
+  );
 
   const handleSingleChange = useCallback(
     (key: keyof SingleDraft, value?: string) => {
@@ -180,19 +189,20 @@ export default function LogExpensesScreen() {
           } else {
             delete next.subcategoryId;
           }
+        } else if (key === 'category') {
+          const nextCategory = value ?? '';
+          (next as any)[key] = nextCategory;
+          if (!nextCategory) {
+            delete next.subcategoryId;
+          } else {
+            const derivedType = getCategoryDefinition(nextCategory)?.type;
+            updateLastSelectedCategory(nextCategory, derivedType);
+          }
+          setCategoryError('');
         } else {
           (next as any)[key] = value ?? '';
-          if (key === 'category') {
-            updateLastSelectedCategory(value ?? next.category);
-            if (!value) {
-              delete next.subcategoryId;
-            }
-          }
           if (key === 'amount') {
             setAmountError('');
-          }
-          if (key === 'category') {
-            setCategoryError('');
           }
           if (key === 'payee') {
             setPayeeError('');
@@ -213,7 +223,6 @@ export default function LogExpensesScreen() {
       }
       if (payload.category) {
         handleSingleChange('category', payload.category);
-        updateLastSelectedCategory(payload.category);
       }
       if (payload.subcategoryId) {
         handleSingleChange('subcategoryId', payload.subcategoryId);
@@ -222,7 +231,7 @@ export default function LogExpensesScreen() {
       }
     });
     return unsubscribe;
-  }, [handleSingleChange, updateLastSelectedCategory]);
+  }, [handleSingleChange]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

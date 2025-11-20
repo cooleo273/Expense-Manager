@@ -93,7 +93,7 @@ export default function ScanScreen() {
       });
     } catch (error) {
       console.error('Receipt processing failed', error);
-      showToast('Could not process receipt');
+      showToast('Could not process receipt', { tone: 'error' });
       Alert.alert('Receipt scan failed', 'Please try again or upload another file.');
     } finally {
       setIsProcessing(false);

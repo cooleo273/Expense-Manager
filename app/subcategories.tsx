@@ -11,8 +11,8 @@ import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategor
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
-import { emitCategorySelection } from '@/utils/navigation-events';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import { emitCategorySelection } from '@/utils/navigation-events';
 
 export default function SubcategoriesScreen() {
   const colorScheme = useColorScheme();

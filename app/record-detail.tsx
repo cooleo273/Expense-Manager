@@ -8,12 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getFullCategoryLabel } from '@/constants/categories';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { SingleDraft } from '@/types/transactions';
 import { emitRecordDetailUpdate, subscribeToCategorySelection } from '@/utils/navigation-events';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 const styles = logExpensesStyles;
 
@@ -26,6 +27,8 @@ type DraftErrors = {
   amount?: string;
   note?: string;
 };
+
+type PickerMode = 'date' | 'time' | null;
 
 export default function RecordDetailScreen() {
   const colorScheme = useColorScheme();
@@ -57,6 +60,7 @@ export default function RecordDetailScreen() {
           payee: parsed.payee ?? '',
           note: parsed.note ?? '',
           labels: Array.isArray(parsed.labels) ? parsed.labels : [],
+          occurredAt: typeof parsed.occurredAt === 'string' ? parsed.occurredAt : undefined,
         };
       } catch (error) {
         console.warn('Failed to hydrate record detail payload', error);
@@ -69,11 +73,50 @@ export default function RecordDetailScreen() {
       payee: typeof params.payee === 'string' ? params.payee : '',
       note: typeof params.note === 'string' ? params.note : '',
       labels: [],
+      occurredAt: undefined,
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
 
-  const [draft, setDraft] = useState<SingleDraft>(initialDraft);
+  const initialDate = useMemo(() => {
+    if (initialDraft.occurredAt) {
+      const parsed = new Date(initialDraft.occurredAt);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
+  }, [initialDraft.occurredAt]);
+
+  const [recordDate, setRecordDate] = useState<Date>(initialDate);
+  const [draft, setDraft] = useState<SingleDraft>(() => ({
+    ...initialDraft,
+    labels: Array.isArray(initialDraft.labels) ? [...initialDraft.labels] : [],
+    occurredAt: initialDate.toISOString(),
+  }));
   const [errors, setErrors] = useState<DraftErrors>({});
+  const [currentLabelInput, setCurrentLabelInput] = useState('');
+  const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+
+  useEffect(() => {
+    const resolvedDate = (() => {
+      if (initialDraft.occurredAt) {
+        const parsed = new Date(initialDraft.occurredAt);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+      return initialDate;
+    })();
+
+    setDraft({
+      ...initialDraft,
+      labels: Array.isArray(initialDraft.labels) ? [...initialDraft.labels] : [],
+      occurredAt: resolvedDate.toISOString(),
+    });
+    setRecordDate(resolvedDate);
+    setErrors({});
+    setCurrentLabelInput('');
+  }, [initialDate, initialDraft]);
 
   useEffect(() => {
     const unsubscribe = subscribeToCategorySelection((payload) => {
@@ -91,6 +134,71 @@ export default function RecordDetailScreen() {
     });
     return unsubscribe;
   }, [recordIndex]);
+
+  const addLabel = useCallback(() => {
+    const trimmed = currentLabelInput.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setDraft((prev) => {
+      const labels = Array.isArray(prev.labels) ? prev.labels : [];
+      if (labels.includes(trimmed)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        labels: [...labels, trimmed],
+      };
+    });
+    setCurrentLabelInput('');
+  }, [currentLabelInput]);
+
+  const removeLabel = useCallback((labelToRemove: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      labels: (prev.labels ?? []).filter((label) => label !== labelToRemove),
+    }));
+  }, []);
+
+  const handleDateTimeChange = useCallback(
+    (_event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (!selectedDate || !pickerMode) {
+        if (Platform.OS !== 'ios') {
+          setPickerMode(null);
+        }
+        return;
+      }
+
+      const nextDate = new Date(recordDate);
+      if (pickerMode === 'date') {
+        nextDate.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      } else {
+        nextDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      }
+
+      setRecordDate(nextDate);
+      setDraft((prev) => ({
+        ...prev,
+        occurredAt: nextDate.toISOString(),
+      }));
+
+      if (Platform.OS !== 'ios') {
+        setPickerMode(null);
+      }
+    },
+    [pickerMode, recordDate]
+  );
+
+  const formattedDate = useMemo(
+    () => recordDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+    [recordDate]
+  );
+
+  const formattedTime = useMemo(
+    () => recordDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    [recordDate]
+  );
 
   const validate = useCallback(() => {
     const nextErrors: DraftErrors = {};
@@ -113,18 +221,24 @@ export default function RecordDetailScreen() {
 
   const handleSave = useCallback(() => {
     if (!validate()) {
-      showToast('Fix errors to continue');
+      showToast('Fix errors to continue', { tone: 'error' });
       return;
     }
+
+    const nextDraft: SingleDraft = {
+      ...draft,
+      occurredAt: recordDate.toISOString(),
+    };
 
     emitRecordDetailUpdate({
       target: 'log-expenses-list',
       recordIndex,
-      record: draft,
+      record: nextDraft,
     });
+    setDraft(nextDraft);
     showToast('Details updated');
     navigation.goBack();
-  }, [draft, navigation, recordIndex, showToast, validate]);
+  }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -230,7 +344,79 @@ export default function RecordDetailScreen() {
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>{errors.note}</ThemedText>
               ) : null}
             </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Labels</ThemedText>
+                <View style={{ marginTop: (draft.labels?.length ?? 0) > 0 ? Spacing.sm : 0 }}>
+                  <TextInput
+                    style={[styles.notchedInput, { color: palette.text }]}
+                    placeholder="Add a label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                  />
+                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
+                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {(draft.labels?.length ?? 0) > 0 ? (
+                <View style={{ marginTop: Spacing.sm }}>
+                  <View style={styles.labelsContainer}>
+                    {draft.labels?.map((label) => (
+                      <View
+                        key={label}
+                        style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}
+                      >
+                        <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
+                        <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                          <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
+              <View style={styles.dateTimeRow}>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  onPress={() => setPickerMode('date')}
+                >
+                  <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  onPress={() => setPickerMode('time')}
+                >
+                  <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
           </ThemedView>
+
+          {pickerMode ? (
+            <View style={[styles.pickerContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <DateTimePicker
+                value={recordDate}
+                mode={pickerMode}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateTimeChange}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity style={styles.pickerDoneButton} onPress={() => setPickerMode(null)}>
+                  <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
