@@ -23,6 +23,7 @@ import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
+import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { ReceiptImportResult } from '@/types/receipt';
 import { RecordType, SingleDraft } from '@/types/transactions';
@@ -77,7 +78,7 @@ export default function LogExpensesListScreen() {
   const [records, setRecords] = useState<SingleDraft[]>([
     {
       amount: '',
-      category: params.defaultCategory as string || '',
+      category: params.defaultCategory as string || (transactionType === 'income' ? 'income' : transactionDraftState.getLastSelectedCategory('expense')),
       subcategoryId: '',
       payee: '',
       note: '',
@@ -427,6 +428,9 @@ export default function LogExpensesListScreen() {
                           currentSubcategory: record.subcategoryId,
                           returnTo: 'log-expenses-list',
                           recordIndex: index.toString(),
+                          type: transactionType,
+                          // do not auto open subcategories when switching to income
+                          // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                         },
                       })
                       }

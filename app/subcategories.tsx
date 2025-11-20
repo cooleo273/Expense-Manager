@@ -12,6 +12,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { emitCategorySelection } from '@/utils/navigation-events';
+import { transactionDraftState } from '@/state/transactionDraftState';
 
 export default function SubcategoriesScreen() {
   const colorScheme = useColorScheme();
@@ -52,6 +53,15 @@ export default function SubcategoriesScreen() {
       StorageService.incrementCategoryUsage(categoryId);
     } catch (err) {
       // ignore errors
+    }
+    try {
+      // store last selected category by its type (income/expense)
+      const catDef = getCategoryDefinition(categoryId);
+      if (catDef) {
+        transactionDraftState.setLastSelectedCategory(categoryId, catDef.type);
+      }
+    } catch (err) {
+      // non-fatal
     }
     emitCategorySelection({
       target: returnTo ?? '',

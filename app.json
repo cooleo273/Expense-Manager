@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Bella Vista Restaurant",
-    "slug": "bella-vista-restaurant",
+    "name": "Expense Manager",
+    "slug": "expense-manager",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

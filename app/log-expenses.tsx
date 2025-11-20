@@ -69,7 +69,7 @@ export default function LogExpensesScreen() {
 
   const scrollToInput = useCallback((yOffset: number) => {
     scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
-  }, []);
+  }, [transactionType]);
 
   const scrollToEnd = useCallback(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -162,7 +162,7 @@ export default function LogExpensesScreen() {
 
   const updateLastSelectedCategory = useCallback((category: string) => {
     setLastSelectedCategoryState(category);
-    transactionDraftState.setLastSelectedCategory(category);
+    transactionDraftState.setLastSelectedCategory(category, transactionType);
   }, []);
 
   const handleSingleChange = useCallback(
@@ -366,8 +366,20 @@ export default function LogExpensesScreen() {
       }
       setTransactionType(value);
       transactionDraftState.setTransactionType(value);
+      if (value === 'income') {
+        // Pre-populate the Category dropdown as 'Income' when switching to income
+        handleSingleChange('category', 'income');
+        // Remove any subcategory — Income must not display subcategories when switched
+        handleSingleChange('subcategoryId', undefined);
+        // store that Income was chosen so future openings remember it under income type
+        transactionDraftState.setLastSelectedCategory('income', 'income');
+      } else if (value === 'expense') {
+        // Restore last selected expense category when switching back to expense
+        const lastExpense = transactionDraftState.getLastSelectedCategory('expense');
+        handleSingleChange('category', lastExpense);
+      }
     },
-    []
+    [handleSingleChange]
   );
 
   useEffect(() => {
@@ -426,7 +438,7 @@ export default function LogExpensesScreen() {
                   pathname: '/log-expenses-list',
                   params: {
                     type: transactionType,
-                    defaultCategory: lastSelectedCategory,
+                    defaultCategory: transactionType === 'income' ? 'income' : lastSelectedCategory,
                   },
                 })
               }
@@ -479,6 +491,9 @@ export default function LogExpensesScreen() {
                         current: singleDraft.category,
                         currentSubcategory: singleDraft.subcategoryId,
                         returnTo: 'log-expenses',
+                        type: transactionType,
+                        // do not auto open subcategories when switching to income
+                        // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                       },
                     })
                   }
@@ -540,18 +555,7 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
                   Labels
                 </ThemedText>
-                {singleDraft.labels.length > 0 && (
-                  <View style={styles.labelsContainer}>
-                  {singleDraft.labels.map((label) => (
-                    <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
-                      <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
-                      <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
-                        <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  </View>
-                )}
+                {/* keep input inside the inputWrapper */}
                 <View style={{ marginTop: singleDraft.labels.length > 0 ? Spacing.sm : 0 }}>
                   <TextInput
                     style={[styles.notchedInput, { color: palette.text }]}
@@ -568,6 +572,22 @@ export default function LogExpensesScreen() {
                 </View>
                 </View>
               </View>
+
+            {/* Display labels outside the input box and below it */}
+            {singleDraft.labels.length > 0 && (
+              <View style={{ marginTop: Spacing.sm }}>
+                <View style={styles.labelsContainer}>
+                  {singleDraft.labels.map((label) => (
+                    <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
+                      <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
+                      <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                        <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
 
             <View style={styles.fieldGroup}>
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>

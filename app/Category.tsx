@@ -1,17 +1,18 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { categoryList, getCategoryColor, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
+import { categoryList, getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
 import { mockRecordsData } from '@/constants/mock-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
+import { transactionDraftState } from '@/state/transactionDraftState';
 
 export default function CategoriesScreen() {
   const colorScheme = useColorScheme();
@@ -20,9 +21,21 @@ export default function CategoriesScreen() {
   const params = useLocalSearchParams();
   const { filters, setSelectedCategories } = useFilterContext();
 
-  const currentCategory = params.current as string || '';
-  const batchIndex = params.batchIndex as string || '';
+  // Determine source; used to decide whether to prefer draft state's last category
   const from = params.from as string || '';
+
+  // If caller didn't pass a `current` category and we're opening from a record input
+  // page, prefer the last selected category from the draft state so the user sees
+  // their most recent category selection by default.
+  const paramCategory = params.current as string | undefined;
+  const typeParam = (params.type as string) as 'income' | 'expense' | undefined;
+
+  const currentCategory = paramCategory && paramCategory.length > 0
+    ? paramCategory
+    : (['log-expenses', 'log-expenses-list', 'filter'].includes(from) ? transactionDraftState.getLastSelectedCategory(typeParam ?? 'expense') : '');
+  
+  const autoOpenSubcategories = params.autoOpenSubcategories === '1';
+  const batchIndex = params.batchIndex as string || '';
   const returnTo = params.returnTo as string || 'log-expenses';
   const recordIndex = params.recordIndex as string || '';
 
@@ -31,6 +44,20 @@ export default function CategoriesScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>(filters.selectedCategories);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [mostFrequent, setMostFrequent] = useState<string[]>([]);
+  const mostFrequentFiltered = useMemo(() => {
+    if (!typeParam) return mostFrequent;
+    return mostFrequent.filter(id => getCategoryDefinition(id)?.type === typeParam);
+  }, [mostFrequent, typeParam]);
+
+  // If opened for a specific type (e.g., expense) prefer the last selected category
+  // — show it at the top of MOST FREQUENT so the user sees it immediately.
+  const mostFrequentWithLastUsed = useMemo(() => {
+    if (!typeParam) return mostFrequentFiltered;
+    const last = transactionDraftState.getLastSelectedCategory(typeParam);
+    if (!last) return mostFrequentFiltered;
+    if (mostFrequentFiltered.includes(last)) return mostFrequentFiltered;
+    return [last, ...mostFrequentFiltered];
+  }, [mostFrequentFiltered, typeParam]);
 
   // Load persisted category usage when the screen mounts so MOST FREQUENT can show
   // categories the user has recently used. If no persisted usage exists, seed
@@ -84,7 +111,9 @@ export default function CategoriesScreen() {
   const toggleSubcategorySelection = (subcategoryId: string) => {
     setSelectedIds(prev => {
       if (prev.includes(subcategoryId)) {
-        return prev.filter(id => id !== subcategoryId);
+        // When removing a subcategory, also remove the parent category selection
+        const sub = getSubcategoryDefinition(subcategoryId);
+        return prev.filter(id => id !== subcategoryId && id !== (sub ? sub.parentId : ''));
       }
       const sub = getSubcategoryDefinition(subcategoryId);
       if (!sub) {
@@ -148,6 +177,20 @@ export default function CategoriesScreen() {
     router.push({ pathname: '/subcategories', params: paramsToPass });
   };
 
+  React.useEffect(() => {
+    // If parent told us to open subcategories for a type, navigate directly
+    if (!isFilterMode && autoOpenSubcategories && typeParam) {
+      // If the type is specified, use the matching category id — e.g. 'income'
+      try {
+        if (typeParam === 'income') {
+          navigateToSubcategories('income');
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+  }, [autoOpenSubcategories, isFilterMode, typeParam]);
+
   const handleDone = () => {
     setSelectedCategories(selectedIds);
     router.back();
@@ -166,10 +209,11 @@ export default function CategoriesScreen() {
       )}
       <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.tiny, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
         <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>MOST FREQUENT</ThemedText>
-        {mostFrequent.length > 0 ? (
+        {mostFrequentWithLastUsed.length > 0 ? (
           <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center' }}>
-            {mostFrequent.map((id) => {
-              const cat = categoryList.find((c) => c.id === id);
+            {mostFrequentWithLastUsed.map((id: string) => {
+              const catDef = getCategoryDefinition(id);
+              const cat = catDef ? categoryList.find((c) => c.id === catDef.id) : undefined;
               if (!cat) return null;
               const categoryColor = getCategoryColor(cat.id, palette.tint);
               const iconName = getCategoryIcon(cat.id);
@@ -204,7 +248,7 @@ export default function CategoriesScreen() {
             <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600' }}>ALL CATEGORIES</ThemedText>
           </View>
         )}
-        data={categoryList}
+        data={typeParam ? categoryList.filter(c => c.type === typeParam) : categoryList}
         keyExtractor={(item) => item.id}
         style={{ backgroundColor: palette.card }}
         renderItem={({ item }) => {
@@ -254,7 +298,8 @@ export default function CategoriesScreen() {
                     <MaterialCommunityIcons
                       name={isCategorySelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
                       size={22}
-                      color={isCategorySelected ? categoryColor : palette.icon}
+                      // Show selected state with app accent (blue) — not the category color
+                      color={isCategorySelected ? palette.tint : palette.icon}
                     />
                   </TouchableOpacity>
                 </View>
@@ -268,7 +313,8 @@ export default function CategoriesScreen() {
                       <MaterialCommunityIcons
                         name={isCategorySelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
                         size={20}
-                        color={isCategorySelected ? categoryColor : palette.icon}
+                        // parent 'All' checkbox should be accent color when checked (blue)
+                        color={isCategorySelected ? palette.tint : palette.icon}
                       />
                     </TouchableOpacity>
                     {subcategories.map((sub) => {

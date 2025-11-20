@@ -15,9 +15,11 @@ const createInitialBatchDrafts = (category: string): BatchDraft[] => [
 let singleDraftMemory: SingleDraft = cloneSingle(INITIAL_SINGLE_DRAFT);
 let batchDraftsMemory: BatchDraft[] = createInitialBatchDrafts(INITIAL_SINGLE_DRAFT.category);
 let transactionTypeMemory: RecordType = 'expense';
-let lastSelectedCategoryMemory: string = INITIAL_SINGLE_DRAFT.category;
+let lastSelectedCategoryMemory: { income?: string; expense?: string } = {
+  expense: INITIAL_SINGLE_DRAFT.category,
+};
 
-const ensureCategory = (category?: string): string => category || lastSelectedCategoryMemory || INITIAL_SINGLE_DRAFT.category;
+const ensureCategory = (category?: string): string => category || lastSelectedCategoryMemory.expense || INITIAL_SINGLE_DRAFT.category;
 
 export const transactionDraftState = {
   getSingleDraft(): SingleDraft {
@@ -67,13 +69,17 @@ export const transactionDraftState = {
     transactionTypeMemory = type;
   },
 
-  getLastSelectedCategory(): string {
-    return lastSelectedCategoryMemory;
+  getLastSelectedCategory(type?: RecordType): string {
+    if (type) {
+      return lastSelectedCategoryMemory[type] ?? INITIAL_SINGLE_DRAFT.category;
+    }
+    return lastSelectedCategoryMemory[transactionTypeMemory] ?? INITIAL_SINGLE_DRAFT.category;
   },
 
-  setLastSelectedCategory(category: string) {
+  setLastSelectedCategory(category: string, type?: RecordType) {
     if (category) {
-      lastSelectedCategoryMemory = category;
+      const key = type ?? transactionTypeMemory;
+      lastSelectedCategoryMemory[key] = category;
     }
   },
 

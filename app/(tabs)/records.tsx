@@ -503,10 +503,10 @@ export default function RecordsScreen() {
   const uniquePayers = useMemo(() => {
     const counts: Record<string, number> = {};
     transactions.forEach((t) => {
-      const p = t.payee ?? '';
-      if (!p.trim()) return;
-      const key = p.trim();
-      counts[key] = (counts[key] ?? 0) + 1;
+      // prefer explicit payee; fall back to account name or title so payees show even when payee is missing
+      const candidate = (t.payee || t.account || t.title || '').toString().trim();
+      if (!candidate) return;
+      counts[candidate] = (counts[candidate] ?? 0) + 1;
     });
     // sort by frequency
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([payee]) => payee);
@@ -775,7 +775,7 @@ export default function RecordsScreen() {
                 return (
                 <View key={section.id}>
                   {section.id === 'categories' ? (
-                    <TouchableOpacity onPress={() => router.push('/Category?from=filter')}>
+                    <TouchableOpacity onPress={() => router.push({ pathname: '/Category', params: { from: 'filter', type: selectedRecordType !== 'all' ? selectedRecordType : undefined }})}>
                       <View style={[styles.filterRowItem, (isExpanded || isActive) && { backgroundColor: `${palette.tint}0F`, borderColor: palette.tint, borderWidth: 1 }]}> 
                         <View style={styles.filterRowText}>
                           <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
