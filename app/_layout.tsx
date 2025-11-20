@@ -58,6 +58,7 @@ function RootLayoutContent() {
         <CartProvider>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="scan" options={{ headerShown: false, headerLeft: () => null, headerTitle: '' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

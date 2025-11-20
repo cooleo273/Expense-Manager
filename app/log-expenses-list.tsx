@@ -37,6 +37,17 @@ const isReceiptImportResult = (payload: unknown): payload is ReceiptImportResult
   return candidate.draftPatch !== undefined && candidate.draftPatch !== null && typeof candidate.draftPatch === 'object';
 };
 
+const isReceiptImportBatch = (payload: unknown): payload is { records: SingleDraft[] } => {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+  const candidate = payload as { records?: unknown };
+  if (!Array.isArray(candidate.records) || candidate.records.length === 0) {
+    return false;
+  }
+  return candidate.records.every((r) => r && typeof r === 'object');
+};
+
 export const options = {
   headerShown: true,
   headerTitle: 'Add Expenses List',
@@ -214,6 +225,31 @@ export default function LogExpensesListScreen() {
     try {
       const decoded = decodeURIComponent(parsedParam);
       const payload = JSON.parse(decoded);
+      if (isReceiptImportBatch(payload)) {
+        const incoming = payload.records.map((r) => {
+          const record = r as any;
+          const amt = record.amount;
+          const amount = typeof amt === 'number' ? amt.toFixed(2) : (typeof amt === 'string' ? amt : '');
+          return {
+            amount,
+            category: record.category ?? '',
+            subcategoryId: record.subcategoryId ?? '',
+            payee: record.payee ?? '',
+            note: record.note ?? '',
+            occurredAt: typeof record.occurredAt === 'string' ? record.occurredAt : undefined,
+            labels: Array.isArray(record.labels) ? [...record.labels] : [],
+          } as SingleDraft;
+        });
+
+        setRecords(incoming);
+        setRecordErrors(Array(incoming.length).fill(''));
+        setRecordNoteErrors(Array(incoming.length).fill(''));
+        setRecordCategoryErrors(Array(incoming.length).fill(''));
+        showToast('Receipt items imported');
+        scanPrefillRef.current = parsedParam;
+        return;
+      }
+
       if (!isReceiptImportResult(payload)) {
         return;
       }
@@ -232,6 +268,7 @@ export default function LogExpensesListScreen() {
           note: draftPatch.note ?? first.note,
           category: draftPatch.category ?? first.category,
           subcategoryId: draftPatch.subcategoryId ?? first.subcategoryId,
+          occurredAt: typeof (draftPatch as any).occurredAt === 'string' ? (draftPatch as any).occurredAt : first.occurredAt,
         };
 
         return [nextFirst, ...rest];

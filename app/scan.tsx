@@ -52,6 +52,7 @@ export default function ScanScreen() {
       type: 'image/jpeg',
     } as any);
 
+    console.debug('[Scan] Uploading receipt', { endpoint, uri });
     const response = await fetch(endpoint, {
       method: 'POST',
       body: formData,
@@ -70,18 +71,61 @@ export default function ScanScreen() {
       throw new Error(message);
     }
 
-    return response.json();
+    const json = await response.json();
+    // Log the full response from the receipt parsing endpoint for debugging
+    console.debug('[Scan] receipt parse response', JSON.stringify(json, null, 2));
+    return json;
   }, [apiBaseUrl]);
 
   const processReceipt = useCallback(
     async (uri: string) => {
       const proxyResponse = await uploadReceipt(uri);
+      // Log the complete proxy response for debugging mapping
+      console.debug('[Scan] proxyResponse', JSON.stringify(proxyResponse, null, 2));
       const mappedExpense = mapReceiptToExpense(proxyResponse?.fields);
+      // Log the mapped expense so we can check for incorrect field mappings
+      console.debug('[Scan] mappedExpense', JSON.stringify(mappedExpense, null, 2));
       if (!mappedExpense) {
         throw new Error('Receipt fields unavailable');
       }
 
-      const encodedFields = encodeURIComponent(JSON.stringify(mappedExpense));
+      // If the parsed receipt contains individual line-items, create a draft per item
+      // so the log expenses list shows each item separately.
+      const items = mappedExpense.expense?.items ?? [];
+      const receiptDate = mappedExpense.expense?.date ?? null;
+      const receiptTime = mappedExpense.expense?.time ?? null;
+      const computeOccurredAt = () => {
+        if (!receiptDate) return undefined;
+        const combined = receiptTime ? `${receiptDate}T${receiptTime}` : receiptDate;
+        const parsed = new Date(combined);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed.toISOString();
+        }
+        return undefined;
+      };
+      const occurredAtForRecord = computeOccurredAt();
+      const records = (items && items.length > 0)
+        ? items.map((it) => ({
+            amount: (typeof it.total === 'number' ? it.total.toFixed(2) : `${it.total}`),
+            category: mappedExpense.expense?.category ?? '',
+            subcategoryId: mappedExpense.expense?.subcategoryId ?? '',
+            payee: mappedExpense.expense?.payee ?? mappedExpense.expense?.merchant ?? '',
+            note: it.description ?? mappedExpense.expense?.note ?? '',
+            labels: [],
+            occurredAt: occurredAtForRecord,
+          })) as any[]
+        : undefined;
+
+      const payloadToSend: any = records && records.length > 0
+        ? { records }
+        : {
+            draftPatch: {
+              ...(mappedExpense.draftPatch ?? {}),
+              ...(occurredAtForRecord ? { occurredAt: occurredAtForRecord } : {}),
+            },
+          };
+      console.debug('[Scan] outgoing parsed payload', JSON.stringify(payloadToSend, null, 2));
+      const encodedFields = encodeURIComponent(JSON.stringify(payloadToSend));
       showToast('Receipt imported');
       router.replace({
         pathname: '/log-expenses-list',
@@ -174,16 +218,21 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} ref={cameraRef} facing={facing} flash="off">
-        <View
-          style={[
-            styles.overlay,
-            {
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom + Spacing.lg,
-            },
-          ]}
-        >
+      <CameraView style={StyleSheet.absoluteFill} ref={cameraRef} facing={facing} flash="off" />
+      <View
+        style={[
+          styles.overlay,
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom + Spacing.lg,
+          },
+        ]}
+      >
           <View style={styles.frameContainer}>
             <View style={styles.receiptFrame}>
               <View style={[styles.frameCorner, styles.frameCornerTL]} />
@@ -224,7 +273,6 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </CameraView>
       {isProcessing && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color="#FFFFFF" />
