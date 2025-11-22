@@ -4,20 +4,21 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FAB, Portal } from 'react-native-paper';
 import type { FABGroupProps } from 'react-native-paper';
+import { FAB, Portal } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCategoryColor, getCategoryDefinition, getCategoryIcon, type CategoryKey } from '@/constants/categories';
+import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getNodeDisplayName, type CategoryKey } from '@/constants/categories';
+import { getAccountMeta, mockRecordsData, resolveAccountId } from '@/constants/mock-data';
 import { Colors, IconSizes, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { Transaction } from '@/services/storage';
 import { homeStyles } from '@/styles/home.styles';
 import { formatFriendlyDate } from '@/utils/date';
-import { mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { StorageService } from '../../services/storage';
 
 export default function HomeScreen() {
@@ -34,23 +35,24 @@ export default function HomeScreen() {
     try {
       const data = await StorageService.getTransactions();
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      const transformedData = transactionsToUse.map(transaction => {
+      type UiTransaction = Transaction & { subtitle?: string; date: Date; dateLabel?: string };
+      const transformedData = (transactionsToUse as any[]).map((transaction: any) => {
         const subtitle = transaction.subtitle
           ? transaction.subtitle
           : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
         const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
         return {
-          ...transaction,
+          ...(transaction as UiTransaction),
           accountId: resolveAccountId(transaction.accountId, transaction.account),
           subtitle,
           date: dateValue,
-        };
+        } as UiTransaction;
       });
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
       // Fallback to mock data on error
-      const transformedData = mockRecordsData.map(transaction => ({
+      const transformedData = mockRecordsData.map((transaction: any) => ({
         ...transaction,
         accountId: resolveAccountId(transaction.accountId, transaction.account),
         date: transaction.date instanceof Date ? transaction.date : new Date(transaction.date),
@@ -79,9 +81,10 @@ export default function HomeScreen() {
   }, [isFocused]);
 
   const handleFabNavigate = useCallback(
-    (path: string) => {
+    (path: Parameters<typeof router.push>[0]) => {
       setFabOpen(false);
-      router.push(path);
+      // `router.push` expects a route union; cast the path to the expected type so we can call it safely
+      router.push(path as Parameters<typeof router.push>[0]);
     },
     [router]
   );
@@ -335,8 +338,14 @@ export default function HomeScreen() {
                     />
                   </View>
                   <View style={styles.recordContent}>
-                    <ThemedText style={styles.recordTitle}>{record.title}</ThemedText>
-                    <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{record.subtitle}</ThemedText>
+                    <ThemedText style={styles.recordTitle}>{getNodeDisplayName(record.subcategoryId) ?? getNodeDisplayName(record.categoryId) ?? record.title}</ThemedText>
+                    <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{getAccountMeta(record.accountId)?.name ?? record.account}</ThemedText>
+                    {/* Bottom line shows note or first label if available (show only one) */}
+                    { (record.note || (record.labels && record.labels.length > 0)) ? (
+                      <ThemedText style={[styles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
+                        {record.note ? record.note : (record.labels && record.labels.length > 0 ? record.labels[0] : '')}
+                      </ThemedText>
+                    ) : null}
                   </View>
                   <View style={styles.recordMeta}>
                     <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: amountColor }]}>

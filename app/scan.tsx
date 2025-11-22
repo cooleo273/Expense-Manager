@@ -1,5 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,15 +17,22 @@ export const options = {
   headerShown: false,
 };
 
-type FlashMode = 'off' | 'on';
-
 export default function ScanScreen() {
+  const navigation = useNavigation();
+  React.useEffect(() => {
+    // Ensure the header is hidden when this screen mounts. Some parent layout
+    // configuration can occasionally re-enable the default header for routes.
+    navigation.setOptions({ headerShown: false, headerLeft: () => null, headerTitle: '' });
+    return () => {
+      // Resetting headerShown isn't necessary for the app, but keep a noop cleanup
+      // to be explicit for the lifecycle.
+    };
+  }, [navigation]);
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [facing, setFacing] = useState<CameraType>('back');
-  const [flash, setFlash] = useState<FlashMode>('off');
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
   const { showToast } = useToast();
@@ -32,10 +41,6 @@ export default function ScanScreen() {
 
   const toggleCameraFacing = () => {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
-  };
-
-  const toggleFlash = () => {
-    setFlash((current) => (current === 'off' ? 'on' : 'off'));
   };
 
   const uploadReceipt = useCallback(async (uri: string) => {
@@ -47,6 +52,7 @@ export default function ScanScreen() {
       type: 'image/jpeg',
     } as any);
 
+    console.debug('[Scan] Uploading receipt', { endpoint, uri });
     const response = await fetch(endpoint, {
       method: 'POST',
       body: formData,
@@ -65,44 +71,133 @@ export default function ScanScreen() {
       throw new Error(message);
     }
 
-    return response.json();
+    const json = await response.json();
+    // Log the full response from the receipt parsing endpoint for debugging
+    console.debug('[Scan] receipt parse response', JSON.stringify(json, null, 2));
+    return json;
   }, [apiBaseUrl]);
 
-  const takePicture = async () => {
-    if (!cameraRef.current || isProcessing) {
-      return;
-    }
-    try {
-      setIsProcessing(true);
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, base64: false });
-      if (!photo?.uri) {
-        throw new Error('Unable to capture photo');
-      }
-
-      const proxyResponse = await uploadReceipt(photo.uri);
+  const processReceipt = useCallback(
+    async (uri: string) => {
+      const proxyResponse = await uploadReceipt(uri);
+      // Log the complete proxy response for debugging mapping
+      console.debug('[Scan] proxyResponse', JSON.stringify(proxyResponse, null, 2));
       const mappedExpense = mapReceiptToExpense(proxyResponse?.fields);
+      // Log the mapped expense so we can check for incorrect field mappings
+      console.debug('[Scan] mappedExpense', JSON.stringify(mappedExpense, null, 2));
       if (!mappedExpense) {
         throw new Error('Receipt fields unavailable');
       }
-      const encodedFields = encodeURIComponent(JSON.stringify(mappedExpense));
 
+      // If the parsed receipt contains individual line-items, create a draft per item
+      // so the log expenses list shows each item separately.
+      const items = mappedExpense.expense?.items ?? [];
+      const receiptDate = mappedExpense.expense?.date ?? null;
+      const receiptTime = mappedExpense.expense?.time ?? null;
+      const computeOccurredAt = () => {
+        if (!receiptDate) return undefined;
+        const combined = receiptTime ? `${receiptDate}T${receiptTime}` : receiptDate;
+        const parsed = new Date(combined);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed.toISOString();
+        }
+        return undefined;
+      };
+      const occurredAtForRecord = computeOccurredAt();
+      const records = (items && items.length > 0)
+        ? items.map((it) => ({
+            amount: (typeof it.total === 'number' ? it.total.toFixed(2) : `${it.total}`),
+            category: mappedExpense.expense?.category ?? '',
+            subcategoryId: mappedExpense.expense?.subcategoryId ?? '',
+            payee: mappedExpense.expense?.payee ?? mappedExpense.expense?.merchant ?? '',
+            note: it.description ?? mappedExpense.expense?.note ?? '',
+            labels: [],
+            occurredAt: occurredAtForRecord,
+          })) as any[]
+        : undefined;
+
+      const payloadToSend: any = records && records.length > 0
+        ? { records }
+        : {
+            draftPatch: {
+              ...(mappedExpense.draftPatch ?? {}),
+              ...(occurredAtForRecord ? { occurredAt: occurredAtForRecord } : {}),
+            },
+          };
+      console.debug('[Scan] outgoing parsed payload', JSON.stringify(payloadToSend, null, 2));
+      const encodedFields = encodeURIComponent(JSON.stringify(payloadToSend));
       showToast('Receipt imported');
       router.replace({
         pathname: '/log-expenses-list',
         params: { parsed: encodedFields },
       });
+    },
+    [router, showToast, uploadReceipt]
+  );
+  const takePicture = useCallback(async () => {
+    if (!cameraRef.current || isProcessing) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, base64: false });
+      if (!photo?.uri) {
+        throw new Error('Unable to capture photo');
+      }
+
+      await processReceipt(photo.uri);
     } catch (error) {
-      console.error('Receipt processing failed', error);
-      showToast('Could not process receipt');
+      console.error('Receipt capture failed', error);
+      showToast('Could not process receipt', { tone: 'error' });
       Alert.alert('Receipt scan failed', 'Please try again or upload another file.');
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [cameraRef, isProcessing, processReceipt, showToast]);
 
-  const handleOpenGallery = () => {
-    Alert.alert('Coming soon', 'Importing receipts from the gallery will arrive in a future update.');
-  };
+  const handleOpenGallery = useCallback(async () => {
+    if (isProcessing) {
+      return;
+    }
+
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Please allow photo library access to import receipts.');
+        return;
+      }
+
+      const selection = await ImagePicker.launchImageLibraryAsync({
+        allowsMultipleSelection: false,
+        quality: 0.9,
+      });
+
+      if (selection.canceled || !selection.assets?.length) {
+        return;
+      }
+
+      const asset = selection.assets[0];
+      if (!asset?.uri) {
+        throw new Error('No image selected');
+      }
+
+      // Only accept images (ignore videos or other media for now).
+      if (asset.type && asset.type !== 'image') {
+        Alert.alert('Invalid selection', 'Please select an image file from your library.');
+        return;
+      }
+
+      setIsProcessing(true);
+      await processReceipt(asset.uri);
+    } catch (error) {
+      console.error('Gallery import failed', error);
+      showToast('Could not import receipt', { tone: 'error' });
+      Alert.alert('Receipt import failed', 'Please try again with a different image.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, processReceipt, showToast]);
 
   if (!permission) {
     return <View style={[styles.container, { backgroundColor: palette.background }]} />;
@@ -123,47 +218,21 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} ref={cameraRef} facing={facing} flash={flash}>
-        <View
-          style={[
-            styles.overlay,
-            {
-              paddingTop: insets.top + Spacing.lg,
-              paddingBottom: insets.bottom + Spacing.lg,
-            },
-          ]}
-        >
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => router.back()}
-              style={[styles.circleButton, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <View style={styles.topControls}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={toggleFlash}
-                style={[styles.iconChip, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-              >
-                <MaterialCommunityIcons name={flash === 'off' ? 'flash-off' : 'flash'} size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                style={[styles.iconChip, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-              >
-                <MaterialCommunityIcons name="timer-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                style={[styles.iconChip, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-              >
-                <MaterialCommunityIcons name="aspect-ratio" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
+      <CameraView style={StyleSheet.absoluteFill} ref={cameraRef} facing={facing} flash="off" />
+      <View
+        style={[
+          styles.overlay,
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom + Spacing.lg,
+          },
+        ]}
+      >
           <View style={styles.frameContainer}>
             <View style={styles.receiptFrame}>
               <View style={[styles.frameCorner, styles.frameCornerTL]} />
@@ -204,7 +273,6 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </CameraView>
       {isProcessing && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color="#FFFFFF" />
@@ -235,35 +303,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  circleButton: {
-    width: 42,
-    height: 42,
-    borderRadius: BorderRadius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  iconChip: {
-    minWidth: 42,
-    height: 42,
-    borderRadius: BorderRadius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.sm,
-  },
-  iconChipText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   frameContainer: {
     flex: 1,

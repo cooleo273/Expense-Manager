@@ -44,6 +44,7 @@ export interface Transaction {
 }
 
 const TRANSACTIONS_KEY = '@transactions';
+const CATEGORY_USAGE_KEY = '@category_usage';
 
 export class StorageService {
   // Get all transactions
@@ -147,6 +148,35 @@ export class StorageService {
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
     } catch (error) {
       console.error('Error clearing storage:', error);
+    }
+  }
+
+  static async getCategoryUsage(): Promise<Record<string, number>> {
+    try {
+      const value = await AsyncStorage.getItem(CATEGORY_USAGE_KEY);
+      return value ? JSON.parse(value) : {};
+    } catch (error) {
+      console.error('Error loading category usage:', error);
+      return {};
+    }
+  }
+
+  static async incrementCategoryUsage(categoryId: string): Promise<void> {
+    try {
+      const current = await this.getCategoryUsage();
+      const next = { ...current } as Record<string, number>;
+      next[categoryId] = (next[categoryId] ?? 0) + 1;
+      await AsyncStorage.setItem(CATEGORY_USAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+      console.error('Error incrementing category usage:', error);
+    }
+  }
+
+  static async setCategoryUsage(usage: Record<string, number>): Promise<void> {
+    try {
+      await AsyncStorage.setItem(CATEGORY_USAGE_KEY, JSON.stringify(usage));
+    } catch (error) {
+      console.error('Error setting category usage:', error);
     }
   }
 }

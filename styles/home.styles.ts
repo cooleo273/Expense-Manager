@@ -8,7 +8,7 @@ export const homeStyles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.lg,
     gap: Spacing.lg,
   },
   sectionCard: {
@@ -117,8 +117,8 @@ export const homeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    gap: Spacing.md,
+    paddingVertical: Spacing.xs,
+    gap: Spacing.sm,
   },
   recordDivider: {
     height: StyleSheet.hairlineWidth,

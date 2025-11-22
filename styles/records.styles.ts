@@ -82,7 +82,7 @@ export const recordsStyles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.lg,
     gap: Spacing.lg,
   },
@@ -180,6 +180,10 @@ export const recordsStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  filterRowActive: {
+    borderWidth: 1,
+    // color will be applied inline from palette
   },
   filterRowText: {
     flex: 1,
