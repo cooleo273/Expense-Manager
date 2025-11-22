@@ -44,7 +44,7 @@ export const logExpensesStyles = StyleSheet.create({
   summaryLabel: {
     fontSize: FontSizes.sm,
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    // textTransform: 'uppercase',
   },
   summaryTotal: {
     fontSize: FontSizes.huge,
@@ -89,13 +89,14 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignSelf: 'flex-end',
   },
   addListLabel: {
     fontWeight: FontWeights.semibold as any,
+    fontSize: FontSizes.sm,
   },
   sectionCard: {
     borderWidth: 1,
@@ -159,12 +160,16 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.massive,
     fontWeight: FontWeights.bold as any,
     padding: 0,
+    lineHeight: FontSizes.massive + 4,
+    textAlignVertical: 'center',
   },
   amountCompactInput: {
     minWidth: 60,
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     padding: 0,
+    lineHeight: FontSizes.lg + 4,
+    textAlignVertical: 'center',
   },
   inputWrapper: {
     position: 'relative',
@@ -206,9 +211,10 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
+    minHeight: 56,
   },
   categoryIconBadge: {
     width: 32,
@@ -229,6 +235,8 @@ export const logExpensesStyles = StyleSheet.create({
     maxWidth: 140,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
+    minHeight: 56,
+    justifyContent: 'center',
   },
   amountInputRow: {
     flexDirection: 'row',
@@ -238,6 +246,10 @@ export const logExpensesStyles = StyleSheet.create({
   currencyTiny: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold as any,
+    // Align to the larger compact amount line (FontSizes.lg) so the dollar sign
+    // sits on the same baseline as the numeric input.
+    lineHeight: FontSizes.lg + 4,
+    textAlignVertical: 'center',
   },
   deleteButton: {
     padding: Spacing.sm,
@@ -370,6 +382,30 @@ export const logExpensesStyles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.sm,
   },
+  labelsSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  labelSummaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
+  labelActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
   labelChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,5 +427,27 @@ export const logExpensesStyles = StyleSheet.create({
     right: Spacing.sm,
     top: '50%',
     transform: [{ translateY: -10 }],
+  },
+  sharedLabelInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  sharedLabelInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    fontSize: FontSizes.md,
+  },
+  sharedLabelAction: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
 });

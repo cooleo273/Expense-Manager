@@ -9,6 +9,7 @@ export type SingleDraft = {
   payee: string;
   note: string;
   labels: string[];
+  occurredAt?: string;
 };
 
 export type BatchDraft = {
@@ -40,6 +41,7 @@ export const INITIAL_SINGLE_DRAFT: SingleDraft = {
   payee: '',
   note: '',
   labels: [],
+  occurredAt: undefined,
 };
 
 export const createBatchDraft = (defaultCategory: string = DEFAULT_CATEGORY): BatchDraft => ({

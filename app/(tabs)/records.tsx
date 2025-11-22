@@ -4,19 +4,37 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FAB, Portal } from 'react-native-paper';
 import type { FABGroupProps } from 'react-native-paper';
+import { FAB, Portal } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+// imports consolidated below
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId } from '@/constants/categories';
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { Transaction } from '@/services/storage';
 import { recordsStyles } from '@/styles/records.styles';
 import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
-import { getAccountMeta, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
+import { getAccountMeta, mockAccounts, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
+// @ts-ignore - optional dependency, install with `npm install @react-native-community/slider`
+// prefer a dual-handle slider; if the dependency isn't installed fallback to two single sliders
+// dynamic require so app stays resilient if the package isn't installed
+// @ts-ignore
+let MultiSlider: any;
+try {
+  // @ts-ignore
+  MultiSlider = require('@ptomasroos/react-native-multi-slider');
+  // the package sometimes exports default
+  if (MultiSlider && MultiSlider.default) MultiSlider = MultiSlider.default;
+} catch (err) {
+  MultiSlider = undefined;
+}
+// @ts-ignore
+import KeyTermsEditor from '@/components/KeyTermsEditor';
+import Slider from '@react-native-community/slider';
 import { StorageService } from '../../services/storage';
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
@@ -82,11 +100,12 @@ export default function RecordsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const accent = palette.tint;
   const router = useRouter();
-  const { filters, setSelectedCategories, setDateRange } = useFilterContext();
+  const { filters, setSelectedCategories, setDateRange, setAmountRange, setSelectedPayers, setSelectedLabels, setKeyTerms, setSelectedAccount, resetFilters } = useFilterContext();
 
   const [selectedRecordType, setSelectedRecordType] = useState<TransactionTypeValue>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
@@ -97,9 +116,9 @@ export default function RecordsScreen() {
   const isFocused = useIsFocused();
 
   const handleFabNavigate = useCallback(
-    (path: string) => {
+    (path: Parameters<typeof router.push>[0]) => {
       setFabOpen(false);
-      router.push(path);
+      router.push(path as Parameters<typeof router.push>[0]);
     },
     [router]
   );
@@ -132,17 +151,18 @@ export default function RecordsScreen() {
     try {
       const data = await StorageService.getTransactions();
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      const transformedData = transactionsToUse.map(transaction => {
+      type UiTransaction = Transaction & { subtitle?: string; date: Date; dateLabel?: string };
+      const transformedData = (transactionsToUse as any[]).map((transaction: any) => {
         const subtitle = transaction.subtitle
           ? transaction.subtitle
           : `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`;
         const dateValue = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
         return {
-          ...transaction,
+          ...(transaction as UiTransaction),
           accountId: resolveAccountId(transaction.accountId, transaction.account),
           subtitle,
           date: dateValue,
-        };
+        } as UiTransaction;
       });
       setTransactions(transformedData);
     } catch (error) {
@@ -175,6 +195,47 @@ export default function RecordsScreen() {
     }
   }, [isFocused]);
 
+  // Amount slider support — default to 0..maxTransactionAbs
+  const maxTransactionAbs = useMemo(() => {
+    if (transactions.length === 0) return 100;
+    return Math.max(100, ...transactions.map((t) => Math.abs(t.amount || 0)));
+  }, [transactions]);
+
+  // Local amount slider state used by the filter drawer
+  const [localMinAmount, setLocalMinAmount] = useState<number>(0);
+  const [localMaxAmount, setLocalMaxAmount] = useState<number>(maxTransactionAbs);
+
+  const [localFilters, setLocalFilters] = useState({
+    selectedPayers: [] as string[],
+    selectedLabels: [] as string[],
+    keyTerms: [] as string[],
+    amountRange: null as { min: number; max: number } | null,
+    dateRange: null as DateRange | null,
+    selectedCategories: [] as string[],
+    selectedAccount: 'all' as string,
+  });
+
+  useEffect(() => {
+    if (showFilters) {
+      setLocalFilters({
+        selectedPayers: filters.selectedPayers || [],
+        selectedLabels: filters.selectedLabels || [],
+        keyTerms: filters.keyTerms || [],
+        amountRange: filters.amountRange
+          ? {
+              min: filters.amountRange.min ?? 0,
+              max: filters.amountRange.max ?? maxTransactionAbs,
+            }
+          : null,
+        dateRange: filters.dateRange,
+        selectedCategories: filters.selectedCategories,
+        selectedAccount: filters.selectedAccount || 'all',
+      });
+      setLocalMinAmount(filters.amountRange?.min ?? 0);
+      setLocalMaxAmount(filters.amountRange?.max ?? maxTransactionAbs);
+    }
+  }, [showFilters, filters, maxTransactionAbs]);
+
   const filteredAndSortedData = useMemo(() => {
     const filtered = transactions.filter((item) => {
       if (filters.selectedAccount && filters.selectedAccount !== 'all') {
@@ -184,6 +245,10 @@ export default function RecordsScreen() {
       }
 
       if (selectedRecordType !== 'all' && selectedRecordType !== item.type) {
+        return false;
+      }
+      // Also respect search category from global FilterContext (applies when navigated from search)
+      if (filters.searchCategory && filters.searchCategory !== 'all' && filters.searchCategory !== item.type) {
         return false;
       }
 
@@ -217,6 +282,39 @@ export default function RecordsScreen() {
         }
       }
 
+      if (filters.selectedPayers && filters.selectedPayers.length > 0) {
+        const payee = (item.payee || '').trim();
+        if (!filters.selectedPayers.includes(payee)) {
+          return false;
+        }
+      }
+
+      if (filters.selectedLabels && filters.selectedLabels.length > 0) {
+        const labels = (item.labels || []).map((l: string) => l.trim());
+        const matches = filters.selectedLabels.some((sel) => labels.includes(sel));
+        if (!matches) {
+          return false;
+        }
+      }
+
+      if (filters.keyTerms && filters.keyTerms.length > 0) {
+        const text = `${item.title} ${item.note || ''} ${item.payee || ''} ${(item.labels || []).join(' ')}`.toLowerCase();
+        const allTermsPresent = filters.keyTerms.every((t) => text.includes(t.toLowerCase()));
+        if (!allTermsPresent) {
+          return false;
+        }
+      }
+
+      // apply amount filter (absolute amount)
+      if (filters.amountRange) {
+        const abs = Math.abs(item.amount);
+        const min = filters.amountRange.min ?? 0;
+        const max = filters.amountRange.max ?? Number.MAX_VALUE;
+        if (abs < min || abs > max) {
+          return false;
+        }
+      }
+
       return true;
     });
 
@@ -238,7 +336,7 @@ export default function RecordsScreen() {
     });
 
     return sorted;
-  }, [selectedRecordType, sortOption, filters.selectedAccount, filters.selectedCategories, filters.dateRange, filters.searchTerm, transactions]);
+  }, [selectedRecordType, sortOption, filters.selectedAccount, filters.selectedCategories, filters.dateRange, filters.searchTerm, filters.amountRange, transactions]);
 
   const appliedFiltersCount = useMemo(() => {
     let count = 0;
@@ -254,14 +352,26 @@ export default function RecordsScreen() {
     if (filters.dateRange) {
       count += 1;
     }
+    if (filters.amountRange && (filters.amountRange.min != null || filters.amountRange.max != null)) {
+      count += 1;
+    }
     if (filters.searchTerm) {
       count += 1;
     }
     if (filters.searchCategory && filters.searchCategory !== 'all') {
       count += 1;
     }
+    if (filters.selectedPayers && filters.selectedPayers.length > 0) {
+      count += 1;
+    }
+    if (filters.selectedLabels && filters.selectedLabels.length > 0) {
+      count += 1;
+    }
+    if (filters.keyTerms && filters.keyTerms.length > 0) {
+      count += 1;
+    }
     return count;
-  }, [filters.dateRange, filters.searchCategory, filters.searchTerm, filters.selectedCategories, selectedRecordType]);
+  }, [filters.dateRange, filters.searchCategory, filters.searchTerm, filters.selectedCategories, selectedRecordType, filters.amountRange]);
 
   const filterIconColor = appliedFiltersCount > 0 ? palette.tint : palette.icon;
   const sortIconColor = sortOption === 'date-desc' ? palette.icon : palette.tint;
@@ -384,11 +494,36 @@ export default function RecordsScreen() {
   };
 
   const selectedCategoryLabels = useMemo(() => 
-    filters.selectedCategories
+    localFilters.selectedCategories
       .map(id => getNodeDisplayName(id))
       .filter((name): name is string => Boolean(name)),
-    [filters.selectedCategories]
+    [localFilters.selectedCategories]
   );
+
+  const uniquePayers = useMemo(() => {
+    const counts: Record<string, number> = {};
+    transactions.forEach((t) => {
+      // prefer explicit payee; fall back to account name or title so payees show even when payee is missing
+      const candidate = (t.payee || t.account || t.title || '').toString().trim();
+      if (!candidate) return;
+      counts[candidate] = (counts[candidate] ?? 0) + 1;
+    });
+    // sort by frequency
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([payee]) => payee);
+  }, [transactions]);
+
+  const uniqueLabels = useMemo(() => {
+    const counts: Record<string, number> = {};
+    transactions.forEach((t) => {
+      (t.labels || []).forEach((lab: string) => {
+        const key = lab.trim();
+        if (!key) return;
+        counts[key] = (counts[key] ?? 0) + 1;
+      });
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([label]) => label);
+  }, [transactions]);
+  
 
   const filterSections = [
     {
@@ -399,7 +534,7 @@ export default function RecordsScreen() {
     },
     {
       id: 'categories',
-      title: `Categories (${filters.selectedCategories.length || 'All'})`,
+      title: `Categories (${localFilters.selectedCategories.length || 'All'})`,
       detail: selectedCategoryLabels.length > 0 
         ? `${selectedCategoryLabels.slice(0, 3).join(', ')}${selectedCategoryLabels.length > 3 ? '...' : ''}`
         : 'Fuel, Groceries, Household…',
@@ -407,17 +542,17 @@ export default function RecordsScreen() {
     {
       id: 'payers',
       title: 'Payers, Payees',
-      detail: '—',
+      detail: localFilters.selectedPayers && localFilters.selectedPayers.length > 0 ? `${localFilters.selectedPayers.length} selected` : '—',
     },
     {
       id: 'labels',
       title: 'Labels (2)',
-      detail: 'Sale, Bargain',
+      detail: filters.selectedLabels && filters.selectedLabels.length > 0 ? `${filters.selectedLabels.length} selected` : 'Sale, Bargain',
     },
     {
       id: 'keyTerms',
       title: 'Key Terms (3)',
-      detail: 'Black, Gift, Mom',
+      detail: filters.keyTerms && filters.keyTerms.length > 0 ? filters.keyTerms.join(', ') : 'Black, Gift, Mom',
     },
     {
       id: 'amount',
@@ -456,30 +591,30 @@ export default function RecordsScreen() {
               />
             </View>
             <View style={styles.actionIcons}>
-              <View style={{ alignItems: 'center' }}>
-                <TouchableOpacity
-                  style={[styles.actionIcon, { borderColor: filterIconColor }]}
-                  onPress={() => setShowFilters(true)}
-                >
+              <TouchableOpacity
+                style={{ alignItems: 'center' }}
+                onPress={() => setShowFilters(true)}
+                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              >
+                <View style={[styles.actionIcon, { borderColor: filterIconColor }]}>
                   <MaterialCommunityIcons name="tune-variant" size={18} color={filterIconColor} />
-                </TouchableOpacity>
+                </View>
                 <ThemedText style={{ fontSize: FontSizes.xs, color: filterIconColor, marginTop: 2 }}>
                   {filterLabel}
                 </ThemedText>
-              </View>
-              <View style={{ alignItems: 'center' }}>
-                <View style={styles.sortContainer}>
-                  <TouchableOpacity
-                    style={[styles.actionIcon, { borderColor: sortIconColor }]}
-                    onPress={() => setShowSortDropdown(!showSortDropdown)}
-                  >
-                    <MaterialCommunityIcons name="swap-vertical" size={18} color={sortIconColor} />
-                  </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ alignItems: 'center' }}
+                onPress={() => setShowSortDropdown(!showSortDropdown)}
+                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              >
+                <View style={[styles.actionIcon, { borderColor: sortIconColor }]}>
+                  <MaterialCommunityIcons name="swap-vertical" size={18} color={sortIconColor} />
                 </View>
                 <ThemedText style={{ fontSize: FontSizes.xs, color: sortIconColor, marginTop: 2 }}>
                   {sortLabel}
                 </ThemedText>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -510,9 +645,12 @@ export default function RecordsScreen() {
                       />
                     </View>
                     <View style={styles.itemContent}>
-                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{item.title}</ThemedText>
-                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{item.subtitle}</ThemedText>
-                      <ThemedText style={[styles.itemNote, { color: palette.icon }]}></ThemedText>
+                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{getAccountMeta(item.accountId)?.name ?? item.account}</ThemedText>
+                      {/* show note or first label (only one) */}
+                      { (item.note || (item.labels && item.labels.length > 0)) ? (
+                        <ThemedText style={[styles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>{item.note ? item.note : (item.labels && item.labels.length > 0 ? item.labels[0] : '')}</ThemedText>
+                      ) : null}
                     </View>
                     <View style={styles.itemMeta}>
                       <ThemedText
@@ -587,17 +725,58 @@ export default function RecordsScreen() {
                 onPress={() => {
                   setSelectedRecordType('all');
                   setSortOption('date-desc');
+                  // Reset global filters saved in context
+                  resetFilters();
+                  // reset local UI state as well
+                  setLocalMinAmount(0);
+                  setLocalMaxAmount(maxTransactionAbs);
+                  setLocalFilters({
+                    selectedPayers: [],
+                    selectedLabels: [],
+                    keyTerms: [],
+                    amountRange: null,
+                    dateRange: null,
+                    selectedCategories: [],
+                    selectedAccount: 'all',
+                  });
+                  setExpandedFilter(null);
+                  // close drawer
+                  setShowFilters(false);
                 }}
               >
                 <ThemedText style={{ color: accent, fontWeight: '600' }}>RESET</ThemedText>
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.filterContent}>
-              {filterSections.map((section) => (
+              {filterSections.map((section) => {
+                const isExpanded = expandedFilter === section.id;
+                const isActive = (() => {
+                  switch (section.id) {
+                    case 'recordType':
+                      return selectedRecordType !== 'all';
+                    case 'categories':
+                      return (filters.selectedCategories || []).length > 0;
+                    case 'payers':
+                      return (filters.selectedPayers || []).length > 0;
+                    case 'labels':
+                      return (filters.selectedLabels || []).length > 0;
+                    case 'keyTerms':
+                      return (filters.keyTerms || []).length > 0;
+                    case 'amount':
+                      return !!(filters.amountRange && (filters.amountRange.min != null || filters.amountRange.max != null));
+                    case 'timePeriod':
+                      return !!filters.dateRange;
+                    case 'accounts':
+                      return filters.selectedAccount && filters.selectedAccount !== 'all';
+                    default:
+                      return false;
+                  }
+                })();
+                return (
                 <View key={section.id}>
                   {section.id === 'categories' ? (
-                    <TouchableOpacity onPress={() => router.push('/categories?from=filter')}>
-                      <View style={[styles.filterRowItem]}> 
+                    <TouchableOpacity onPress={() => router.push({ pathname: '/Category', params: { from: 'filter', type: selectedRecordType !== 'all' ? selectedRecordType : undefined }})}>
+                      <View style={[styles.filterRowItem, (isExpanded || isActive) && { backgroundColor: `${palette.tint}0F`, borderColor: palette.tint, borderWidth: 1 }]}> 
                         <View style={styles.filterRowText}>
                           <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
                           {section.detail && (
@@ -621,18 +800,23 @@ export default function RecordsScreen() {
                     </TouchableOpacity>
                   ) : (
                     <View style={[styles.filterRowItem]}> 
-                      <View style={styles.filterRowText}>
+                      <TouchableOpacity
+                        onPress={() => setExpandedFilter(prev => (prev === section.id ? null : section.id))}
+                        activeOpacity={0.85}
+                        style={{ flex: 1 }}
+                      >
+                        <View style={styles.filterRowText}>
                         <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
                         {section.detail && (
                           <ThemedText style={{ color: palette.icon, marginTop: 4 }}>{section.detail}</ThemedText>
                         )}
-                        {section.chips && section.id === 'recordType' && (
+                        {section.chips && section.id === 'recordType' && isExpanded && (
                           <TransactionTypeFilter
                             value={selectedRecordType}
                             onChange={setSelectedRecordType}
                             options={['expense', 'income', 'all']}
                             variant="compact"
-                              labelSize="small"
+                            labelSize="small"
                             style={{ marginTop: Spacing.sm }}
                           />
                         )}
@@ -664,13 +848,162 @@ export default function RecordsScreen() {
                             })}
                           </View>
                         )}
-                      </View>
-                      {section.id !== 'recordType' && <MaterialCommunityIcons name="chevron-down" size={22} color={palette.icon} />}
+                        {section.id === 'payers' && isExpanded && (
+                          <View style={{ marginTop: Spacing.md }}>
+                            <View style={styles.filterChipRow}>
+                              {uniquePayers.slice(0, 8).map((payee) => {
+                                const isActive = (filters.selectedPayers || []).includes(payee);
+                                return (
+                                  <TouchableOpacity
+                                    key={payee}
+                                    style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
+                                    onPress={() => {
+                                      const cur = filters.selectedPayers ?? [];
+                                      if (cur.includes(payee)) {
+                                        setSelectedPayers(cur.filter(p => p !== payee));
+                                      } else {
+                                        setSelectedPayers([...cur, payee]);
+                                      }
+                                    }}
+                                  >
+                                    <ThemedText style={[styles.modalChipLabel, { color: isActive ? accent : palette.icon }]}>{payee}</ThemedText>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                              {uniquePayers.length === 0 && (
+                                <ThemedText style={{ color: palette.icon, marginTop: Spacing.md }}>No payees found</ThemedText>
+                              )}
+                            </View>
+                          </View>
+                        )}
+                        {section.id === 'labels' && isExpanded && (
+                          <View style={{ marginTop: Spacing.md }}>
+                            <View style={styles.filterChipRow}>
+                              {uniqueLabels.slice(0, 8).map((lab) => {
+                                const isActive = (filters.selectedLabels || []).includes(lab);
+                                return (
+                                  <TouchableOpacity
+                                    key={lab}
+                                    style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
+                                    onPress={() => {
+                                      const cur = filters.selectedLabels ?? [];
+                                      if (cur.includes(lab)) {
+                                        setSelectedLabels(cur.filter(l => l !== lab));
+                                      } else {
+                                        setSelectedLabels([...cur, lab]);
+                                      }
+                                    }}
+                                  >
+                                    <ThemedText style={[styles.modalChipLabel, { color: isActive ? accent : palette.icon }]}>{lab}</ThemedText>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                              {uniqueLabels.length === 0 && (
+                                <ThemedText style={{ color: palette.icon, marginTop: Spacing.md }}>No labels found</ThemedText>
+                              )}
+                            </View>
+                          </View>
+                        )}
+                        {section.id === 'accounts' && isExpanded && (
+                          <View style={{ marginTop: Spacing.md }}>
+                            <View style={styles.filterChipRow}>
+                              {mockAccounts.map((acc) => {
+                                const isActive = filters.selectedAccount === acc.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={acc.id}
+                                    style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
+                                    onPress={() => setSelectedAccount(acc.id)}
+                                  >
+                                    <ThemedText style={[styles.modalChipLabel, { color: isActive ? accent : palette.icon }]}>{acc.name}</ThemedText>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        )}
+                        {section.id === 'keyTerms' && isExpanded && (
+                          <View style={{ marginTop: Spacing.md }}>
+                            <KeyTermsEditor
+                              terms={filters.keyTerms ?? []}
+                              onChange={(terms) => setKeyTerms(terms)}
+                            />
+                          </View>
+                        )}
+                        {section.id === 'amount' && isExpanded && (
+                          <View style={{ marginTop: Spacing.md }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xs }}>
+                              <ThemedText style={{ color: palette.icon }}>${localMinAmount.toFixed(2)}</ThemedText>
+                              <ThemedText style={{ color: palette.icon }}>${localMaxAmount.toFixed(2)}</ThemedText>
+                            </View>
+                            {/* Use MultiSlider if available; fall back to two single sliders */}
+                            {typeof MultiSlider !== 'undefined' ? (
+                              <MultiSlider
+                                values={[localMinAmount, localMaxAmount]}
+                                onValuesChange={(vals: number[]) => {
+                                  setLocalMinAmount(Math.round(vals[0]));
+                                  setLocalMaxAmount(Math.round(vals[1]));
+                                }}
+                                onValuesChangeFinish={(vals: number[] = [localMinAmount, localMaxAmount]) => {
+                                  setAmountRange({ min: Math.round(vals[0]), max: Math.round(vals[1]) });
+                                }}
+                                min={0}
+                                max={maxTransactionAbs}
+                                step={1}
+                                selectedStyle={{ backgroundColor: palette.tint }}
+                                unselectedStyle={{ backgroundColor: palette.border }}
+                              />
+                            ) : (
+                              <>
+                                <Slider
+                                  minimumValue={0}
+                                  maximumValue={maxTransactionAbs}
+                                  step={1}
+                                  value={localMaxAmount}
+                                  onValueChange={(val) => setLocalMaxAmount(Math.round(val))}
+                                  onSlidingComplete={(val: number) => {
+                                    const newMax = Math.round(val);
+                                    // make sure min/max ordering is valid
+                                    if (newMax < localMinAmount) {
+                                      setLocalMinAmount(newMax);
+                                    }
+                                    setLocalMaxAmount(newMax);
+                                    setAmountRange({ min: Math.round(localMinAmount), max: newMax });
+                                  }}
+                                  minimumTrackTintColor={palette.tint}
+                                  maximumTrackTintColor={palette.border}
+                                />
+                                <Slider
+                                  minimumValue={0}
+                                  maximumValue={maxTransactionAbs}
+                                  step={1}
+                                  value={localMinAmount}
+                                  onValueChange={(val) => setLocalMinAmount(Math.round(val))}
+                                  onSlidingComplete={(val: number) => {
+                                    const newMin = Math.round(val);
+                                    if (newMin > localMaxAmount) {
+                                      setLocalMaxAmount(newMin);
+                                    }
+                                    setLocalMinAmount(newMin);
+                                    setAmountRange({ min: newMin, max: Math.round(localMaxAmount) });
+                                  }}
+                                  minimumTrackTintColor={palette.tint}
+                                  maximumTrackTintColor={palette.border}
+                                />
+                              </>
+                            )}
+                          </View>
+                        )}
+                        </View>
+                      </TouchableOpacity>
+
+                      <MaterialCommunityIcons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.icon} />
                     </View>
                   )}
                   <View style={[styles.separator, { backgroundColor: palette.border }]} />
                 </View>
-              ))}
+              );
+              })}
             </ScrollView>
             <TouchableOpacity
               style={[styles.applyButton, { backgroundColor: accent }]}

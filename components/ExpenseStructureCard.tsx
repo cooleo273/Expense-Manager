@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -115,16 +115,21 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
-  const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => pieData[0]?.segment?.id);
+  // Default to 'all' so the center shows total amount on first render
+  const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => 'all');
 
   useEffect(() => {
+    // If activeSegmentId is 'all' (special state) keep it — don't overwrite.
+    if (activeSegmentId === 'all') {
+      return;
+    }
     if (!pieData.some((entry) => entry.segment?.id === activeSegmentId)) {
       setActiveSegmentId(pieData[0]?.segment?.id);
     }
   }, [activeSegmentId, pieData]);
 
   const activeSegment = useMemo(() => {
-    if (!activeSegmentId) {
+    if (!activeSegmentId || activeSegmentId === 'all') {
       return undefined;
     }
     return segments.find((segment) => segment.id === activeSegmentId);
@@ -152,12 +157,25 @@ export function ExpenseStructureCard({
   const centerValueText = activeSegment
     ? formatValue(activeSegment.value, activeSegment)
     : formattedTotalValue;
-  const centerCaptionText = activeSegment ? activeSegment.label : totalCaption ?? title;
+  // When all is active, the caption should say ALL and the percent should be unchecked
+  const centerCaptionText = activeSegment
+    ? activeSegment.label
+    : activeSegmentId === 'all'
+    ? 'Total Expenses'
+    : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
-  const innerRadius = Math.max(chartSize * 0.2, 40);
+  // Make small screens adapt by reducing the chart size and switching to vertical layout
+  const window = useWindowDimensions();
+  const isNarrow = window.width <= 360;
+  const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
+  const innerRadius = Math.max(effectiveChartSize * 0.2, 40);
   const outerRadius = Math.max(chartSize / 2 - 8, 80);
   const labelRadius = (innerRadius + outerRadius) / 2;
-  const chartCenterBorderColor = activeSegment ? `${activeSegment.color}55` : palette.border;
+  const chartCenterBorderColor = activeSegment
+    ? `${activeSegment.color}55`
+    : activeSegmentId === 'all'
+    ? palette.tint
+    : palette.border;
 
   return (
     <ThemedView
@@ -175,13 +193,18 @@ export function ExpenseStructureCard({
         {subtitle ? <ThemedText style={[styles.subtitle, { color: palette.icon }]}>{subtitle}</ThemedText> : null}
       </View>
 
-      <View style={styles.contentRow}>
-        <View style={[styles.chartWrapper, { width: chartSize, height: chartSize }]}>
+      <View
+        style={[
+          styles.contentRow,
+          isNarrow && { flexDirection: 'column', alignItems: 'center', gap: Spacing.md },
+        ]}
+      >
+        <View style={[styles.chartWrapper, { width: effectiveChartSize, height: effectiveChartSize }]}>
           <VictoryPie
             animate={false}
             data={pieData}
-            width={chartSize}
-            height={chartSize}
+            width={effectiveChartSize}
+            height={effectiveChartSize}
             innerRadius={innerRadius}
             padAngle={pieData.length > 1 ? 2 : 0}
             radius={outerRadius}
@@ -201,7 +224,8 @@ export function ExpenseStructureCard({
             style={{
               data: {
                 fill: ({ datum }) => datum.color,
-                opacity: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 1 : 0.35),
+                opacity: ({ datum }) =>
+                  activeSegmentId === 'all' ? 1 : (datum.segment?.id === activeSegment?.id ? 1 : 0.35),
                 stroke: ({ datum }) => (datum.segment?.id === activeSegment?.id ? palette.card : 'transparent'),
                 strokeWidth: ({ datum }) => (datum.segment?.id === activeSegment?.id ? 2 : 0),
               },
@@ -261,8 +285,13 @@ export function ExpenseStructureCard({
           )}
         </View>
 
-        <View style={styles.legendContainer}>
-          {segments.map((segment) => {
+        <View style={[styles.legendContainer, isNarrow && { width: '100%' }]}>
+          {[{
+            id: 'all',
+            label: 'ALL',
+            value: totalValue,
+            color: palette.tint,
+          } as ExpenseStructureSegment, ...segments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
             const formattedValue = valueFormatter
@@ -276,7 +305,7 @@ export function ExpenseStructureCard({
                 onPress={() => setActiveSegmentId(segment.id)}
                 style={[
                   styles.legendItem,
-                  activeSegment?.id === segment.id && {
+                  activeSegmentId === segment.id && {
                     backgroundColor: `${segment.color}20`,
                     borderRadius: BorderRadius.md,
                     paddingVertical: Spacing.xs,
@@ -395,8 +424,9 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     flex: 1,
-    minWidth: 120,
     gap: Spacing.md,
+    // Allow the legend to shrink on small phones / narrow widths so it doesn't overflow
+    minWidth: 0,
   },
   legendItem: {
     flexDirection: 'row',

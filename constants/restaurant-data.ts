@@ -183,11 +183,11 @@ export const featuredItems: MenuItem[] = [
 ];
 
 export const restaurantInfo = {
-  name: 'Bella Vista Restaurant',
-  description: 'Authentic Italian cuisine with a modern twist',
-  address: '123 Main Street, Downtown',
-  phone: '(555) 123-4567',
-  hours: 'Mon-Sun: 11AM - 10PM',
-  rating: 4.5,
-  reviewCount: 128
+  name: 'Expense Manager',
+  description: 'Personal expense tracker and budget manager',
+  address: '',
+  phone: '',
+  hours: '',
+  rating: 0,
+  reviewCount: 0
 };

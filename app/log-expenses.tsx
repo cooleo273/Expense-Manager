@@ -8,28 +8,28 @@ import {
   Modal,
   Platform,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
-import { TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { getFullCategoryLabel } from '@/constants/categories';
-import { Colors } from '@/constants/theme';
+import { getCategoryDefinition, getFullCategoryLabel } from '@/constants/categories';
 import { mockAccounts } from '@/constants/mock-data';
+import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
-import { StorageService } from '../services/storage';
 import { subscribeToCategorySelection } from '@/utils/navigation-events';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { StorageService } from '../services/storage';
 
 export const options = {
   headerShown: true,
@@ -69,7 +69,7 @@ export default function LogExpensesScreen() {
 
   const scrollToInput = useCallback((yOffset: number) => {
     scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
-  }, []);
+  }, [transactionType]);
 
   const scrollToEnd = useCallback(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -78,13 +78,16 @@ export default function LogExpensesScreen() {
   const accountOptions = useMemo(() => mockAccounts.filter(acc => acc.id !== 'all'), []);
   const fallbackAccountId = accountOptions[0]?.id ?? null;
 
+  const [localSelectedAccount, setLocalSelectedAccount] = useState<string | null>(fallbackAccountId);
   useEffect(() => {
-    if (filters.selectedAccount === 'all' && fallbackAccountId) {
-      setSelectedAccount(fallbackAccountId);
-    }
+    // Do not force a fallback account here — allow the dropdown to show 'All'
+    // when opening Log Expenses. Users expect 'All' as default when adding a record.
+    // if (filters.selectedAccount === 'all' && fallbackAccountId) {
+    //   setSelectedAccount(fallbackAccountId);
+    // }
   }, [filters.selectedAccount, fallbackAccountId, setSelectedAccount]);
 
-  const selectedAccountId = filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount;
+  const selectedAccountId = localSelectedAccount ?? (filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount);
 
   const selectedAccount = useMemo(() => {
     return accountOptions.find(acc => acc.id === selectedAccountId);
@@ -157,10 +160,19 @@ export default function LogExpensesScreen() {
     });
   }, []);
 
-  const updateLastSelectedCategory = useCallback((category: string) => {
-    setLastSelectedCategoryState(category);
-    transactionDraftState.setLastSelectedCategory(category);
-  }, []);
+  const updateLastSelectedCategory = useCallback(
+    (category: string | undefined, overrideType?: RecordType) => {
+      if (!category) {
+        return;
+      }
+      const categoryType = getCategoryDefinition(category)?.type ?? overrideType ?? transactionType;
+      if (categoryType === 'expense') {
+        setLastSelectedCategoryState(category);
+      }
+      transactionDraftState.setLastSelectedCategory(category, categoryType);
+    },
+    [transactionType]
+  );
 
   const handleSingleChange = useCallback(
     (key: keyof SingleDraft, value?: string) => {
@@ -177,19 +189,20 @@ export default function LogExpensesScreen() {
           } else {
             delete next.subcategoryId;
           }
+        } else if (key === 'category') {
+          const nextCategory = value ?? '';
+          (next as any)[key] = nextCategory;
+          if (!nextCategory) {
+            delete next.subcategoryId;
+          } else {
+            const derivedType = getCategoryDefinition(nextCategory)?.type;
+            updateLastSelectedCategory(nextCategory, derivedType);
+          }
+          setCategoryError('');
         } else {
           (next as any)[key] = value ?? '';
-          if (key === 'category') {
-            updateLastSelectedCategory(value ?? next.category);
-            if (!value) {
-              delete next.subcategoryId;
-            }
-          }
           if (key === 'amount') {
             setAmountError('');
-          }
-          if (key === 'category') {
-            setCategoryError('');
           }
           if (key === 'payee') {
             setPayeeError('');
@@ -210,7 +223,6 @@ export default function LogExpensesScreen() {
       }
       if (payload.category) {
         handleSingleChange('category', payload.category);
-        updateLastSelectedCategory(payload.category);
       }
       if (payload.subcategoryId) {
         handleSingleChange('subcategoryId', payload.subcategoryId);
@@ -219,7 +231,7 @@ export default function LogExpensesScreen() {
       }
     });
     return unsubscribe;
-  }, [handleSingleChange, updateLastSelectedCategory]);
+  }, [handleSingleChange]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -255,6 +267,16 @@ export default function LogExpensesScreen() {
       );
 
       setStoredRecords((prev) => [...records, ...prev]);
+      // Persist usage counts for categories (and subcategories) so "MOST FREQUENT"
+      // shows the selected items after saving a record.
+      try {
+        await Promise.all(
+          records.map((record) => StorageService.incrementCategoryUsage(record.subcategoryId ?? record.category))
+        );
+      } catch (err) {
+        // not fatal; just log
+        console.error('Failed to increment category usage:', err);
+      }
       resetDrafts();
 
       showToast('Record saved successfully');
@@ -264,6 +286,8 @@ export default function LogExpensesScreen() {
         return;
       }
 
+      // Ensure records page shows All Accounts by default after adding a record.
+      setSelectedAccount('all');
       router.push('/(tabs)/records');
     } catch (error) {
       console.error('Failed to save transactions:', error);
@@ -351,19 +375,31 @@ export default function LogExpensesScreen() {
       }
       setTransactionType(value);
       transactionDraftState.setTransactionType(value);
+      if (value === 'income') {
+        // Pre-populate the Category dropdown as 'Income' when switching to income
+        handleSingleChange('category', 'income');
+        // Remove any subcategory — Income must not display subcategories when switched
+        handleSingleChange('subcategoryId', undefined);
+        // store that Income was chosen so future openings remember it under income type
+        transactionDraftState.setLastSelectedCategory('income', 'income');
+      } else if (value === 'expense') {
+        // Restore last selected expense category when switching back to expense
+        const lastExpense = transactionDraftState.getLastSelectedCategory('expense');
+        handleSingleChange('category', lastExpense);
+      }
     },
-    []
+    [handleSingleChange]
   );
 
   useEffect(() => {
     navigation.setOptions({
       headerTitle: '',
-      headerLeft: () => (
+        headerLeft: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
           </TouchableOpacity>
-          <AccountDropdown allowAll={false} />
+          <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
         </View>
       ),
       headerRight: () => (
@@ -378,6 +414,10 @@ export default function LogExpensesScreen() {
       ),
     });
   }, [handleSave, navigation, palette.icon, palette.tint]);
+
+  // Dont force global selection when adding a record; keep log-expenses local so
+  // it won't affect Records filters. After saving we will set the record page's
+  // global selection to 'all' so the account dropdown there shows All Accounts.
 
   const totalSaved = storedRecords.length;
 
@@ -400,7 +440,6 @@ export default function LogExpensesScreen() {
               options={['expense', 'income']}
               value={transactionType}
               onChange={handleTransactionTypeChange}
-              style={{ flex: 1 }}
             />
             <TouchableOpacity
               onPress={() =>
@@ -408,14 +447,14 @@ export default function LogExpensesScreen() {
                   pathname: '/log-expenses-list',
                   params: {
                     type: transactionType,
-                    defaultCategory: lastSelectedCategory,
+                    defaultCategory: transactionType === 'income' ? 'income' : lastSelectedCategory,
                   },
                 })
               }
               style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
             >
               <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
-              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>Add List</ThemedText>
+              <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -440,12 +479,12 @@ export default function LogExpensesScreen() {
                   />
                 </View>
               </View>
+            </View>
               {amountError ? (
                 <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
                   {amountError}
                 </ThemedText>
               ) : null}
-            </View>
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
@@ -456,11 +495,14 @@ export default function LogExpensesScreen() {
                   style={styles.categoryInput}
                   onPress={() =>
                     router.push({
-                      pathname: '/categories',
+                      pathname: '/Category',
                       params: {
                         current: singleDraft.category,
                         currentSubcategory: singleDraft.subcategoryId,
                         returnTo: 'log-expenses',
+                        type: transactionType,
+                        // do not auto open subcategories when switching to income
+                        // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                       },
                     })
                   }
@@ -518,8 +560,31 @@ export default function LogExpensesScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Labels</ThemedText>
-              {singleDraft.labels.length > 0 && (
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  Labels
+                </ThemedText>
+                {/* keep input inside the inputWrapper */}
+                <View style={{ marginTop: singleDraft.labels.length > 0 ? Spacing.sm : 0 }}>
+                  <TextInput
+                    style={[styles.notchedInput, { color: palette.text }]}
+                    placeholder="Add a label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                    onFocus={() => scrollToInput(350)}
+                  />
+                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
+                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+                </View>
+              </View>
+
+            {/* Display labels outside the input box and below it */}
+            {singleDraft.labels.length > 0 && (
+              <View style={{ marginTop: Spacing.sm }}>
                 <View style={styles.labelsContainer}>
                   {singleDraft.labels.map((label) => (
                     <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
@@ -530,22 +595,8 @@ export default function LogExpensesScreen() {
                     </View>
                   ))}
                 </View>
-              )}
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <TextInput
-                  style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Add a label"
-                  placeholderTextColor={palette.icon}
-                  value={currentLabelInput}
-                  onChangeText={setCurrentLabelInput}
-                  onSubmitEditing={addLabel}
-                  onFocus={() => scrollToInput(350)}
-                />
-                <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
-                  <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
-                </TouchableOpacity>
               </View>
-            </View>
+            )}
 
             <View style={styles.fieldGroup}>
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>

@@ -27,7 +27,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
     { label: 'Debts', route: '/reminders', icon: 'credit-card-clock' },
     { label: 'Budgets', route: '/analysis', icon: 'chart-pie' },
     { label: 'Accounts', route: '/accounts', icon: 'wallet-outline' },
-    { label: 'Categories', route: '/analysis', icon: 'shape-outline' },
+    { label: 'Category', route: '/analysis', icon: 'shape-outline' },
     { label: 'Settings', route: '/settings', icon: 'cog-outline' },
     { label: 'Templates', route: '/support', icon: 'file-document-edit-outline' },
     { label: 'Help', route: '/support', icon: 'help-circle-outline' },
@@ -37,7 +37,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
     onClose();
 
     // Show toast for features that are not available
-    if (['Debts', 'Budgets', 'Accounts', 'Categories', 'Templates'].includes(label)) {
+    if (['Debts', 'Budgets', 'Accounts', 'Category', 'Templates'].includes(label)) {
       showToast(`${label} feature is not available yet`);
       return;
     }

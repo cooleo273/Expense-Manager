@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,7 +21,7 @@ import { Colors } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { StorageService } from '@/services/storage';
+import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { ReceiptImportResult } from '@/types/receipt';
 import { RecordType, SingleDraft } from '@/types/transactions';
@@ -36,6 +35,17 @@ const isReceiptImportResult = (payload: unknown): payload is ReceiptImportResult
   }
   const candidate = payload as { draftPatch?: unknown };
   return candidate.draftPatch !== undefined && candidate.draftPatch !== null && typeof candidate.draftPatch === 'object';
+};
+
+const isReceiptImportBatch = (payload: unknown): payload is { records: SingleDraft[] } => {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+  const candidate = payload as { records?: unknown };
+  if (!Array.isArray(candidate.records) || candidate.records.length === 0) {
+    return false;
+  }
+  return candidate.records.every((r) => r && typeof r === 'object');
 };
 
 export const options = {
@@ -62,11 +72,12 @@ export default function LogExpensesListScreen() {
   }, []);
 
   const fallbackAccount = useMemo(() => mockAccounts.find((acc) => acc.id !== 'all'), []);
+  const [localSelectedAccount, setLocalSelectedAccount] = useState<string | null>(fallbackAccount?.id ?? null);
   const selectedAccountId = useMemo(() => {
     if (filters.selectedAccount && filters.selectedAccount !== 'all') {
       return filters.selectedAccount;
     }
-    return fallbackAccount?.id ?? 'rbc';
+    return localSelectedAccount ?? fallbackAccount?.id ?? 'rbc';
   }, [fallbackAccount, filters.selectedAccount]);
   const accountMeta = useMemo(() => getAccountMeta(selectedAccountId) ?? fallbackAccount, [selectedAccountId, fallbackAccount]);
   const accountName = accountMeta?.name ?? 'RBC Account';
@@ -76,7 +87,7 @@ export default function LogExpensesListScreen() {
   const [records, setRecords] = useState<SingleDraft[]>([
     {
       amount: '',
-      category: params.defaultCategory as string || '',
+      category: params.defaultCategory as string || (transactionType === 'income' ? 'income' : transactionDraftState.getLastSelectedCategory('expense')),
       subcategoryId: '',
       payee: '',
       note: '',
@@ -104,7 +115,6 @@ export default function LogExpensesListScreen() {
 
   const handleNoteChange = useCallback((index: number, value: string) => {
     updateRecord(index, 'note', value);
-    updateRecord(index, 'payee', value);
   }, [updateRecord]);
 
   const openRecordDetails = useCallback((index: number) => {
@@ -146,39 +156,6 @@ export default function LogExpensesListScreen() {
     }
   }, [records.length]);
 
-  const saveRecords = useCallback(async (drafts: SingleDraft[]) => {
-    try {
-      const now = Date.now();
-      await StorageService.addBatchTransactions(
-        drafts.map((record, idx) => {
-          const amount = Number(record.amount);
-          const normalizedAmount = transactionType === 'expense' ? -Math.abs(amount) : Math.abs(amount);
-          return {
-            id: `${now}-${idx}`,
-            title: record.note || 'Transaction',
-            account: accountName,
-            accountId: selectedAccountId,
-            note: record.note,
-            amount: normalizedAmount,
-            date: new Date(now + idx).toISOString(),
-            type: transactionType,
-            icon: 'cash',
-            categoryId: record.category,
-            subcategoryId: record.subcategoryId,
-            labels: record.labels,
-            userId: 'default-user',
-          };
-        })
-      );
-
-      showToast(`Added ${drafts.length} record${drafts.length > 1 ? 's' : ''}`);
-      router.replace('/(tabs)/records');
-    } catch (error) {
-      console.error('Failed to save batch records', error);
-      Alert.alert('Error', 'Failed to save these records. Please try again.');
-    }
-  }, [accountName, router, selectedAccountId, showToast, transactionType]);
-
   const handleNext = useCallback(() => {
     let hasErrors = false;
     const amountErrors = records.map((record) => {
@@ -216,20 +193,24 @@ export default function LogExpensesListScreen() {
     setRecordCategoryErrors(categoryErrors);
     setRecordNoteErrors(noteErrors);
     if (hasErrors) {
-      showToast('Please fix the errors before proceeding');
+      showToast('Please fix the errors before proceeding', { tone: 'error' });
       return;
     }
 
-    const confirmationMessage = `Add ${records.length} record${records.length > 1 ? 's' : ''} to Records?`;
-    Alert.alert('Confirm Records', confirmationMessage, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Add',
-        style: 'default',
-        onPress: () => saveRecords(records),
+    const payload = {
+      records,
+      accountId: selectedAccountId,
+      accountName,
+      transactionType,
+    };
+
+    router.push({
+      pathname: '/log-expenses-review',
+      params: {
+        payload: encodeURIComponent(JSON.stringify(payload)),
       },
-    ]);
-  }, [records, saveRecords, showToast]);
+    });
+  }, [accountName, records, router, selectedAccountId, showToast, transactionType]);
 
   useEffect(() => {
     const parsedParam = params.parsed;
@@ -244,6 +225,31 @@ export default function LogExpensesListScreen() {
     try {
       const decoded = decodeURIComponent(parsedParam);
       const payload = JSON.parse(decoded);
+      if (isReceiptImportBatch(payload)) {
+        const incoming = payload.records.map((r) => {
+          const record = r as any;
+          const amt = record.amount;
+          const amount = typeof amt === 'number' ? amt.toFixed(2) : (typeof amt === 'string' ? amt : '');
+          return {
+            amount,
+            category: record.category ?? '',
+            subcategoryId: record.subcategoryId ?? '',
+            payee: record.payee ?? '',
+            note: record.note ?? '',
+            occurredAt: typeof record.occurredAt === 'string' ? record.occurredAt : undefined,
+            labels: Array.isArray(record.labels) ? [...record.labels] : [],
+          } as SingleDraft;
+        });
+
+        setRecords(incoming);
+        setRecordErrors(Array(incoming.length).fill(''));
+        setRecordNoteErrors(Array(incoming.length).fill(''));
+        setRecordCategoryErrors(Array(incoming.length).fill(''));
+        showToast('Receipt items imported');
+        scanPrefillRef.current = parsedParam;
+        return;
+      }
+
       if (!isReceiptImportResult(payload)) {
         return;
       }
@@ -262,6 +268,7 @@ export default function LogExpensesListScreen() {
           note: draftPatch.note ?? first.note,
           category: draftPatch.category ?? first.category,
           subcategoryId: draftPatch.subcategoryId ?? first.subcategoryId,
+          occurredAt: typeof (draftPatch as any).occurredAt === 'string' ? (draftPatch as any).occurredAt : first.occurredAt,
         };
 
         return [nextFirst, ...rest];
@@ -316,7 +323,7 @@ export default function LogExpensesListScreen() {
   useEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <AccountDropdown allowAll={false} />
+        <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
       ),
       headerLeft: () => (
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
@@ -325,7 +332,7 @@ export default function LogExpensesListScreen() {
       ),
       headerRight: () => (
         <TouchableOpacity onPress={handleNext} style={{ padding: 8 }}>
-          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Next</ThemedText>
+          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>NEXT</ThemedText>
         </TouchableOpacity>
       ),
     });
@@ -386,7 +393,7 @@ export default function LogExpensesListScreen() {
               >
                 <View style={styles.noteRow}>
                   <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}>
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note*</ThemedText>
                     <TextInput
                       style={[styles.noteInput, styles.notchedInput, { color: palette.text }]}
                       placeholder="Add a note"
@@ -407,20 +414,25 @@ export default function LogExpensesListScreen() {
                 ) : null}
 
                 <View style={styles.recordFooter}>
-                  <TouchableOpacity
-                    style={[styles.categoryPill, { borderColor: palette.border }]}
-                    onPress={() =>
+                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1, padding: 0 }]}> 
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
+                    <TouchableOpacity
+                      style={[styles.categoryPill, { borderWidth: 0 }]}
+                      onPress={() =>
                       router.push({
-                        pathname: '/categories',
+                        pathname: '/Category',
                         params: {
                           current: record.category,
                           currentSubcategory: record.subcategoryId,
                           returnTo: 'log-expenses-list',
                           recordIndex: index.toString(),
+                          type: transactionType,
+                          // do not auto open subcategories when switching to income
+                          // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                         },
                       })
-                    }
-                  >
+                      }
+                    >
                     <View style={[styles.categoryIconBadge, { backgroundColor: `${categoryColor}22` }]}> 
                       <MaterialCommunityIcons name={categoryIcon} size={16} color={categoryColor} /> 
                     </View>
@@ -431,19 +443,27 @@ export default function LogExpensesListScreen() {
                     </View>
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
-                  <View style={[styles.inputWrapper, styles.amountField, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount</ThemedText>
-                    <View style={styles.amountInputRow}>
-                      <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
-                      <TextInput
-                        style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text }]}
-                        keyboardType="numeric"
-                        placeholder="0.00"
-                        placeholderTextColor={palette.icon}
-                        value={record.amount}
-                        onChangeText={(value) => updateRecord(index, 'amount', value)}
-                      />
+                </View>
+                  <View style={{ minWidth: 110, maxWidth: 150 }}>
+                    <View style={[styles.inputWrapper, styles.amountField, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                      <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
+                      <View style={styles.amountInputRow}>
+                        <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
+                        <TextInput
+                          style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text }]}
+                          keyboardType="numeric"
+                          placeholder="0.00"
+                          placeholderTextColor={palette.icon}
+                          value={record.amount}
+                          onChangeText={(value) => updateRecord(index, 'amount', value)}
+                        />
+                      </View>
                     </View>
+                    {recordErrors[index] ? (
+                      <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                        {recordErrors[index]}
+                      </ThemedText>
+                    ) : null}
                   </View>
                   {records.length > 1 && (
                     <TouchableOpacity onPress={() => removeRecord(index)} style={styles.deleteButton}>
@@ -451,11 +471,6 @@ export default function LogExpensesListScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-                {recordErrors[index] ? (
-                  <ThemedText style={{ color: palette.error, fontSize: 12 }}>
-                    {recordErrors[index]}
-                  </ThemedText>
-                ) : null}
                 {recordCategoryErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
                     {recordCategoryErrors[index]}
@@ -470,7 +485,7 @@ export default function LogExpensesListScreen() {
             style={[styles.addListButton, { marginTop: 16 }]}
           >
             <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
-            <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>Add Record</ThemedText>
+            <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>ADD RECORD</ThemedText>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

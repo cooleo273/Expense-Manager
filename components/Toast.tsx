@@ -1,20 +1,39 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+
+type ToastTone = 'default' | 'success' | 'error' | 'warning';
 
 type ToastProps = {
   message: string;
   visible: boolean;
   onHide: () => void;
   duration?: number;
+  tone?: ToastTone;
 };
 
-export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration = 3000 }) => {
+export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration = 3000, tone = 'default' }) => {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(100)).current;
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
+
+  const backgroundColor = useMemo(() => {
+    switch (tone) {
+      case 'error':
+        return palette.error;
+      case 'success':
+        return palette.success;
+      case 'warning':
+        return palette.warning;
+      default:
+        return 'rgba(15, 23, 42, 0.9)';
+    }
+  }, [palette.error, palette.success, palette.warning, tone]);
 
   const hideToast = useCallback(() => {
     Animated.parallel([
@@ -71,7 +90,8 @@ export const Toast: React.FC<ToastProps> = ({ message, visible, onHide, duration
         },
       ]}
     >
-      <View style={styles.toast}>
+      <View style={[styles.toast, { backgroundColor }]}
+      >
         <Text style={styles.message}>{message}</Text>
       </View>
     </Animated.View>
@@ -86,7 +106,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   toast: {
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,

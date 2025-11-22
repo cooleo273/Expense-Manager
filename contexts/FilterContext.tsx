@@ -13,6 +13,10 @@ export type FilterState = {
   searchHistory: string[];
   searchCategory: 'all' | 'income' | 'expense';
   selectedCategories: string[];
+  amountRange?: { min?: number | null; max?: number | null } | null; // null means no amount filter
+  selectedPayers?: string[]; // payee values
+  selectedLabels?: string[];
+  keyTerms?: string[]; // free-text tokens user may add for filtering
 };
 
 const defaultFilterState: FilterState = {
@@ -22,6 +26,10 @@ const defaultFilterState: FilterState = {
   searchHistory: [],
   searchCategory: 'all',
   selectedCategories: [],
+  amountRange: null,
+  selectedPayers: [],
+  selectedLabels: [],
+  keyTerms: [],
 };
 
 type FilterContextType = {
@@ -32,6 +40,10 @@ type FilterContextType = {
   addToSearchHistory: (term: string) => void;
   setSearchCategory: (category: 'all' | 'income' | 'expense') => void;
   setSelectedCategories: (categories: string[]) => void;
+  setAmountRange: (range: { min?: number | null; max?: number | null } | null) => void;
+  setSelectedPayers: (payers: string[]) => void;
+  setSelectedLabels: (labels: string[]) => void;
+  setKeyTerms: (terms: string[]) => void;
   resetFilters: () => void;
 };
 
@@ -88,6 +100,22 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setFilters(prev => ({ ...prev, dateRange: range }));
   };
 
+  const setAmountRange = (range: { min?: number | null; max?: number | null } | null) => {
+    setFilters(prev => ({ ...prev, amountRange: range }));
+  };
+
+  const setSelectedPayers = (payers: string[]) => {
+    setFilters(prev => ({ ...prev, selectedPayers: payers }));
+  };
+
+  const setSelectedLabels = (labels: string[]) => {
+    setFilters(prev => ({ ...prev, selectedLabels: labels }));
+  };
+
+  const setKeyTerms = (terms: string[]) => {
+    setFilters(prev => ({ ...prev, keyTerms: terms }));
+  };
+
   const setSearchCategory = (category: 'all' | 'income' | 'expense') => {
     setFilters(prev => ({ ...prev, searchCategory: category }));
   };
@@ -106,7 +134,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const resetFilters = () => {
-    setFilters(defaultFilterState);
+    setFilters({ ...defaultFilterState, amountRange: null });
   };
 
   return (
@@ -119,6 +147,10 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSearchCategory,
         setSelectedCategories,
         addToSearchHistory,
+        setAmountRange,
+        setSelectedPayers,
+        setSelectedLabels,
+        setKeyTerms,
         resetFilters,
       }}
     >
