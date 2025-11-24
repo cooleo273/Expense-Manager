@@ -55,7 +55,7 @@ export default function RecordDetailScreen() {
         const parsed = JSON.parse(decoded);
         return {
           amount: parsed.amount ?? '',
-          category: parsed.category ?? 'housing',
+          category: parsed.category ?? 'foodAndDrinks',
           subcategoryId: parsed.subcategoryId,
           payee: parsed.payee ?? '',
           note: parsed.note ?? '',
@@ -68,7 +68,7 @@ export default function RecordDetailScreen() {
     }
     return {
       amount: typeof params.amount === 'string' ? params.amount : '',
-      category: typeof params.category === 'string' ? params.category : 'housing',
+      category: typeof params.category === 'string' ? params.category : 'foodAndDrinks',
       subcategoryId: typeof params.subcategoryId === 'string' ? params.subcategoryId : undefined,
       payee: typeof params.payee === 'string' ? params.payee : '',
       note: typeof params.note === 'string' ? params.note : '',
@@ -385,14 +385,14 @@ export default function RecordDetailScreen() {
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('date')}
                 >
                   <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
                   <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('time')}
                 >
                   <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />

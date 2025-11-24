@@ -291,6 +291,10 @@ export default function LogExpensesListScreen() {
         return;
       }
       const index = typeof payload.recordIndex === 'number' ? payload.recordIndex : 0;
+      if (payload.category) {
+        transactionDraftState.setLastSelectedCategory(payload.category, transactionType);
+      }
+      transactionDraftState.setLastSelectedSubcategory(payload.subcategoryId ?? undefined, transactionType);
       setRecords((prev) =>
         prev.map((record, i) =>
           i === index
@@ -318,7 +322,7 @@ export default function LogExpensesListScreen() {
       unsubscribeCategory();
       unsubscribeDetails();
     };
-  }, []);
+  }, [transactionType]);
 
   useEffect(() => {
     navigation.setOptions({

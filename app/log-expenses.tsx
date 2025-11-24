@@ -186,14 +186,17 @@ export default function LogExpensesScreen() {
         if (key === 'subcategoryId') {
           if (value) {
             next.subcategoryId = value;
+            transactionDraftState.setLastSelectedSubcategory(value, transactionType);
           } else {
             delete next.subcategoryId;
+            transactionDraftState.setLastSelectedSubcategory(undefined, transactionType);
           }
         } else if (key === 'category') {
           const nextCategory = value ?? '';
           (next as any)[key] = nextCategory;
           if (!nextCategory) {
             delete next.subcategoryId;
+            transactionDraftState.setLastSelectedSubcategory(undefined, transactionType);
           } else {
             const derivedType = getCategoryDefinition(nextCategory)?.type;
             updateLastSelectedCategory(nextCategory, derivedType);
@@ -213,7 +216,7 @@ export default function LogExpensesScreen() {
         return next;
       });
     },
-    [updateLastSelectedCategory]
+    [transactionType, updateLastSelectedCategory]
   );
 
   useEffect(() => {
@@ -599,28 +602,45 @@ export default function LogExpensesScreen() {
             )}
 
             <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => {
-                    setPickerMode('date');
-                    scrollToEnd();
-                  }}
+                <View
+                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
-                  <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => {
-                    setPickerMode('time');
-                    scrollToEnd();
-                  }}
+                  <ThemedText
+                    style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
+                  >
+                    Date
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    onPress={() => {
+                      setPickerMode('date');
+                      scrollToEnd();
+                    }}
+                  >
+                    <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                  </TouchableOpacity>
+                </View>
+                <View
+                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
-                  <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
-                </TouchableOpacity>
+                  <ThemedText
+                    style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
+                  >
+                    Time
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    onPress={() => {
+                      setPickerMode('time');
+                      scrollToEnd();
+                    }}
+                  >
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </ThemedView>

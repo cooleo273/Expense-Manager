@@ -146,8 +146,9 @@ export const logExpensesStyles = StyleSheet.create({
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.tiny,
     paddingTop: Spacing.sm,
+    justifyContent: 'flex-end',
   },
   currencySymbol: {
     fontSize: FontSizes.massive,
@@ -156,12 +157,15 @@ export const logExpensesStyles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   amountInput: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
     fontSize: FontSizes.massive,
     fontWeight: FontWeights.bold as any,
     padding: 0,
     lineHeight: FontSizes.massive + 4,
     textAlignVertical: 'center',
+    textAlign: 'right',
+    minWidth: 0,
   },
   amountCompactInput: {
     minWidth: 60,
@@ -170,6 +174,7 @@ export const logExpensesStyles = StyleSheet.create({
     padding: 0,
     lineHeight: FontSizes.lg + 4,
     textAlignVertical: 'center',
+    textAlign: 'right',
   },
   inputWrapper: {
     position: 'relative',
@@ -211,10 +216,10 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     gap: Spacing.md,
-    minHeight: 56,
+    height: 48,
   },
   categoryIconBadge: {
     width: 32,
@@ -235,13 +240,14 @@ export const logExpensesStyles = StyleSheet.create({
     maxWidth: 140,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    minHeight: 56,
+    height: 48,
     justifyContent: 'center',
   },
   amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.tiny,
+    justifyContent: 'flex-end',
   },
   currencyTiny: {
     fontSize: FontSizes.md,
@@ -276,10 +282,18 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    width: '100%',
+  },
+  dateTimeButtonOutlined: {
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
+  },
+  dateTimeButtonInput: {
+    borderWidth: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   dateTimeText: {
     fontSize: FontSizes.md,

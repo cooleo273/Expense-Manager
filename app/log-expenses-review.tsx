@@ -568,14 +568,14 @@ export default function LogExpensesReviewScreen() {
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('date')}
                 >
                   <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
                   <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('time')}
                 >
                   <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
