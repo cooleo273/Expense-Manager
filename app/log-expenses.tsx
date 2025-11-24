@@ -441,6 +441,8 @@ export default function LogExpensesScreen() {
           </Menu>
         </View>
       ),
+      headerStyle: { backgroundColor: 'transparent', shadowColor: 'transparent', elevation: 0, borderBottomWidth: 0 },
+      headerShadowVisible: false,
     });
   }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
 
