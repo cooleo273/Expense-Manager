@@ -1,17 +1,17 @@
-﻿import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { Menu } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
@@ -397,7 +397,7 @@ export default function LogExpensesScreen() {
   useEffect(() => {
     navigation.setOptions({
       headerTitle: '',
-        headerLeft: () => (
+      headerLeft: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
@@ -410,13 +410,37 @@ export default function LogExpensesScreen() {
           <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
-            <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
-          </TouchableOpacity>
+          <Menu
+            visible={showMenu}
+            onDismiss={() => setShowMenu(false)}
+            anchor={
+              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
+              </TouchableOpacity>
+            }
+            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
+          >
+            <Menu.Item
+              onPress={() => {
+                handleSave(true);
+                setShowMenu(false);
+              }}
+              title="Save and add new record"
+              titleStyle={{ color: palette.text }}
+            />
+            <Menu.Item
+              onPress={() => {
+                Alert.alert('Template Saved', 'Record saved as template for future use.');
+                setShowMenu(false);
+              }}
+              title="Save template"
+              titleStyle={{ color: palette.text }}
+            />
+          </Menu>
         </View>
       ),
     });
-  }, [handleSave, navigation, palette.icon, palette.tint]);
+  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
 
   // Dont force global selection when adding a record; keep log-expenses local so
   // it won't affect Records filters. After saving we will set the record page's
@@ -676,54 +700,7 @@ export default function LogExpensesScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal
-        visible={showMenu}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowMenu(false)}
-      >
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
-          activeOpacity={1}
-          onPress={() => setShowMenu(false)}
-        >
-          <View
-            style={{
-              position: 'absolute',
-              top: 100,
-              right: 20,
-              backgroundColor: palette.card,
-              borderRadius: 8,
-              padding: 8,
-              minWidth: 150,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 4,
-              elevation: 5,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => {
-                handleSave(true);
-                setShowMenu(false);
-              }}
-              style={{ padding: 12 }}
-            >
-              <ThemedText style={{ color: palette.text }}>Save and add new record</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                Alert.alert('Template Saved', 'Record saved as template for future use.');
-                setShowMenu(false);
-              }}
-              style={{ padding: 12 }}
-            >
-              <ThemedText style={{ color: palette.text }}>Save template</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </SafeAreaView>
   );
 }
+
