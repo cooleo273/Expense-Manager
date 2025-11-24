@@ -9,9 +9,11 @@ export const logExpensesStyles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
+    // reduce top space between header and content by lowering top padding
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 250, // Increased back to 250 for better keyboard space
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
   summaryContainer: {
     borderWidth: 1,
@@ -93,6 +95,22 @@ export const logExpensesStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignSelf: 'flex-end',
+  },
+  templatesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignSelf: 'flex-end',
+  },
+  templatesBadge: {
+    fontSize: FontSizes.xs,
+    lineHeight: FontSizes.xs,
+    marginLeft: Spacing.xs,
+    alignSelf: 'flex-start',
+    paddingTop: 2,
   },
   addListLabel: {
     fontWeight: FontWeights.semibold as any,
@@ -424,7 +442,7 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.tiny,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -463,5 +481,52 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+  },
+  labelsContainerInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+    paddingTop: Spacing.sm,
+  },
+  labelChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  
+  addLabelButtonInline: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  labelAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    gap: Spacing.xs,
+    // subtle elevation/shadow for visual depth
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  labelAddButtonText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold as any,
+  },
+  labelsInlineInput: {
+    minWidth: 120,
+    borderWidth: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    fontSize: FontSizes.md,
+    height: 36,
   },
 });

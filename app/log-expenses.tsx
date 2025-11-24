@@ -63,6 +63,8 @@ export default function LogExpensesScreen() {
   const [recordDate, setRecordDate] = useState(() => new Date());
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
   const [currentLabelInput, setCurrentLabelInput] = useState('');
+  const [isAddingLabel, setIsAddingLabel] = useState(false);
+  const labelInputRef = useRef<TextInput>(null);
 
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -285,7 +287,7 @@ export default function LogExpensesScreen() {
       showToast('Record saved successfully');
 
       if (stayOnScreen) {
-        Alert.alert('Saved', `${records.length} record${records.length > 1 ? 's' : ''} stored.`);
+        showToast(`${records.length} record${records.length > 1 ? 's' : ''} stored.`);
         return;
       }
 
@@ -483,6 +485,14 @@ export default function LogExpensesScreen() {
               <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
               <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => showToast && showToast('Feature not available')}
+              style={[styles.templatesButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+            >
+              <MaterialCommunityIcons name="file-document-multiple" size={18} color={palette.tint} />
+              <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Templates</ThemedText>
+              <ThemedText style={[styles.templatesBadge, { color: palette.tint }]}>{'¹'}</ThemedText>
+            </TouchableOpacity>
           </View>
 
           <ThemedView
@@ -570,60 +580,66 @@ export default function LogExpensesScreen() {
               ) : null}
             </View>
 
+            {/* Labels inside input wrapper with chips and a '+' button */}
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  Note
-                </ThemedText>
-                <TextInput
-                  style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Add a note"
-                  placeholderTextColor={palette.icon}
-                  value={singleDraft.note}
-                  onChangeText={(value) => handleSingleChange('note', value)}
-                  onFocus={() => scrollToInput(280)}
-                />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
+                <View style={styles.labelsContainerInline}>
+                  <View style={styles.labelChipsRow}>
+                    {singleDraft.labels.map((label) => (
+                      <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border, marginRight: Spacing.xs }]}> 
+                        <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
+                        <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                          <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {!isAddingLabel ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setIsAddingLabel(true);
+                          setTimeout(() => labelInputRef.current?.focus(), 60);
+                        }}
+                        style={[styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                        accessibilityLabel="Add label"
+                      >
+                        <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
+                        <ThemedText style={[styles.labelAddButtonText, { color: palette.tint }]}>Add label</ThemedText>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.sharedLabelInputRow}>
+                        <TextInput
+                          ref={labelInputRef}
+                          style={[styles.labelsInlineInput, { color: palette.text }]}
+                          placeholder="Add a label"
+                          placeholderTextColor={palette.icon}
+                          value={currentLabelInput}
+                          onChangeText={setCurrentLabelInput}
+                          onSubmitEditing={() => {
+                            addLabel();
+                            setIsAddingLabel(false);
+                          }}
+                          onBlur={() => setIsAddingLabel(false)}
+                        />
+                        <TouchableOpacity
+                          onPress={() => {
+                            addLabel();
+                            setIsAddingLabel(false);
+                          }}
+                          style={[styles.sharedLabelAction, { borderColor: palette.border }]}
+                        >
+                          <MaterialCommunityIcons name="check" size={16} color={palette.tint} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  Labels
-                </ThemedText>
-                {/* keep input inside the inputWrapper */}
-                <View style={{ marginTop: singleDraft.labels.length > 0 ? Spacing.sm : 0 }}>
-                  <TextInput
-                    style={[styles.notchedInput, { color: palette.text }]}
-                    placeholder="Add a label"
-                    placeholderTextColor={palette.icon}
-                    value={currentLabelInput}
-                    onChangeText={setCurrentLabelInput}
-                    onSubmitEditing={addLabel}
-                    onFocus={() => scrollToInput(350)}
-                  />
-                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
-                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
-                  </TouchableOpacity>
-                </View>
-                </View>
-              </View>
+            
 
-            {/* Display labels outside the input box and below it */}
-            {singleDraft.labels.length > 0 && (
-              <View style={{ marginTop: Spacing.sm }}>
-                <View style={styles.labelsContainer}>
-                  {singleDraft.labels.map((label) => (
-                    <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}>
-                      <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
-                      <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
-                        <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
+            {/* labels are rendered inline inside the Labels input wrapper */}
 
             <View style={styles.fieldGroup}>
               <View style={styles.dateTimeRow}>
@@ -667,6 +683,21 @@ export default function LogExpensesScreen() {
                 </View>
               </View>
             </View>
+
+            {/* NOTE: moved to bottom of the card so it's last in the form as requested */}
+            <View style={styles.fieldGroup}>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Note</ThemedText>
+                <TextInput
+                  style={[styles.notchedInput, { color: palette.text }]}
+                  placeholder="Add a note"
+                  placeholderTextColor={palette.icon}
+                  value={singleDraft.note}
+                  onChangeText={(value) => handleSingleChange('note', value)}
+                  onFocus={() => scrollToEnd()}
+                />
+              </View>
+            </View>
           </ThemedView>
 
           {pickerMode ? (
@@ -685,18 +716,7 @@ export default function LogExpensesScreen() {
             </View>
           ) : null}
 
-          {totalSaved > 0 ? (
-            <ThemedView
-              style={[styles.savedSummary, { backgroundColor: palette.highlight, borderColor: palette.border }]}
-            >
-              <ThemedText style={{ color: palette.text, fontWeight: '600' }}>
-                {totalSaved} record{totalSaved > 1 ? 's' : ''} saved this session
-              </ThemedText>
-              <ThemedText style={{ color: palette.icon }}>
-                Saved items sync once you reconnect.
-              </ThemedText>
-            </ThemedView>
-          ) : null}
+          {/* Removed saved summary - users should not see record count at the bottom */}
         </ScrollView>
       </KeyboardAvoidingView>
 
