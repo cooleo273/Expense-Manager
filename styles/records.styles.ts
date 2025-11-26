@@ -20,6 +20,7 @@ export const recordsStyles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     marginTop: Spacing.sm,
     overflow: 'hidden',
+    flex: 1,
   },
   headerRow: {
     flexDirection: 'row',

@@ -1,17 +1,15 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
 
+import { BreakdownChart } from '@/components/BreakdownChart';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/constants/categories';
-import { Colors, Spacing } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { mockRecordsData } from '../../constants/mock-data';
@@ -147,67 +145,6 @@ export default function Statistics() {
     });
   }, [filters.dateRange, filters.searchTerm, transactions]);
 
-  const weeklyAmounts = useMemo(() => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-    
-    const amounts: Record<'expense' | 'income', number[]> = {
-      expense: [0, 0, 0, 0, 0, 0, 0],
-      income: [0, 0, 0, 0, 0, 0, 0]
-    };
-
-    filteredTransactions.forEach((transaction) => {
-      const transactionDate = new Date(transaction.date);
-      const dayDiff = Math.floor((transactionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (dayDiff >= 0 && dayDiff < 7) {
-        if (transaction.type === 'expense') {
-          amounts.expense[dayDiff] += Math.abs(transaction.amount);
-        } else if (transaction.type === 'income') {
-          amounts.income[dayDiff] += transaction.amount;
-        }
-      }
-    });
-
-    return amounts;
-  }, [filteredTransactions]);
-
-  const activeSeries = weeklyAmounts[selectedType];
-
-  const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
-
-  const maxDataValue = useMemo(
-    () => activeSeries.reduce((max, value) => Math.max(max, value), 0),
-    [activeSeries]
-  );
-
-  const weeklyChartData = useMemo(
-    () =>
-      WEEK_LABELS.map((label, index) => ({
-        x: label,
-        y: activeSeries[index],
-      })),
-    [activeSeries]
-  );
-
-  const yAxisTickValues = useMemo(() => {
-    if (maxDataValue === 0) {
-      return [0, 1, 2, 3];
-    }
-    const steps = 4;
-    const stepSize = Math.max(1, Math.ceil(maxDataValue / steps));
-    return Array.from({ length: steps + 1 }, (_, idx) => idx * stepSize);
-  }, [maxDataValue]);
-
-  const weeklyTotal = activeSeries.reduce((sum, value) => sum + value, 0);
-  let peakIndex = 0;
-  activeSeries.forEach((value, index) => {
-    if (value > activeSeries[peakIndex]) {
-      peakIndex = index;
-    }
-  });
-  const weekendTotal = activeSeries.slice(5).reduce((sum, value) => sum + value, 0);
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
 
@@ -232,9 +169,6 @@ export default function Statistics() {
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, palette.tint]);
 
-  const weekendShare = weeklyTotal === 0 ? 0 : Math.round((weekendTotal / weeklyTotal) * 100);
-  const dailyAverage = weeklyTotal === 0 ? 0 : Math.round(weeklyTotal / activeSeries.length);
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
       <ScrollView
@@ -253,78 +187,11 @@ export default function Statistics() {
           </ThemedText>
         </View>
 
-          <ThemedView style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-              <MaterialCommunityIcons name="chart-bar" size={20} color={palette.tint} />
-              <ThemedText type="subtitle">Weekly Breakdown</ThemedText>
-            </View>
-            <ThemedText style={{ color: palette.icon }}>
-              {selectedType === 'income' ? 'Income overview' : 'Expense overview'}
-            </ThemedText>
-          </View>
-          <View style={[styles.chart, { width: chartWidth }]}>
-            <VictoryChart
-              animate={{ duration: 600 }}
-              height={240}
-              padding={{ top: 32, bottom: 56, left: 56, right: 24 }}
-              domainPadding={{ x: 24, y: [0, 12] }}
-              width={chartWidth}
-            >
-              <VictoryAxis
-                style={{
-                  axis: { stroke: palette.border },
-                  tickLabels: { fill: palette.icon, fontSize: 12, padding: 12 },
-                  ticks: { stroke: palette.border },
-                }}
-              />
-              <VictoryAxis
-                dependentAxis
-                tickValues={yAxisTickValues}
-                tickFormat={(value: number) => formatCurrency(value)}
-                style={{
-                  axis: { stroke: palette.border },
-                  grid: { stroke: palette.border, strokeDasharray: '4,4' },
-                  tickLabels: { fill: palette.icon, fontSize: 12, padding: 8 },
-                  ticks: { stroke: palette.border },
-                }}
-              />
-              <VictoryBar
-                data={weeklyChartData}
-                barWidth={24}
-                cornerRadius={{ top: 8, bottom: 8 }}
-                labels={({ datum }: { datum: { y: number } }) =>
-                  datum.y ? formatCurrency(datum.y) : ''
-                }
-                labelComponent={
-                  <VictoryLabel
-                    dy={-8}
-                    style={{ fill: palette.icon, fontSize: 12, fontWeight: '600' }}
-                  />
-                }
-                style={{ data: { fill: palette.tint } }}
-              />
-            </VictoryChart>
-          </View>
-          <View style={styles.barSummaryRow}>
-            <View style={styles.barSummaryBlock}>
-              <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>${weeklyTotal.toLocaleString()}</ThemedText>
-            </View>
-            <View style={styles.barSummaryBlock}>
-              <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Peak day</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>{WEEK_LABELS[peakIndex]}</ThemedText>
-            </View>
-            <View style={styles.barSummaryBlock}>
-              <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Daily avg</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>${dailyAverage.toLocaleString()}</ThemedText>
-            </View>
-            <View style={styles.barSummaryBlock}>
-              <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Weekend</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: palette.text }]}>{weekendShare}%</ThemedText>
-            </View>
-          </View>
-        </ThemedView>
+        <BreakdownChart
+          transactions={filteredTransactions}
+          selectedType={selectedType}
+          dateRange={filters.dateRange}
+        />
 
         <ExpenseStructureCard
           title="Expense Structure"

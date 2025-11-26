@@ -11,8 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow Expense Manager to import receipts from your photo library."
-      }
+        "NSPhotoLibraryUsageDescription": "Allow Expense Manager to import receipts from your photo library.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.leulteferi27.expensemanager"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +26,8 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "READ_MEDIA_IMAGES"
-      ]
+      ],
+      "package": "com.leulteferi27.expensemanager"
     },
     "web": {
       "output": "static",
@@ -49,6 +52,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "da516dcd-93ee-49f9-af7c-997281f6e250"
+      }
+    },
+    "owner": "leulteferi27"
   }
 }

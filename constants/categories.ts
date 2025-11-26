@@ -5,14 +5,16 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 export type CategoryType = 'income' | 'expense';
 
 export type CategoryKey =
+  | 'foodAndDrinks'
+  | 'shopping'
   | 'housing'
   | 'transportation'
-  | 'groceries'
-  | 'dining'
-  | 'insurance'
-  | 'health'
-  | 'entertainment'
-  | 'utilities'
+  | 'vehicle'
+  | 'lifeEntertainment'
+  | 'communicationPc'
+  | 'financialExpenses'
+  | 'investments'
+  | 'others'
   | 'income';
 
 type MaterialIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -33,10 +35,24 @@ export type SubcategoryDefinition = {
 };
 
 export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
+  foodAndDrinks: {
+    id: 'foodAndDrinks',
+    name: 'Food & Drinks',
+    color: '#F97316',
+    icon: 'silverware-fork-knife',
+    type: 'expense',
+  },
+  shopping: {
+    id: 'shopping',
+    name: 'Shopping',
+    color: '#A855F7',
+    icon: 'shopping',
+    type: 'expense',
+  },
   housing: {
     id: 'housing',
     name: 'Housing',
-    color: '#F97316',
+    color: '#EF4444',
     icon: 'home-variant-outline',
     type: 'expense',
   },
@@ -44,49 +60,49 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
     id: 'transportation',
     name: 'Transportation',
     color: '#0EA5E9',
+    icon: 'bus',
+    type: 'expense',
+  },
+  vehicle: {
+    id: 'vehicle',
+    name: 'Vehicle',
+    color: '#22C55E',
     icon: 'car',
     type: 'expense',
   },
-  groceries: {
-    id: 'groceries',
-    name: 'Groceries',
-    color: '#22C55E',
-    icon: 'basket-outline',
-    type: 'expense',
-  },
-  dining: {
-    id: 'dining',
-    name: 'Dining',
-    color: '#A855F7',
-    icon: 'silverware-fork-knife',
-    type: 'expense',
-  },
-  insurance: {
-    id: 'insurance',
-    name: 'Insurance',
-    color: '#F59E0B',
-    icon: 'shield-check-outline',
-    type: 'expense',
-  },
-  health: {
-    id: 'health',
-    name: 'Health & Fitness',
-    color: '#14B8A6',
-    icon: 'heart-pulse',
-    type: 'expense',
-  },
-  entertainment: {
-    id: 'entertainment',
-    name: 'Entertainment',
+  lifeEntertainment: {
+    id: 'lifeEntertainment',
+    name: 'Life & Entertainment',
     color: '#EC4899',
-    icon: 'movie-open-outline',
+    icon: 'party-popper',
     type: 'expense',
   },
-  utilities: {
-    id: 'utilities',
-    name: 'Utilities',
-    color: '#4F46E5',
-    icon: 'flash-outline',
+  communicationPc: {
+    id: 'communicationPc',
+    name: 'Communication, PC',
+    color: '#6366F1',
+    icon: 'cellphone',
+    type: 'expense',
+  },
+  financialExpenses: {
+    id: 'financialExpenses',
+    name: 'Financial Expenses',
+    color: '#F59E0B',
+    icon: 'bank-outline',
+    type: 'expense',
+  },
+  investments: {
+    id: 'investments',
+    name: 'Investments',
+    color: '#10B981',
+    icon: 'chart-line',
+    type: 'expense',
+  },
+  others: {
+    id: 'others',
+    name: 'Others',
+    color: '#9CA3AF',
+    icon: 'dots-horizontal-circle',
     type: 'expense',
   },
   income: {
@@ -101,68 +117,98 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
 export const categoryList: CategoryDefinition[] = Object.values(CATEGORY_MAP);
 
 const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
+  foodAndDrinks: [
+    { id: 'foodAndDrinks:bar-cafe', parentId: 'foodAndDrinks', name: 'Bar, Cafe', icon: 'coffee-outline' },
+    { id: 'foodAndDrinks:groceries', parentId: 'foodAndDrinks', name: 'Groceries', icon: 'cart-outline' },
+    { id: 'foodAndDrinks:restaurant-fast-food', parentId: 'foodAndDrinks', name: 'Restaurant, Fast-food', icon: 'silverware-fork-knife' },
+  ],
+  shopping: [
+    { id: 'shopping:clothes-shoes', parentId: 'shopping', name: 'Clothes & shoes', icon: 'tshirt-crew-outline' },
+    { id: 'shopping:drug-store-chemist', parentId: 'shopping', name: 'Drug-store, chemist', icon: 'pill' },
+    { id: 'shopping:electronics-accessories', parentId: 'shopping', name: 'Electronics, accessories', icon: 'cellphone' },
+    { id: 'shopping:free-time', parentId: 'shopping', name: 'Free-time', icon: 'puzzle-outline' },
+    { id: 'shopping:gifts-joy', parentId: 'shopping', name: 'Gifts, joy', icon: 'gift-outline' },
+    { id: 'shopping:health-beauty', parentId: 'shopping', name: 'Health and beauty', icon: 'flower-outline' },
+    { id: 'shopping:home-green', parentId: 'shopping', name: 'Home, green', icon: 'leaf' },
+    { id: 'shopping:jewels-accessories', parentId: 'shopping', name: 'Jewels, accessories', icon: 'diamond-stone' },
+    { id: 'shopping:kids', parentId: 'shopping', name: 'Kids', icon: 'baby-face-outline' },
+    { id: 'shopping:pets-animals', parentId: 'shopping', name: 'Pets, animals', icon: 'paw' },
+    { id: 'shopping:stationary-tools', parentId: 'shopping', name: 'Stationary, tools', icon: 'pencil-ruler' },
+  ],
   housing: [
-    { id: 'housing:rent', parentId: 'housing', name: 'Rent', icon: 'home-city-outline' },
+    { id: 'housing:energy-utilities', parentId: 'housing', name: 'Energy, utilities', icon: 'flash-outline' },
+    { id: 'housing:maintenance-repairs', parentId: 'housing', name: 'Maintenance, repairs', icon: 'hammer-wrench' },
     { id: 'housing:mortgage', parentId: 'housing', name: 'Mortgage', icon: 'office-building-outline' },
-  { id: 'housing:maintenance', parentId: 'housing', name: 'Maintenance', icon: 'wrench-outline' },
-  { id: 'housing:taxes', parentId: 'housing', name: 'Property Tax', icon: 'file-document-outline' },
-    { id: 'housing:hoa', parentId: 'housing', name: 'HOA Fees', icon: 'account-group-outline' },
+    { id: 'housing:property-insurance', parentId: 'housing', name: 'Property insurance', icon: 'shield-home-outline' },
+    { id: 'housing:rent', parentId: 'housing', name: 'Rent', icon: 'home-city-outline' },
+    { id: 'housing:services', parentId: 'housing', name: 'Services', icon: 'toolbox-outline' },
   ],
   transportation: [
-    { id: 'transportation:fuel', parentId: 'transportation', name: 'Fuel', icon: 'gas-station-outline' },
-    { id: 'transportation:public', parentId: 'transportation', name: 'Public Transit', icon: 'bus' },
-    { id: 'transportation:rideshare', parentId: 'transportation', name: 'Ride Share', icon: 'car-arrow-right' },
-    { id: 'transportation:maintenance', parentId: 'transportation', name: 'Maintenance', icon: 'car-wrench' },
-    { id: 'transportation:parking', parentId: 'transportation', name: 'Parking', icon: 'parking' },
+    { id: 'transportation:business-trips', parentId: 'transportation', name: 'Business trips', icon: 'briefcase-outline' },
+    { id: 'transportation:long-distance', parentId: 'transportation', name: 'Long distance', icon: 'airplane' },
+    { id: 'transportation:public-transport', parentId: 'transportation', name: 'Public transport', icon: 'bus' },
+    { id: 'transportation:taxi', parentId: 'transportation', name: 'Taxi', icon: 'taxi' },
   ],
-  groceries: [
-    { id: 'groceries:supermarket', parentId: 'groceries', name: 'Supermarket', icon: 'cart-outline' },
-    { id: 'groceries:farmers', parentId: 'groceries', name: 'Farmers Market', icon: 'storefront-outline' },
-    { id: 'groceries:pantry', parentId: 'groceries', name: 'Pantry Staples', icon: 'food-apple-outline' },
-    { id: 'groceries:household', parentId: 'groceries', name: 'Household Supplies', icon: 'bottle-tonic-outline' },
-    { id: 'groceries:beverages', parentId: 'groceries', name: 'Beverages', icon: 'cup-outline' },
+  vehicle: [
+    { id: 'vehicle:fuel', parentId: 'vehicle', name: 'Fuel', icon: 'gas-station-outline' },
+    { id: 'vehicle:leasing', parentId: 'vehicle', name: 'Leasing', icon: 'car-key' },
+    { id: 'vehicle:parking', parentId: 'vehicle', name: 'Parking', icon: 'parking' },
+    { id: 'vehicle:rentals', parentId: 'vehicle', name: 'Rentals', icon: 'car-arrow-right' },
+    { id: 'vehicle:vehicle-insurance', parentId: 'vehicle', name: 'Vehicle insurance', icon: 'shield-car' },
+    { id: 'vehicle:vehicle-maintenance', parentId: 'vehicle', name: 'Vehicle maintenance', icon: 'car-wrench' },
   ],
-  dining: [
-    { id: 'dining:restaurant', parentId: 'dining', name: 'Restaurants', icon: 'silverware-fork-knife' },
-    { id: 'dining:coffee', parentId: 'dining', name: 'Coffee Shops', icon: 'coffee-outline' },
-    { id: 'dining:fast', parentId: 'dining', name: 'Fast Food', icon: 'food-outline' },
-    { id: 'dining:delivery', parentId: 'dining', name: 'Delivery', icon: 'bike-fast' },
-    { id: 'dining:bars', parentId: 'dining', name: 'Bars & Pubs', icon: 'glass-cocktail' },
+  lifeEntertainment: [
+    { id: 'lifeEntertainment:active-sport-fitness', parentId: 'lifeEntertainment', name: 'Active sport, fitness', icon: 'dumbbell' },
+    { id: 'lifeEntertainment:alcohol-tobacco', parentId: 'lifeEntertainment', name: 'Alcohol, tobacco', icon: 'glass-cocktail' },
+    { id: 'lifeEntertainment:books-audio-subscriptions', parentId: 'lifeEntertainment', name: 'Books, audio, subscriptions', icon: 'book-open-page-variant' },
+    { id: 'lifeEntertainment:charity-gifts', parentId: 'lifeEntertainment', name: 'Charity, gifts', icon: 'hand-heart-outline' },
+    { id: 'lifeEntertainment:culture-sport-events', parentId: 'lifeEntertainment', name: 'Culture, sport events', icon: 'ticket-confirmation-outline' },
+    { id: 'lifeEntertainment:education-development', parentId: 'lifeEntertainment', name: 'Education, development', icon: 'school-outline' },
+    { id: 'lifeEntertainment:health-care-doctor', parentId: 'lifeEntertainment', name: 'Health care, doctor', icon: 'stethoscope' },
+    { id: 'lifeEntertainment:hobbies', parentId: 'lifeEntertainment', name: 'Hobbies', icon: 'palette-outline' },
+    { id: 'lifeEntertainment:holiday-trips-hotels', parentId: 'lifeEntertainment', name: 'Holiday, trips, hotels', icon: 'beach' },
+    { id: 'lifeEntertainment:life-events', parentId: 'lifeEntertainment', name: 'Life events', icon: 'party-popper' },
+    { id: 'lifeEntertainment:lottery-gambling', parentId: 'lifeEntertainment', name: 'Lottery, gambling', icon: 'dice-5' },
+    { id: 'lifeEntertainment:tv-streaming', parentId: 'lifeEntertainment', name: 'TV, Streaming', icon: 'television-play' },
+    { id: 'lifeEntertainment:wellness-beauty', parentId: 'lifeEntertainment', name: 'Wellness, beauty', icon: 'flower-lotus' },
   ],
-  insurance: [
-    { id: 'insurance:auto', parentId: 'insurance', name: 'Auto Insurance', icon: 'shield-car' },
-    { id: 'insurance:home', parentId: 'insurance', name: 'Home Insurance', icon: 'shield-home-outline' },
-    { id: 'insurance:health', parentId: 'insurance', name: 'Health Insurance', icon: 'hospital-box-outline' },
-    { id: 'insurance:life', parentId: 'insurance', name: 'Life Insurance', icon: 'heart-outline' },
-    { id: 'insurance:travel', parentId: 'insurance', name: 'Travel Insurance', icon: 'airplane' },
+  communicationPc: [
+    { id: 'communicationPc:internet', parentId: 'communicationPc', name: 'Internet', icon: 'wifi' },
+    { id: 'communicationPc:phone-cellphone', parentId: 'communicationPc', name: 'Phone, cellphone', icon: 'cellphone' },
+    { id: 'communicationPc:postal-services', parentId: 'communicationPc', name: 'Postal services', icon: 'email-outline' },
+    { id: 'communicationPc:software-apps-games', parentId: 'communicationPc', name: 'Software, apps, games', icon: 'controller-classic-outline' },
   ],
-  health: [
-    { id: 'health:gym', parentId: 'health', name: 'Gym & Fitness', icon: 'dumbbell' },
-    { id: 'health:pharmacy', parentId: 'health', name: 'Pharmacy', icon: 'medical-bag' },
-    { id: 'health:doctor', parentId: 'health', name: 'Doctor Visits', icon: 'stethoscope' },
-    { id: 'health:dental', parentId: 'health', name: 'Dental Care', icon: 'tooth-outline' },
-    { id: 'health:wellness', parentId: 'health', name: 'Wellness', icon: 'flower-outline' },
+  financialExpenses: [
+    { id: 'financialExpenses:advisory', parentId: 'financialExpenses', name: 'Advisory', icon: 'account-tie-outline' },
+    { id: 'financialExpenses:charges-fees', parentId: 'financialExpenses', name: 'Charges, Fees', icon: 'cash-multiple' },
+    { id: 'financialExpenses:child-support', parentId: 'financialExpenses', name: 'Child Support', icon: 'human-child' },
+    { id: 'financialExpenses:fines', parentId: 'financialExpenses', name: 'Fines', icon: 'gavel' },
+    { id: 'financialExpenses:insurances', parentId: 'financialExpenses', name: 'Insurances', icon: 'shield-outline' },
+    { id: 'financialExpenses:loan-interest', parentId: 'financialExpenses', name: 'Loan, Interest', icon: 'cash-plus' },
+    { id: 'financialExpenses:taxes', parentId: 'financialExpenses', name: 'Taxes', icon: 'file-document-outline' },
   ],
-  entertainment: [
-    { id: 'entertainment:movies', parentId: 'entertainment', name: 'Movies', icon: 'movie-outline' },
-    { id: 'entertainment:concerts', parentId: 'entertainment', name: 'Concerts', icon: 'music-circle-outline' },
-    { id: 'entertainment:gaming', parentId: 'entertainment', name: 'Gaming', icon: 'controller-classic-outline' },
-    { id: 'entertainment:streaming', parentId: 'entertainment', name: 'Streaming', icon: 'cast' },
-    { id: 'entertainment:events', parentId: 'entertainment', name: 'Events', icon: 'ticket-confirmation-outline' },
+  investments: [
+    { id: 'investments:collections', parentId: 'investments', name: 'Collections', icon: 'cube-outline' },
+    { id: 'investments:financial-investments', parentId: 'investments', name: 'Financial investments', icon: 'chart-line' },
+    { id: 'investments:realty', parentId: 'investments', name: 'Realty', icon: 'home-modern' },
+    { id: 'investments:savings', parentId: 'investments', name: 'Savings', icon: 'piggy-bank' },
+    { id: 'investments:vehicle-chattels', parentId: 'investments', name: 'Vehicle, chattels', icon: 'garage' },
   ],
-  utilities: [
-    { id: 'utilities:electricity', parentId: 'utilities', name: 'Electricity', icon: 'flash-outline' },
-    { id: 'utilities:water', parentId: 'utilities', name: 'Water', icon: 'water-outline' },
-    { id: 'utilities:internet', parentId: 'utilities', name: 'Internet', icon: 'wifi' },
-    { id: 'utilities:gas', parentId: 'utilities', name: 'Natural Gas', icon: 'fire' },
-    { id: 'utilities:waste', parentId: 'utilities', name: 'Waste Services', icon: 'trash-can-outline' },
+  others: [
+    { id: 'others:missing', parentId: 'others', name: 'Missing', icon: 'dots-horizontal-circle-outline' },
   ],
   income: [
-    { id: 'income:salary', parentId: 'income', name: 'Salary', icon: 'briefcase-outline' },
-    { id: 'income:bonus', parentId: 'income', name: 'Bonus', icon: 'gift-outline' },
-    { id: 'income:freelance', parentId: 'income', name: 'Freelance', icon: 'laptop' },
-    { id: 'income:investments', parentId: 'income', name: 'Investments', icon: 'chart-line' },
-    { id: 'income:gifts', parentId: 'income', name: 'Gifts', icon: 'hand-heart-outline' },
+    { id: 'income:checks-coupons', parentId: 'income', name: 'Checks, coupons', icon: 'ticket-percent' },
+    { id: 'income:child-support', parentId: 'income', name: 'Child Support', icon: 'human-child' },
+    { id: 'income:dues-grants', parentId: 'income', name: 'Dues & grants', icon: 'hand-coin-outline' },
+    { id: 'income:gifts', parentId: 'income', name: 'Gifts', icon: 'gift-outline' },
+    { id: 'income:interests-dividends', parentId: 'income', name: 'Interests, dividends', icon: 'chart-areaspline' },
+    { id: 'income:lending-renting', parentId: 'income', name: 'Lending, renting', icon: 'handshake' },
+    { id: 'income:lottery-gambling', parentId: 'income', name: 'Lottery, Gambling', icon: 'dice-5' },
+    { id: 'income:refunds', parentId: 'income', name: 'Refunds (tax, purchase)', icon: 'cash-refund' },
+    { id: 'income:rental-income', parentId: 'income', name: 'Rental Income', icon: 'home-city-outline' },
+    { id: 'income:sale', parentId: 'income', name: 'Sale', icon: 'tag-outline' },
+    { id: 'income:wage-invoices', parentId: 'income', name: 'Wage, invoices', icon: 'briefcase-outline' },
   ],
 };
 
@@ -206,15 +252,12 @@ export function getNodeDisplayName(id: string | undefined): string | undefined {
 }
 
 export function getFullCategoryLabel(categoryId: string | undefined, subcategoryId?: string | null): string {
-  const category = getCategoryDefinition(categoryId);
-  if (!category) {
-    return categoryId ?? '';
-  }
   const subcategory = getSubcategoryDefinition(subcategoryId || undefined);
-  if (!subcategory) {
-    return category.name;
+  if (subcategory) {
+    return subcategory.name;
   }
-  return `${category.name} - ${subcategory.name}`;
+  const category = getCategoryDefinition(categoryId);
+  return category?.name ?? categoryId ?? '';
 }
 
 export function getCategoryDefinition(id: CategoryKey | string | undefined): CategoryDefinition | undefined {

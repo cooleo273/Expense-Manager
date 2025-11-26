@@ -11,6 +11,7 @@ import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { SingleDraft } from '@/types/transactions';
 import { emitRecordDetailUpdate, subscribeToCategorySelection } from '@/utils/navigation-events';
@@ -54,8 +55,8 @@ export default function RecordDetailScreen() {
         const decoded = decodeURIComponent(payload);
         const parsed = JSON.parse(decoded);
         return {
-          amount: parsed.amount ?? '',
-          category: parsed.category ?? 'housing',
+          amount: typeof parsed.amount === 'number' ? String(Math.abs(parsed.amount)) : parsed.amount ?? '',
+          category: parsed.category ?? 'foodAndDrinks',
           subcategoryId: parsed.subcategoryId,
           payee: parsed.payee ?? '',
           note: parsed.note ?? '',
@@ -68,7 +69,7 @@ export default function RecordDetailScreen() {
     }
     return {
       amount: typeof params.amount === 'string' ? params.amount : '',
-      category: typeof params.category === 'string' ? params.category : 'housing',
+      category: typeof params.category === 'string' ? params.category : 'foodAndDrinks',
       subcategoryId: typeof params.subcategoryId === 'string' ? params.subcategoryId : undefined,
       payee: typeof params.payee === 'string' ? params.payee : '',
       note: typeof params.note === 'string' ? params.note : '',
@@ -76,6 +77,27 @@ export default function RecordDetailScreen() {
       occurredAt: undefined,
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
+
+  // Keep the parsed payload (if any) accessible so we can infer record type and original id
+  const parsedPayload = useMemo(() => {
+    const payloadStr = typeof params.payload === 'string' ? params.payload : undefined;
+    if (!payloadStr) return undefined;
+    try {
+      return JSON.parse(decodeURIComponent(payloadStr));
+    } catch (err) {
+      return undefined;
+    }
+  }, [params.payload]);
+
+  const recordType = useMemo(() => {
+    if (typeof params.type === 'string') {
+      return (params.type === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+    }
+    if (parsedPayload && typeof parsedPayload.type === 'string') {
+      return (parsedPayload.type === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+    }
+    return undefined;
+  }, [params.type, parsedPayload]);
 
   const initialDate = useMemo(() => {
     if (initialDraft.occurredAt) {
@@ -95,6 +117,7 @@ export default function RecordDetailScreen() {
   }));
   const [errors, setErrors] = useState<DraftErrors>({});
   const [currentLabelInput, setCurrentLabelInput] = useState('');
+  const [showLabelInput, setShowLabelInput] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
   useEffect(() => {
@@ -116,6 +139,7 @@ export default function RecordDetailScreen() {
     setRecordDate(resolvedDate);
     setErrors({});
     setCurrentLabelInput('');
+    setShowLabelInput(false);
   }, [initialDate, initialDraft]);
 
   useEffect(() => {
@@ -138,20 +162,26 @@ export default function RecordDetailScreen() {
   const addLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
+      setShowLabelInput(false);
+      setCurrentLabelInput('');
       return;
     }
 
     setDraft((prev) => {
       const labels = Array.isArray(prev.labels) ? prev.labels : [];
       if (labels.includes(trimmed)) {
+        setShowLabelInput(false);
+        setCurrentLabelInput('');
         return prev;
       }
-      return {
+      const next = {
         ...prev,
         labels: [...labels, trimmed],
       };
+      setShowLabelInput(false);
+      setCurrentLabelInput('');
+      return next;
     });
-    setCurrentLabelInput('');
   }, [currentLabelInput]);
 
   const removeLabel = useCallback((labelToRemove: string) => {
@@ -219,7 +249,7 @@ export default function RecordDetailScreen() {
     return Object.keys(nextErrors).length === 0;
   }, [draft.amount, draft.note]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!validate()) {
       showToast('Fix errors to continue', { tone: 'error' });
       return;
@@ -229,13 +259,40 @@ export default function RecordDetailScreen() {
       ...draft,
       occurredAt: recordDate.toISOString(),
     };
+    setDraft(nextDraft);
 
+    // If editing an existing stored record (id provided), persist changes to storage
+    const existingId = typeof params.id === 'string' ? params.id : undefined;
+    if (existingId) {
+      try {
+        const numeric = Number(nextDraft.amount.trim());
+        const signedAmount = recordType === 'expense' ? -Math.abs(numeric) : Math.abs(numeric);
+        const updates: any = {
+          amount: signedAmount,
+          note: nextDraft.note ?? '',
+          title: nextDraft.note ?? 'Transaction',
+          payee: nextDraft.payee ?? '',
+          categoryId: nextDraft.category ?? undefined,
+          subcategoryId: nextDraft.subcategoryId ?? undefined,
+          labels: nextDraft.labels ?? undefined,
+          date: nextDraft.occurredAt ?? recordDate.toISOString(),
+        };
+        await StorageService.updateTransaction(existingId, updates);
+        showToast('Record saved');
+      } catch (err) {
+        console.error('Failed to persist record changes:', err);
+        showToast('Failed to save record', { tone: 'error' });
+      }
+      navigation.goBack();
+      return;
+    }
+
+    // Default: notify log-expenses-list about the change so it can update in-memory drafts
     emitRecordDetailUpdate({
       target: 'log-expenses-list',
       recordIndex,
       record: nextDraft,
     });
-    setDraft(nextDraft);
     showToast('Details updated');
     navigation.goBack();
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
@@ -295,7 +352,7 @@ export default function RecordDetailScreen() {
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                 <TouchableOpacity
-                  style={styles.categoryInput}
+                  style={[styles.categoryInput, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={() =>
                     router.push({
                       pathname: '/Category',
@@ -311,17 +368,19 @@ export default function RecordDetailScreen() {
                   <ThemedText style={[styles.categoryText, { color: palette.text }]} numberOfLines={1}>
                     {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
                   </ThemedText>
-                  <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
+                  {/* chevron removed — category label shouldn't look like a dropdown */}
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Payee</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                  {recordType === 'income' ? 'Payer' : 'Payee'}
+                </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Eg: Grocery Store"
+                  placeholder={recordType === 'income' ? 'Eg: Company X' : 'Eg: Grocery Store'}
                   placeholderTextColor={palette.icon}
                   value={draft.payee}
                   onChangeText={(value) => setDraft((prev) => ({ ...prev, payee: value }))}
@@ -348,23 +407,13 @@ export default function RecordDetailScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Labels</ThemedText>
-                <View style={{ marginTop: (draft.labels?.length ?? 0) > 0 ? Spacing.sm : 0 }}>
-                  <TextInput
-                    style={[styles.notchedInput, { color: palette.text }]}
-                    placeholder="Add a label"
-                    placeholderTextColor={palette.icon}
-                    value={currentLabelInput}
-                    onChangeText={setCurrentLabelInput}
-                    onSubmitEditing={addLabel}
-                  />
-                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
-                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {(draft.labels?.length ?? 0) > 0 ? (
-                <View style={{ marginTop: Spacing.sm }}>
-                  <View style={styles.labelsContainer}>
+                <View style={styles.labelsSummaryRow}>
+                  <ScrollView
+                    horizontal
+                    style={[styles.labelsScrollArea, { flex: 1 }]}
+                    contentContainerStyle={styles.labelsScrollInner}
+                    showsHorizontalScrollIndicator={false}
+                  >
                     {draft.labels?.map((label) => (
                       <View
                         key={label}
@@ -376,23 +425,58 @@ export default function RecordDetailScreen() {
                         </TouchableOpacity>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    onPress={() => {
+                      setShowLabelInput(true);
+                      setCurrentLabelInput('');
+                    }}
+                  >
+                    <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
+                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
+                  </TouchableOpacity>
                 </View>
-              ) : null}
+              </View>
             </View>
 
-            <View style={styles.fieldGroup}>
+            {showLabelInput && (
+              <View style={styles.sharedLabelInputRow}>
+                <View style={styles.sharedLabelInputContainer}>
+                  <TextInput
+                    style={[
+                      styles.sharedLabelInput,
+                      { backgroundColor: palette.card, color: palette.text },
+                    ]}
+                    placeholder="Add Label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    onPress={addLabel}
+                    style={styles.sharedLabelIconButton}
+                  >
+                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('date')}
                 >
                   <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
                   <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
                   onPress={() => setPickerMode('time')}
                 >
                   <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />

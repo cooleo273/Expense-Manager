@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { mapReceiptToExpense } from '@/utils/receipt-mapper';
+import { mapReceiptToExpense, normalizeCasing } from '@/utils/receipt-mapper';
 
 export const options = {
   headerShown: false,
@@ -35,6 +35,7 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { showToast } = useToast();
   const cameraRef = useRef<CameraView>(null);
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
@@ -89,8 +90,9 @@ export default function ScanScreen() {
         throw new Error('Receipt fields unavailable');
       }
 
-      // If the parsed receipt contains individual line-items, create a draft per item
-      // so the log expenses list shows each item separately.
+      // If the parsed receipt contains individual records, create a draft per record
+      // so the log expenses list shows each item separately with correct subcategories.
+      const apiRecords = proxyResponse?.fields?.records ?? [];
       const items = mappedExpense.expense?.items ?? [];
       const receiptDate = mappedExpense.expense?.date ?? null;
       const receiptTime = mappedExpense.expense?.time ?? null;
@@ -104,20 +106,41 @@ export default function ScanScreen() {
         return undefined;
       };
       const occurredAtForRecord = computeOccurredAt();
-      const records = (items && items.length > 0)
-        ? items.map((it) => ({
+
+      // Use the API records directly since they have correct subcategories
+      setIsProcessing(false);
+      setIsAnalyzing(true);
+      let resolvedRecords: any[] | undefined = undefined;
+      try {
+        if (apiRecords.length > 0) {
+          // Use the API records directly since they have correct subcategories
+          resolvedRecords = apiRecords.map((record: any) => ({
+            amount: (typeof record.amount === 'number' ? record.amount.toFixed(2) : `${record.amount}`),
+            category: record.category ?? '',
+            subcategoryId: record.subcategoryId ?? '',
+            payee: record.payee ?? mappedExpense.expense?.payee ?? mappedExpense.expense?.merchant ?? '',
+            note: normalizeCasing(record.note ?? record.description ?? mappedExpense.expense?.note ?? '') ?? '',
+            labels: [],
+            occurredAt: record.occurredAt ? new Date(record.occurredAt).toISOString() : occurredAtForRecord,
+          })) as any[];
+        } else if (items.length > 0) {
+          // Fallback to items if no API records
+          resolvedRecords = items.map((it) => ({
             amount: (typeof it.total === 'number' ? it.total.toFixed(2) : `${it.total}`),
             category: mappedExpense.expense?.category ?? '',
             subcategoryId: mappedExpense.expense?.subcategoryId ?? '',
             payee: mappedExpense.expense?.payee ?? mappedExpense.expense?.merchant ?? '',
-            note: it.description ?? mappedExpense.expense?.note ?? '',
+            note: normalizeCasing(it.description ?? mappedExpense.expense?.note ?? '') ?? '',
             labels: [],
             occurredAt: occurredAtForRecord,
-          })) as any[]
-        : undefined;
+          })) as any[];
+        }
+      } finally {
+        setIsAnalyzing(false);
+      }
 
-      const payloadToSend: any = records && records.length > 0
-        ? { records }
+      const payloadToSend: any = (resolvedRecords && resolvedRecords.length > 0)
+        ? { records: resolvedRecords }
         : {
             draftPatch: {
               ...(mappedExpense.draftPatch ?? {}),
@@ -273,10 +296,12 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      {isProcessing && (
-        <View style={styles.processingOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.processingText}>Processing receipt…</Text>
+      {(isProcessing || isAnalyzing) && (
+        <View style={[styles.processingOverlay, { backgroundColor: '#FFFFFF' }]}>
+          <ActivityIndicator size="large" color={palette.tint} />
+          <Text style={[styles.processingText, { color: palette.text }]}>
+            {isProcessing ? 'Processing receipt…' : 'Analyzing category…'}
+          </Text>
         </View>
       )}
     </View>

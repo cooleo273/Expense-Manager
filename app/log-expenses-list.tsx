@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Alert, KeyboardAvoidingView,
   Platform,
   ScrollView,
   TextInput,
@@ -97,6 +97,7 @@ export default function LogExpensesListScreen() {
   const [recordErrors, setRecordErrors] = useState<string[]>(['']);
   const [recordCategoryErrors, setRecordCategoryErrors] = useState<string[]>(['']);
   const [recordNoteErrors, setRecordNoteErrors] = useState<string[]>(['']);
+  const [recordPayeeErrors, setRecordPayeeErrors] = useState<string[]>(['']);
 
   const updateRecord = useCallback((index: number, key: EditableDraftKey, value: string) => {
     setRecords(prev => prev.map((record, i) =>
@@ -110,6 +111,9 @@ export default function LogExpensesListScreen() {
     }
     if (key === 'note') {
       setRecordNoteErrors(prev => prev.map((err, i) => i === index ? '' : err));
+    }
+    if (key === 'payee') {
+      setRecordPayeeErrors(prev => prev.map((err, i) => i === index ? '' : err));
     }
   }, []);
 
@@ -144,8 +148,24 @@ export default function LogExpensesListScreen() {
     setRecordErrors(prev => [...prev, '']);
     setRecordCategoryErrors(prev => [...prev, '']);
     setRecordNoteErrors(prev => [...prev, '']);
+    setRecordPayeeErrors(prev => [...prev, '']);
     showToast('Record added successfully');
   }, [params.defaultCategory, showToast]);
+
+  const isRecordEdited = useCallback((record: SingleDraft) => {
+    const amountSet = (record.amount ?? '').trim() !== '';
+    const noteSet = (record.note ?? '').trim() !== '';
+    const payeeSet = (record.payee ?? '').trim() !== '';
+    const subcategorySet = !!record.subcategoryId;
+    const categorySet = !!record.category;
+    const labelsSet = Array.isArray(record.labels) && record.labels.length > 0;
+    const occurredAtSet = !!record.occurredAt;
+
+    // Avoid treating only default category as an edit. Category by itself is not an edit
+    // unless any other field is set or a subcategory is chosen.
+    const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
+    return anyOther || (categorySet && subcategorySet);
+  }, []);
 
   const removeRecord = useCallback((index: number) => {
     if (records.length > 1) {
@@ -153,8 +173,31 @@ export default function LogExpensesListScreen() {
       setRecordErrors(prev => prev.filter((_, i) => i !== index));
       setRecordCategoryErrors(prev => prev.filter((_, i) => i !== index));
       setRecordNoteErrors(prev => prev.filter((_, i) => i !== index));
+      setRecordPayeeErrors(prev => prev.filter((_, i) => i !== index));
     }
   }, [records.length]);
+
+  const confirmAndRemoveRecord = useCallback((index: number) => {
+    const record = records[index];
+    if (!record) {
+      return;
+    }
+
+    if (!isRecordEdited(record)) {
+      removeRecord(index);
+      return;
+    }
+
+    Alert.alert(
+      'Delete record',
+      'This record has unsaved edits. Are you sure you want to delete it?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => removeRecord(index) },
+      ],
+      { cancelable: true }
+    );
+  }, [isRecordEdited, records, removeRecord]);
 
   const handleNext = useCallback(() => {
     let hasErrors = false;
@@ -189,9 +232,17 @@ export default function LogExpensesListScreen() {
       }
       return '';
     });
+    const payeeErrors = records.map((record) => {
+      if (!record.payee || record.payee.trim() === '') {
+        hasErrors = true;
+        return `${transactionType === 'income' ? 'Payer' : 'Payee'} is required`;
+      }
+      return '';
+    });
     setRecordErrors(amountErrors);
     setRecordCategoryErrors(categoryErrors);
     setRecordNoteErrors(noteErrors);
+    setRecordPayeeErrors(payeeErrors);
     if (hasErrors) {
       showToast('Please fix the errors before proceeding', { tone: 'error' });
       return;
@@ -245,6 +296,7 @@ export default function LogExpensesListScreen() {
         setRecordErrors(Array(incoming.length).fill(''));
         setRecordNoteErrors(Array(incoming.length).fill(''));
         setRecordCategoryErrors(Array(incoming.length).fill(''));
+        setRecordPayeeErrors(Array(incoming.length).fill(''));
         showToast('Receipt items imported');
         scanPrefillRef.current = parsedParam;
         return;
@@ -277,6 +329,7 @@ export default function LogExpensesListScreen() {
       setRecordErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordNoteErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordCategoryErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
+      setRecordPayeeErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
 
       showToast('Receipt fields imported');
       scanPrefillRef.current = parsedParam;
@@ -291,6 +344,10 @@ export default function LogExpensesListScreen() {
         return;
       }
       const index = typeof payload.recordIndex === 'number' ? payload.recordIndex : 0;
+      if (payload.category) {
+        transactionDraftState.setLastSelectedCategory(payload.category, transactionType);
+      }
+      transactionDraftState.setLastSelectedSubcategory(payload.subcategoryId ?? undefined, transactionType);
       setRecords((prev) =>
         prev.map((record, i) =>
           i === index
@@ -318,7 +375,7 @@ export default function LogExpensesListScreen() {
       unsubscribeCategory();
       unsubscribeDetails();
     };
-  }, []);
+  }, [transactionType]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -326,7 +383,26 @@ export default function LogExpensesListScreen() {
         <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
       ),
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+        <TouchableOpacity
+          onPress={() => {
+            // if any record is edited, confirm before navigating back
+            const anyEdited = records.some((r) => isRecordEdited(r));
+            if (anyEdited) {
+              Alert.alert(
+                'Discard changes?',
+                'You have unsaved changes. Do you want to discard and go back?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+                ],
+                { cancelable: true }
+              );
+              return;
+            }
+            navigation.goBack();
+          }}
+          style={{ padding: 8 }}
+        >
           <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
         </TouchableOpacity>
       ),
@@ -336,7 +412,40 @@ export default function LogExpensesListScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, palette.icon, palette.tint, handleNext]);
+  }, [navigation, palette.icon, palette.tint, handleNext, records, isRecordEdited]);
+
+  useEffect(() => {
+    // Block navigation if any record in the list is edited (unsaved)
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const anyEdited = records.some((r) => isRecordEdited(r));
+      if (!anyEdited) {
+        // Allow navigation
+        return;
+      }
+
+      // Prevent default behavior of leaving the screen
+      e.preventDefault();
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Do you want to discard and leave?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              // Remove listener and continue navigation
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, records, isRecordEdited]);
 
   const totalRecords = records.length;
   const totalAmount = useMemo(() => {
@@ -403,9 +512,16 @@ export default function LogExpensesListScreen() {
                       onFocus={() => scrollToInput(200 + (index * 160))}
                     />
                   </View>
-                  <TouchableOpacity onPress={() => openRecordDetails(index)} style={[styles.iconTouchArea, styles.noteMenuButton]}>
-                    <MaterialCommunityIcons name="dots-horizontal" size={20} color={palette.icon} />
-                  </TouchableOpacity>
+                  <View style={styles.stackedIconGroup}>
+                    <TouchableOpacity onPress={() => openRecordDetails(index)} style={[styles.smallIconTouch, styles.noteMenuButton]}> 
+                      <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} />
+                    </TouchableOpacity>
+                    {records.length > 1 && (
+                      <TouchableOpacity onPress={() => confirmAndRemoveRecord(index)} style={[styles.smallIconTouch, { marginTop: 6 }]}> 
+                        <MaterialCommunityIcons name="trash-can" size={18} color={palette.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
                 {recordNoteErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
@@ -414,7 +530,7 @@ export default function LogExpensesListScreen() {
                 ) : null}
 
                 <View style={styles.recordFooter}>
-                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1, padding: 0 }]}> 
+                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 2, padding: 0 }]}> 
                     <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                     <TouchableOpacity
                       style={[styles.categoryPill, { borderWidth: 0 }]}
@@ -444,13 +560,27 @@ export default function LogExpensesListScreen() {
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
                 </View>
-                  <View style={{ minWidth: 110, maxWidth: 150 }}>
-                    <View style={[styles.inputWrapper, styles.amountField, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+                      <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                        {transactionType === 'income' ? 'Payer' : 'Payee'}
+                      </ThemedText>
+                      <TextInput
+                        style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text, paddingTop: 0 }]}
+                        placeholder={transactionType === 'income' ? 'Company X' : 'Boardwalk Housing'}
+                        placeholderTextColor={palette.icon}
+                        value={record.payee}
+                        onChangeText={(value) => updateRecord(index, 'payee', value)}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                       <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
                       <View style={styles.amountInputRow}>
                         <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
                         <TextInput
-                          style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text }]}
+                          style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text, paddingTop: 0 }]}
                           keyboardType="numeric"
                           placeholder="0.00"
                           placeholderTextColor={palette.icon}
@@ -465,12 +595,13 @@ export default function LogExpensesListScreen() {
                       </ThemedText>
                     ) : null}
                   </View>
-                  {records.length > 1 && (
-                    <TouchableOpacity onPress={() => removeRecord(index)} style={styles.deleteButton}>
-                      <MaterialCommunityIcons name="trash-can" size={20} color={palette.error} />
-                    </TouchableOpacity>
-                  )}
+                  {/* delete action moved to top-right action group; no bottom delete button */}
                 </View>
+                {recordPayeeErrors[index] ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12 }}>
+                    {recordPayeeErrors[index]}
+                  </ThemedText>
+                ) : null}
                 {recordCategoryErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
                     {recordCategoryErrors[index]}

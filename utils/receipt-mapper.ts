@@ -40,6 +40,25 @@ const toCleanString = (value?: MindeeField<string> | string | number | null): st
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+/**
+ * Normalize the casing of a display string coming from OCR. If the text appears
+ * to be all-caps, convert it to title-case (Graphic Tee), otherwise return
+ * the original string.
+ */
+export const normalizeCasing = (input?: string | null): string | undefined => {
+  if (!input) return undefined;
+  const text = input.trim();
+  if (!text) return undefined;
+  // If the string is ALL CAPS (including numbers/punctuation), convert to title-case.
+  const isAllCaps = text.toUpperCase() === text;
+  if (!isAllCaps) return text;
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+};
+
 const toNumber = (value?: MindeeField<number> | MindeeField<string> | number | string | null): number | undefined => {
   const raw = extractFieldValue<number | string>(value as MindeeField<number> | string | number | null);
   if (raw === undefined || raw === null) {
@@ -81,7 +100,8 @@ const buildLineItems = (items?: ReceiptLineItemField[]): ExpenseLineItem[] => {
   }
   return items
     .map((item) => {
-      const description = toCleanString(item.description ?? null) ?? '';
+      const descriptionRaw = toCleanString(item.description ?? null) ?? '';
+      const description = normalizeCasing(descriptionRaw) ?? '';
       const quantity = toNumber(item.quantity ?? null) ?? 1;
       const unitPrice = toNumber(item.unit_price ?? null) ?? 0;
       const total =
@@ -123,8 +143,55 @@ export const mapReceiptToExpense = (fields?: ReceiptFields | null): ReceiptImpor
     return null;
   }
 
-  const merchant = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
-  const description = pickFirstString([fields.purchase_description, fields.description, merchant]) ?? '';
+  // If records are provided in the response, use them directly
+  if (fields.records && fields.records.length > 0) {
+    const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
+    const merchant = normalizeCasing(merchantRaw) ?? '';
+    const amountValue = pickFirstNumber([fields.total_amount, fields.amount, fields.tip]);
+    const taxValue = pickFirstNumber([fields.total_tax]);
+    const date = pickFirstString([fields.date]) ?? null;
+    const time = pickFirstString([fields.time]) ?? null;
+
+    const draftPatch: ReceiptDraftPatch = {};
+    if (amountValue !== undefined) {
+      draftPatch.amount = formatAmountString(amountValue);
+    }
+    if (merchant) {
+      draftPatch.payee = merchant;
+    }
+    if (merchant) {
+      draftPatch.note = merchant;
+    }
+    draftPatch.category = 'shopping'; // Default category
+    draftPatch.subcategoryId = 'other';
+
+    const items = buildLineItems(fields.line_items);
+    const taxes = buildTaxes(fields.taxes);
+
+    return {
+      draftPatch,
+      expense: {
+        amount: draftPatch.amount ?? '',
+        payee: draftPatch.payee ?? '',
+        note: draftPatch.note ?? '',
+        category: draftPatch.category ?? '',
+        subcategoryId: draftPatch.subcategoryId ?? '',
+        merchant,
+        total: amountValue ?? null,
+        tax: taxValue ?? null,
+        date,
+        time,
+        items,
+        taxes,
+      },
+    };
+  }
+
+  // Fallback to original logic if no records
+  const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
+  const descriptionRaw = pickFirstString([fields.purchase_description, fields.description, merchantRaw]) ?? '';
+  const merchant = normalizeCasing(merchantRaw) ?? '';
+  const description = normalizeCasing(descriptionRaw) ?? '';
   const category = pickFirstString([fields.purchase_category]) ?? '';
   const subcategory = pickFirstString([fields.purchase_subcategory]) ?? '';
   const amountValue = pickFirstNumber([fields.total_amount, fields.amount, fields.tip]);

@@ -33,7 +33,7 @@ export type StoredRecord = {
   occurredAt: string;
 };
 
-export const DEFAULT_CATEGORY = 'housing';
+export const DEFAULT_CATEGORY = 'foodAndDrinks';
 
 export const INITIAL_SINGLE_DRAFT: SingleDraft = {
   amount: '',
