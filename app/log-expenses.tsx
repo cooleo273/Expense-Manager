@@ -3,13 +3,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Menu } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -373,6 +373,43 @@ export default function LogExpensesScreen() {
     [buildRecords, persistRecords]
   );
 
+  const isSingleDraftEdited = useCallback((draft: SingleDraft) => {
+    const amountSet = (draft.amount ?? '').trim() !== '';
+    const noteSet = (draft.note ?? '').trim() !== '';
+    const payeeSet = (draft.payee ?? '').trim() !== '';
+    const subcategorySet = !!draft.subcategoryId;
+    const categorySet = !!draft.category;
+    const labelsSet = Array.isArray(draft.labels) && draft.labels.length > 0;
+    const occurredAtSet = !!draft.occurredAt;
+    const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
+    return anyOther || (categorySet && subcategorySet);
+  }, []);
+
+  const confirmDiscardSingle = useCallback(() => {
+    const draftEdited = isSingleDraftEdited(singleDraft);
+    if (!draftEdited) {
+      showToast && showToast('No changes to discard');
+      return;
+    }
+    Alert.alert(
+      'Discard draft',
+      'This record has unsaved changes. Are you sure you want to discard them?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            transactionDraftState.resetSingleDraft(lastSelectedCategory);
+            setSingleDraft(transactionDraftState.getSingleDraft());
+            showToast && showToast('Changes discarded');
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [isSingleDraftEdited, lastSelectedCategory, setSingleDraft, singleDraft, showToast]);
+
   const handleTransactionTypeChange = useCallback(
     (value: TransactionTypeValue) => {
       if (value === 'all') {
@@ -401,7 +438,34 @@ export default function LogExpensesScreen() {
       headerTitle: '',
       headerLeft: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              const draftEdited = isSingleDraftEdited(singleDraft);
+              const anyStored = storedRecords.length > 0;
+              if (draftEdited || anyStored) {
+                Alert.alert(
+                  'Discard changes?',
+                  'You have unsaved changes. Do you want to discard and go back?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Discard',
+                      style: 'destructive',
+                      onPress: () => {
+                        // reset drafts and go back without saving
+                        transactionDraftState.resetSingleDraft(lastSelectedCategory);
+                        navigation.goBack();
+                      },
+                    },
+                  ],
+                  { cancelable: true }
+                );
+                return;
+              }
+              navigation.goBack();
+            }}
+            style={{ padding: 8, marginRight: 8 }}
+          >
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
           </TouchableOpacity>
           <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
@@ -412,12 +476,13 @@ export default function LogExpensesScreen() {
           <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
           </TouchableOpacity>
+          {/* Delete (discard) removed from header — delete should only be available on the list page */}
           <Menu
             visible={showMenu}
             onDismiss={() => setShowMenu(false)}
             anchor={
               <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
-                <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
+                <MaterialCommunityIcons name="dots-vertical" size={18} color={palette.icon} />
               </TouchableOpacity>
             }
             contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
@@ -444,7 +509,39 @@ export default function LogExpensesScreen() {
       headerStyle: { backgroundColor: 'transparent', shadowColor: 'transparent', elevation: 0, borderBottomWidth: 0 },
       headerShadowVisible: false,
     });
-  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
+  }, [handleSave, confirmDiscardSingle, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const draftEdited = isSingleDraftEdited(singleDraft);
+      const anyStored = storedRecords.length > 0;
+      if (!draftEdited && !anyStored) {
+        // allow navigation
+        return;
+      }
+
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Do you want to discard and leave?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              // Reset draft and continue navigation
+              transactionDraftState.resetSingleDraft(lastSelectedCategory);
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, singleDraft, isSingleDraftEdited, storedRecords, lastSelectedCategory]);
 
   // Dont force global selection when adding a record; keep log-expenses local so
   // it won't affect Records filters. After saving we will set the record page's
@@ -500,12 +597,10 @@ export default function LogExpensesScreen() {
           <ThemedView
             style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
           >
-            <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  Amount*
-                </ThemedText>
-                <View style={styles.amountRow}>
+            <View style={styles.fieldGroup}> 
+              <View style={[styles.inputWrapper, styles.inputBase, styles.inputWrapperTall, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Amount*</ThemedText>
+                <View style={[styles.amountRow, styles.inputBase, { justifyContent: 'flex-end' }]}> 
                   <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
                   <TextInput
                     ref={singleAmountRef}
@@ -517,21 +612,19 @@ export default function LogExpensesScreen() {
                     onChangeText={(value) => handleSingleChange('amount', value)}
                   />
                 </View>
+                {amountError ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                    {amountError}
+                  </ThemedText>
+                ) : null}
               </View>
             </View>
-              {amountError ? (
-                <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
-                  {amountError}
-                </ThemedText>
-              ) : null}
 
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  Category*
-                </ThemedText>
+              <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Category*</ThemedText>
                 <TouchableOpacity
-                  style={styles.categoryInput}
+                  style={[styles.categoryPill, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={() =>
                     router.push({
                       pathname: '/Category',
@@ -540,30 +633,31 @@ export default function LogExpensesScreen() {
                         currentSubcategory: singleDraft.subcategoryId,
                         returnTo: 'log-expenses',
                         type: transactionType,
-                        // do not auto open subcategories when switching to income
-                        // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                       },
                     })
                   }
                 >
-                  <ThemedText style={[styles.categoryText, { color: palette.text }]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
-                  </ThemedText>
-                  <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
+                  <View style={[styles.categoryIconBadge, { backgroundColor: `${getCategoryDefinition(singleDraft.category)?.color ?? palette.tint}22` }]}> 
+                    <MaterialCommunityIcons name={getCategoryDefinition(singleDraft.category)?.icon ?? 'shape-outline' as any} size={16} color={getCategoryDefinition(singleDraft.category)?.color ?? palette.tint} />
+                  </View>
+                  <View style={styles.categoryTextWrapper}>
+                    <ThemedText style={[styles.categoryLabel, { color: palette.text }]} numberOfLines={1}>
+                      {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
+                    </ThemedText>
+                  </View>
+                  {/* chevron removed — category is not a dropdown visually per sketch */}
                 </TouchableOpacity>
+                {categoryError ? (
+                  <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
+                    {categoryError}
+                  </ThemedText>
+                ) : null}
               </View>
-              {categoryError ? (
-                <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
-                  {categoryError}
-                </ThemedText>
-              ) : null}
             </View>
+            
 
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
                   {transactionType === 'income' ? 'Payer*' : 'Payee*'}
                 </ThemedText>
@@ -584,7 +678,7 @@ export default function LogExpensesScreen() {
 
             {/* Labels inside input wrapper with chips and a '+' button */}
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+              <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
                 <View style={styles.labelsContainerInline}>
                   <View style={styles.labelChipsRow}>
@@ -602,7 +696,7 @@ export default function LogExpensesScreen() {
                           setIsAddingLabel(true);
                           setTimeout(() => labelInputRef.current?.focus(), 60);
                         }}
-                        style={[styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                        style={[styles.addLabelButtonInline, styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
                         accessibilityLabel="Add label"
                       >
                         <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
@@ -654,7 +748,7 @@ export default function LogExpensesScreen() {
                     Date
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
                     onPress={() => {
                       setPickerMode('date');
                       scrollToEnd();
@@ -673,7 +767,7 @@ export default function LogExpensesScreen() {
                     Time
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
                     onPress={() => {
                       setPickerMode('time');
                       scrollToEnd();

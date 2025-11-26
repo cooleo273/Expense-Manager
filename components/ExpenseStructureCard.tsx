@@ -27,6 +27,8 @@ type ExpenseStructureCardProps = {
   valueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
   containerStyle?: StyleProp<ViewStyle>;
   chartSize?: number;
+  /** Limit how many segments are shown; when exceeded smaller segments are grouped as 'Others' */
+  maxLegendItems?: number;
   footer?: ReactNode;
   footerSeparator?: boolean;
   showValuesOnChart?: boolean;
@@ -64,6 +66,7 @@ export function ExpenseStructureCard({
   valueFormatter,
   containerStyle,
   chartSize = 180,
+  maxLegendItems,
   footer,
   footerSeparator = false,
   showValuesOnChart = false,
@@ -115,6 +118,50 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
+  // If `maxLegendItems` is provided and segments exceed that limit, aggregate the
+  // smallest segments into an 'Others' slice so both the chart and legend
+  // remain legible on small screens (e.g. the Home page wants only top 5).
+  const { displayedSegments, aggregatedPieData } = useMemo(() => {
+    // If no limit specified or segments fit within the desired number, no aggregation
+    if (!maxLegendItems) {
+      return { displayedSegments: segments, aggregatedPieData: pieData };
+    }
+
+    // maxLegendItems is the total count for the legend including the ALL item and a possible 'Others'
+    // Reserve one slot for 'ALL', so the restSlots are for categories + optional 'Others'
+    const totalSlots = maxLegendItems;
+    const slotsForCategoriesPlusMaybeOthers = Math.max(0, totalSlots - 1);
+
+    const sorted = [...segments].sort((a, b) => b.value - a.value);
+
+    // If there are fewer or equal segments than the slots available, just show them
+    if (sorted.length <= slotsForCategoriesPlusMaybeOthers) {
+      const displayed = sorted.slice(0, slotsForCategoriesPlusMaybeOthers);
+      return {
+        displayedSegments: displayed,
+        aggregatedPieData: displayed.map((segment) => ({ x: segment.label, y: segment.value, color: segment.color, segment })),
+      };
+    }
+
+    // Need to show 'Others' — it will occupy one slot
+    const slotsLeftForTop = Math.max(0, slotsForCategoriesPlusMaybeOthers - 1);
+    const top = sorted.slice(0, slotsLeftForTop);
+    const rest = sorted.slice(slotsLeftForTop);
+    const othersValue = rest.reduce((sum, s) => sum + s.value, 0);
+    const othersSegment: ExpenseStructureSegment = {
+      id: 'others',
+      label: 'Others',
+      value: othersValue,
+      color: '#000000',
+      percent: (othersValue / totalValue) * 100,
+    };
+    const finalSegments = [...top, othersSegment];
+    return {
+      displayedSegments: finalSegments,
+      aggregatedPieData: finalSegments.map((segment) => ({ x: segment.label, y: segment.value, color: segment.color, segment })),
+    };
+  }, [segments, maxLegendItems, pieData, totalValue]);
+
   // Default to 'all' so the center shows total amount on first render
   const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => 'all');
 
@@ -123,17 +170,17 @@ export function ExpenseStructureCard({
     if (activeSegmentId === 'all') {
       return;
     }
-    if (!pieData.some((entry) => entry.segment?.id === activeSegmentId)) {
-      setActiveSegmentId(pieData[0]?.segment?.id);
+    if (!aggregatedPieData.some((entry) => entry.segment?.id === activeSegmentId)) {
+      setActiveSegmentId(aggregatedPieData[0]?.segment?.id);
     }
-  }, [activeSegmentId, pieData]);
+  }, [activeSegmentId, aggregatedPieData]);
 
   const activeSegment = useMemo(() => {
     if (!activeSegmentId || activeSegmentId === 'all') {
       return undefined;
     }
-    return segments.find((segment) => segment.id === activeSegmentId);
-  }, [segments, activeSegmentId]);
+    return displayedSegments.find((segment) => segment.id === activeSegmentId) || segments.find((segment) => segment.id === activeSegmentId);
+  }, [segments, displayedSegments, activeSegmentId]);
 
   const fallbackSegmentForFormatter = useMemo<ExpenseStructureSegment>(() => {
     if (segments[0]) {
@@ -168,9 +215,10 @@ export function ExpenseStructureCard({
   const window = useWindowDimensions();
   const isNarrow = window.width <= 360;
   const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
-  const innerRadius = Math.max(effectiveChartSize * 0.2, 40);
-  const outerRadius = Math.max(chartSize / 2 - 8, 80);
+  const outerRadius = Math.max(effectiveChartSize / 2 - 8, 24);
+  const innerRadius = Math.max(effectiveChartSize * 0.2, 16);
   const labelRadius = (innerRadius + outerRadius) / 2;
+  const centerDiameter = Math.min(Math.max(Math.round(effectiveChartSize * 0.44), 44), effectiveChartSize - 16);
   const chartCenterBorderColor = activeSegment
     ? `${activeSegment.color}55`
     : activeSegmentId === 'all'
@@ -202,11 +250,11 @@ export function ExpenseStructureCard({
         <View style={[styles.chartWrapper, { width: effectiveChartSize, height: effectiveChartSize }]}>
           <VictoryPie
             animate={false}
-            data={pieData}
+            data={aggregatedPieData}
             width={effectiveChartSize}
             height={effectiveChartSize}
             innerRadius={innerRadius}
-            padAngle={pieData.length > 1 ? 2 : 0}
+            padAngle={aggregatedPieData.length > 1 ? 2 : 0}
             radius={outerRadius}
             startAngle={-90}
             endAngle={270}
@@ -290,8 +338,9 @@ export function ExpenseStructureCard({
             id: 'all',
             label: 'ALL',
             value: totalValue,
-            color: palette.tint,
-          } as ExpenseStructureSegment, ...segments].map((segment) => {
+            // Render 'ALL' label in white; swatch will be white too
+            color: '#FFFFFF',
+          } as ExpenseStructureSegment, ...displayedSegments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
             const formattedValue = valueFormatter
@@ -313,23 +362,38 @@ export function ExpenseStructureCard({
                   },
                 ]}
               >
-                <View style={[styles.legendSwatch, { backgroundColor: segment.color }]} />
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    segment.id === 'all'
+                      ? { backgroundColor: palette.tint }
+                      : { backgroundColor: segment.color },
+                  ]}
+                />
                 <View style={styles.legendContent}>
                   {legendVariant === 'detailed' ? (
                     <>
                       <View style={styles.legendHeaderRow}>
-                        <ThemedText
-                          style={[styles.legendLabel, { color: palette.text }]}
-                          numberOfLines={1}
-                        >
-                          {segment.label}
-                        </ThemedText>
-                        <ThemedText style={[styles.legendPercent, { color: palette.icon }]}>{percentLabel}</ThemedText>
+                        {segment.id === 'all' ? (
+                          <View style={{ backgroundColor: palette.tint, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm }}>
+                            <ThemedText style={[styles.legendLabel, { color: '#000000' }]} numberOfLines={1}>
+                              {segment.label}
+                            </ThemedText>
+                          </View>
+                        ) : (
+                          <ThemedText
+                            style={[styles.legendLabel, { color: '#000000' }]}
+                            numberOfLines={1}
+                          >
+                            {segment.label}
+                          </ThemedText>
+                        )}
+                        <ThemedText style={[styles.legendPercent, { color: '#000000' }]}>{percentLabel}</ThemedText>
                       </View>
                       <View style={[styles.progressTrack, { backgroundColor: palette.muted }]}>
                         <View style={[styles.progressFill, { width: `${percentValue}%`, backgroundColor: segment.color }]} />
                       </View>
-                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: palette.text }]}>
+                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: '#000000' }]}>
                         {formattedValue}
                       </ThemedText>
                     </>
@@ -337,7 +401,7 @@ export function ExpenseStructureCard({
                     <>
                       <View style={styles.legendHeaderRow}>
                         <ThemedText
-                          style={[styles.legendLabel, { color: palette.text }]}
+                          style={[styles.legendLabel, { color: '#000000' }]}
                           numberOfLines={1}
                         >
                           {segment.label}

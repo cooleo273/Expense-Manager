@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Alert, KeyboardAvoidingView,
   Platform,
   ScrollView,
   TextInput,
@@ -147,6 +147,21 @@ export default function LogExpensesListScreen() {
     showToast('Record added successfully');
   }, [params.defaultCategory, showToast]);
 
+  const isRecordEdited = useCallback((record: SingleDraft) => {
+    const amountSet = (record.amount ?? '').trim() !== '';
+    const noteSet = (record.note ?? '').trim() !== '';
+    const payeeSet = (record.payee ?? '').trim() !== '';
+    const subcategorySet = !!record.subcategoryId;
+    const categorySet = !!record.category;
+    const labelsSet = Array.isArray(record.labels) && record.labels.length > 0;
+    const occurredAtSet = !!record.occurredAt;
+
+    // Avoid treating only default category as an edit. Category by itself is not an edit
+    // unless any other field is set or a subcategory is chosen.
+    const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
+    return anyOther || (categorySet && subcategorySet);
+  }, []);
+
   const removeRecord = useCallback((index: number) => {
     if (records.length > 1) {
       setRecords(prev => prev.filter((_, i) => i !== index));
@@ -155,6 +170,28 @@ export default function LogExpensesListScreen() {
       setRecordNoteErrors(prev => prev.filter((_, i) => i !== index));
     }
   }, [records.length]);
+
+  const confirmAndRemoveRecord = useCallback((index: number) => {
+    const record = records[index];
+    if (!record) {
+      return;
+    }
+
+    if (!isRecordEdited(record)) {
+      removeRecord(index);
+      return;
+    }
+
+    Alert.alert(
+      'Delete record',
+      'This record has unsaved edits. Are you sure you want to delete it?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => removeRecord(index) },
+      ],
+      { cancelable: true }
+    );
+  }, [isRecordEdited, records, removeRecord]);
 
   const handleNext = useCallback(() => {
     let hasErrors = false;
@@ -330,7 +367,26 @@ export default function LogExpensesListScreen() {
         <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
       ),
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+        <TouchableOpacity
+          onPress={() => {
+            // if any record is edited, confirm before navigating back
+            const anyEdited = records.some((r) => isRecordEdited(r));
+            if (anyEdited) {
+              Alert.alert(
+                'Discard changes?',
+                'You have unsaved changes. Do you want to discard and go back?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+                ],
+                { cancelable: true }
+              );
+              return;
+            }
+            navigation.goBack();
+          }}
+          style={{ padding: 8 }}
+        >
           <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
         </TouchableOpacity>
       ),
@@ -340,7 +396,40 @@ export default function LogExpensesListScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, palette.icon, palette.tint, handleNext]);
+  }, [navigation, palette.icon, palette.tint, handleNext, records, isRecordEdited]);
+
+  useEffect(() => {
+    // Block navigation if any record in the list is edited (unsaved)
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const anyEdited = records.some((r) => isRecordEdited(r));
+      if (!anyEdited) {
+        // Allow navigation
+        return;
+      }
+
+      // Prevent default behavior of leaving the screen
+      e.preventDefault();
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Do you want to discard and leave?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              // Remove listener and continue navigation
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, records, isRecordEdited]);
 
   const totalRecords = records.length;
   const totalAmount = useMemo(() => {
@@ -407,9 +496,16 @@ export default function LogExpensesListScreen() {
                       onFocus={() => scrollToInput(200 + (index * 160))}
                     />
                   </View>
-                  <TouchableOpacity onPress={() => openRecordDetails(index)} style={[styles.iconTouchArea, styles.noteMenuButton]}>
-                    <MaterialCommunityIcons name="dots-horizontal" size={20} color={palette.icon} />
-                  </TouchableOpacity>
+                  <View style={styles.stackedIconGroup}>
+                    <TouchableOpacity onPress={() => openRecordDetails(index)} style={[styles.smallIconTouch, styles.noteMenuButton]}> 
+                      <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} />
+                    </TouchableOpacity>
+                    {records.length > 1 && (
+                      <TouchableOpacity onPress={() => confirmAndRemoveRecord(index)} style={[styles.smallIconTouch, { marginTop: 6 }]}> 
+                        <MaterialCommunityIcons name="trash-can" size={18} color={palette.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
                 {recordNoteErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
@@ -469,11 +565,7 @@ export default function LogExpensesListScreen() {
                       </ThemedText>
                     ) : null}
                   </View>
-                  {records.length > 1 && (
-                    <TouchableOpacity onPress={() => removeRecord(index)} style={styles.deleteButton}>
-                      <MaterialCommunityIcons name="trash-can" size={20} color={palette.error} />
-                    </TouchableOpacity>
-                  )}
+                  {/* delete action moved to top-right action group; no bottom delete button */}
                 </View>
                 {recordCategoryErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>

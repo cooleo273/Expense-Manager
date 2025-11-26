@@ -11,6 +11,7 @@ import { getFullCategoryLabel } from '@/constants/categories';
 import { Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { SingleDraft } from '@/types/transactions';
 import { emitRecordDetailUpdate, subscribeToCategorySelection } from '@/utils/navigation-events';
@@ -54,7 +55,7 @@ export default function RecordDetailScreen() {
         const decoded = decodeURIComponent(payload);
         const parsed = JSON.parse(decoded);
         return {
-          amount: parsed.amount ?? '',
+          amount: typeof parsed.amount === 'number' ? String(Math.abs(parsed.amount)) : parsed.amount ?? '',
           category: parsed.category ?? 'foodAndDrinks',
           subcategoryId: parsed.subcategoryId,
           payee: parsed.payee ?? '',
@@ -76,6 +77,27 @@ export default function RecordDetailScreen() {
       occurredAt: undefined,
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
+
+  // Keep the parsed payload (if any) accessible so we can infer record type and original id
+  const parsedPayload = useMemo(() => {
+    const payloadStr = typeof params.payload === 'string' ? params.payload : undefined;
+    if (!payloadStr) return undefined;
+    try {
+      return JSON.parse(decodeURIComponent(payloadStr));
+    } catch (err) {
+      return undefined;
+    }
+  }, [params.payload]);
+
+  const recordType = useMemo(() => {
+    if (typeof params.type === 'string') {
+      return (params.type === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+    }
+    if (parsedPayload && typeof parsedPayload.type === 'string') {
+      return (parsedPayload.type === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+    }
+    return undefined;
+  }, [params.type, parsedPayload]);
 
   const initialDate = useMemo(() => {
     if (initialDraft.occurredAt) {
@@ -219,7 +241,7 @@ export default function RecordDetailScreen() {
     return Object.keys(nextErrors).length === 0;
   }, [draft.amount, draft.note]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!validate()) {
       showToast('Fix errors to continue', { tone: 'error' });
       return;
@@ -229,13 +251,40 @@ export default function RecordDetailScreen() {
       ...draft,
       occurredAt: recordDate.toISOString(),
     };
+    setDraft(nextDraft);
 
+    // If editing an existing stored record (id provided), persist changes to storage
+    const existingId = typeof params.id === 'string' ? params.id : undefined;
+    if (existingId) {
+      try {
+        const numeric = Number(nextDraft.amount.trim());
+        const signedAmount = recordType === 'expense' ? -Math.abs(numeric) : Math.abs(numeric);
+        const updates: any = {
+          amount: signedAmount,
+          note: nextDraft.note ?? '',
+          title: nextDraft.note ?? 'Transaction',
+          payee: nextDraft.payee ?? '',
+          categoryId: nextDraft.category ?? undefined,
+          subcategoryId: nextDraft.subcategoryId ?? undefined,
+          labels: nextDraft.labels ?? undefined,
+          date: nextDraft.occurredAt ?? recordDate.toISOString(),
+        };
+        await StorageService.updateTransaction(existingId, updates);
+        showToast('Record saved');
+      } catch (err) {
+        console.error('Failed to persist record changes:', err);
+        showToast('Failed to save record', { tone: 'error' });
+      }
+      navigation.goBack();
+      return;
+    }
+
+    // Default: notify log-expenses-list about the change so it can update in-memory drafts
     emitRecordDetailUpdate({
       target: 'log-expenses-list',
       recordIndex,
       record: nextDraft,
     });
-    setDraft(nextDraft);
     showToast('Details updated');
     navigation.goBack();
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
@@ -295,7 +344,7 @@ export default function RecordDetailScreen() {
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                 <TouchableOpacity
-                  style={styles.categoryInput}
+                  style={[styles.categoryInput, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={() =>
                     router.push({
                       pathname: '/Category',
@@ -311,7 +360,7 @@ export default function RecordDetailScreen() {
                   <ThemedText style={[styles.categoryText, { color: palette.text }]} numberOfLines={1}>
                     {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
                   </ThemedText>
-                  <MaterialCommunityIcons name="chevron-down" size={18} color={palette.icon} />
+                  {/* chevron removed — category label shouldn't look like a dropdown */}
                 </TouchableOpacity>
               </View>
             </View>

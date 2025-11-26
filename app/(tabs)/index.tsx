@@ -2,23 +2,23 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
+import RecordList from '@/components/RecordList';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getNodeDisplayName, type CategoryKey } from '@/constants/categories';
-import { getAccountMeta, mockRecordsData, resolveAccountId } from '@/constants/mock-data';
+import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/constants/categories';
+import { mockRecordsData, resolveAccountId } from '@/constants/mock-data';
 import { Colors, IconSizes, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Transaction } from '@/services/storage';
 import { homeStyles } from '@/styles/home.styles';
-import { formatFriendlyDate } from '@/utils/date';
 import { StorageService } from '../../services/storage';
 
 export default function HomeScreen() {
@@ -297,6 +297,7 @@ export default function HomeScreen() {
           totalLabel={formatCurrency(expenseStructureTotal)}
           totalCaption="Total expenses"
           legendVariant="simple"
+          maxLegendItems={5}
           valueFormatter={formatCurrency}
           footerSeparator
           footer={(
@@ -318,48 +319,13 @@ export default function HomeScreen() {
             <ThemedText type="subtitle">Records</ThemedText>
             <ThemedText style={{ color: palette.icon }}>{displayedRecords.length} of {filteredRecords.length} shown</ThemedText>
           </View>
-          {displayedRecords.map((record, index) => {
-            const category = getCategoryDefinition(record.categoryId);
-            const categoryColor = getCategoryColor(record.categoryId, palette.tint);
-            const iconName = getCategoryIcon(record.categoryId, record.type === 'income' ? 'wallet-plus' : 'shape-outline');
-            const isIncome = category?.type === 'income' || record.type === 'income';
-            const readableDate = formatFriendlyDate(record.date);
-            const amountColor = isIncome ? palette.success : palette.error;
-
-            return (
-              <Fragment key={record.id}>
-                <View style={styles.recordRow}>
-                  <View style={[styles.recordIcon, { backgroundColor: `${categoryColor}20` }]}
-                  >
-                    <MaterialCommunityIcons
-                      name={iconName}
-                      size={20}
-                      color={categoryColor}
-                    />
-                  </View>
-                  <View style={styles.recordContent}>
-                    <ThemedText style={styles.recordTitle}>{getNodeDisplayName(record.subcategoryId) ?? getNodeDisplayName(record.categoryId) ?? record.title}</ThemedText>
-                    <ThemedText style={[styles.recordSubtitle, { color: palette.icon }]}>{getAccountMeta(record.accountId)?.name ?? record.account}</ThemedText>
-                    {/* Bottom line shows note or first label if available (show only one) */}
-                    { (record.note || (record.labels && record.labels.length > 0)) ? (
-                      <ThemedText style={[styles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
-                        {record.note ? record.note : (record.labels && record.labels.length > 0 ? record.labels[0] : '')}
-                      </ThemedText>
-                    ) : null}
-                  </View>
-                  <View style={styles.recordMeta}>
-                    <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.recordAmount, { color: amountColor }]}>
-                      {isIncome ? '+' : '-'}{formatCurrency(record.amount)}
-                    </ThemedText>
-                    <ThemedText style={{ color: palette.icon, textAlign: 'right' }}>{readableDate}</ThemedText>
-                  </View>
-                </View>
-                {index < displayedRecords.length - 1 && (
-                  <View style={[styles.recordDivider, { backgroundColor: palette.border }]} />
-                )}
-              </Fragment>
-            );
-          })}
+          <RecordList
+            records={filteredRecords}
+            limit={10}
+            variant="home"
+            formatCurrency={(value: number) => formatCurrency(value)}
+            onPressItem={(item: any) => router.push({ pathname: '/record-detail', params: { id: item.id, payload: encodeURIComponent(JSON.stringify(item)), type: item.type } })}
+          />
 
           <Pressable
             onPress={() => router.push('/records')}

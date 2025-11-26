@@ -127,6 +127,7 @@ export const logExpensesStyles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     gap: Spacing.md,
+    position: 'relative',
   },
   fieldGroup: {
     gap: Spacing.xs,
@@ -142,12 +143,21 @@ export const logExpensesStyles = StyleSheet.create({
   },
   noteRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   noteMenuButton: {
-    alignSelf: 'stretch',
+    alignSelf: 'center',
     justifyContent: 'center',
+  },
+  // small touch area for stacked actions (edit/delete) in top-right
+  stackedIconGroup: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallIconTouch: {
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
   noteInput: {
     flex: 1,
@@ -165,28 +175,29 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.tiny,
-    paddingTop: Spacing.sm,
     justifyContent: 'flex-end',
+    height: 56,
   },
   currencySymbol: {
-    fontSize: FontSizes.massive,
+    fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
-    lineHeight: FontSizes.massive + 4,
+    lineHeight: FontSizes.huge + 4,
     textAlignVertical: 'center',
   },
   amountInput: {
     flexGrow: 0,
     flexShrink: 1,
-    fontSize: FontSizes.massive,
+    fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
     padding: 0,
-    lineHeight: FontSizes.massive + 4,
+    lineHeight: FontSizes.huge + 4,
     textAlignVertical: 'center',
     textAlign: 'right',
     minWidth: 0,
+    height: 56,
   },
   amountCompactInput: {
-    minWidth: 60,
+    minWidth: 36,
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     padding: 0,
@@ -199,7 +210,19 @@ export const logExpensesStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
+    minHeight: 56,
+    justifyContent: 'center',
+  },
+  // A variant of inputWrapper that allows its height to expand when contents wrap
+  inputWrapperTall: {
+    // keep same minHeight but allow more vertical padding and flex-start so chips
+    // and other multi-line content can stack without overlapping the notched label
     paddingVertical: Spacing.sm,
+    minHeight: 56,
+    justifyContent: 'flex-start',
+    // Prevent the input from growing indefinitely when a user adds many labels
+    maxHeight: 140,
   },
   notchedLabel: {
     position: 'absolute',
@@ -212,6 +235,8 @@ export const logExpensesStyles = StyleSheet.create({
   notchedInput: {
     paddingTop: Spacing.sm,
     fontSize: FontSizes.lg,
+    height: 56,
+    textAlignVertical: 'center',
   },
   batchSummary: {
     flexDirection: 'row',
@@ -237,7 +262,7 @@ export const logExpensesStyles = StyleSheet.create({
     paddingVertical: 0,
     paddingHorizontal: 0,
     gap: Spacing.md,
-    height: 48,
+    height: 56,
   },
   categoryIconBadge: {
     width: 32,
@@ -254,11 +279,11 @@ export const logExpensesStyles = StyleSheet.create({
     fontWeight: FontWeights.semibold as any,
   },
   amountField: {
-    minWidth: 110,
-    maxWidth: 140,
+    minWidth: 48,
+    maxWidth: 80,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    height: 48,
+    height: 56,
     justifyContent: 'center',
   },
   amountInputRow: {
@@ -268,21 +293,27 @@ export const logExpensesStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   currencyTiny: {
-    fontSize: FontSizes.md,
+    // Use the same font-size and lineHeight as the compact amount input so
+    // the currency symbol aligns perfectly with the numeric text.
+    fontSize: FontSizes.lg,
     fontWeight: FontWeights.semibold as any,
-    // Align to the larger compact amount line (FontSizes.lg) so the dollar sign
-    // sits on the same baseline as the numeric input.
     lineHeight: FontSizes.lg + 4,
     textAlignVertical: 'center',
+    alignSelf: 'center',
   },
+  // deleteButton and menuButton moved to stack inside noteRow. Keep old classes if used elsewhere but keep them neutral
   deleteButton: {
     padding: Spacing.sm,
+  },
+  menuButton: {
+    padding: Spacing.xs,
   },
   categoryInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Spacing.sm,
+    height: 56,
+    paddingVertical: 0,
   },
   batchTotal: {
     fontSize: FontSizes.huge,
@@ -301,6 +332,7 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     width: '100%',
+    height: 56,
   },
   dateTimeButtonOutlined: {
     borderWidth: 1,
@@ -495,6 +527,7 @@ export const logExpensesStyles = StyleSheet.create({
     gap: Spacing.xs,
     flexWrap: 'wrap',
     flex: 1,
+    marginTop: Spacing.sm,
   },
   
   addLabelButtonInline: {
@@ -521,12 +554,18 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold as any,
   },
+  // Reusable input base style for consistent height/padding
+  inputBase: {
+    height: 56,
+    justifyContent: 'center',
+  },
   labelsInlineInput: {
     minWidth: 120,
     borderWidth: 0,
     paddingVertical: 6,
     paddingHorizontal: 6,
     fontSize: FontSizes.md,
-    height: 36,
+    height: 56,
+    textAlignVertical: 'center',
   },
 });
