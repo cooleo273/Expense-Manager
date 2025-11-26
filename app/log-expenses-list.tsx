@@ -514,7 +514,7 @@ export default function LogExpensesListScreen() {
                 ) : null}
 
                 <View style={styles.recordFooter}>
-                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1, padding: 0 }]}> 
+                  <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 2, padding: 0 }]}> 
                     <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                     <TouchableOpacity
                       style={[styles.categoryPill, { borderWidth: 0 }]}
@@ -544,13 +544,13 @@ export default function LogExpensesListScreen() {
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
                 </View>
-                  <View style={{ minWidth: 110, maxWidth: 150 }}>
-                    <View style={[styles.inputWrapper, styles.amountField, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                       <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
                       <View style={styles.amountInputRow}>
                         <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
                         <TextInput
-                          style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text }]}
+                          style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text, paddingTop: 0 }]}
                           keyboardType="numeric"
                           placeholder="0.00"
                           placeholderTextColor={palette.icon}
