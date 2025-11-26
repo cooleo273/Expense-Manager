@@ -127,7 +127,7 @@ export const CalendarButton: React.FC = () => {
     }
   };
 
-  const quickSelect = (option: 'all' | 'week' | 'month') => {
+  const quickSelect = (option: 'all' | 'week' | 'month' | 'year') => {
     const now = new Date();
     if (option === 'all') {
       applyRange(null);
@@ -147,6 +147,12 @@ export const CalendarButton: React.FC = () => {
     if (option === 'month') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      applyRange({ start: startOfDay(start), end: startOfDay(end) });
+    }
+
+    if (option === 'year') {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear(), 11, 31);
       applyRange({ start: startOfDay(start), end: startOfDay(end) });
     }
   };
@@ -206,6 +212,13 @@ export const CalendarButton: React.FC = () => {
                     onPress={() => quickSelect('month')}
                   >
                     <Text style={[styles.presetLabel, { color: palette.text }]}>This Month</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    onPress={() => quickSelect('year')}
+                  >
+                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Year</Text>
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
                   <TouchableOpacity
