@@ -20,6 +20,20 @@ export type ReceiptTaxField = {
   amount?: MindeeField<number> | number | null;
 };
 
+export type ReceiptRecord = {
+  amount: number;
+  description?: string;
+  quantity?: number | null;
+  unit_price?: number | null;
+  total_price?: number;
+  occurredAt?: string;
+  payee?: string;
+  note?: string;
+  category?: string;
+  subcategoryId?: string;
+  subcategory?: string;
+};
+
 export type ReceiptFields = {
   supplier_name?: MindeeField<string> | string | null;
   merchant_name?: MindeeField<string> | string | null;
@@ -36,6 +50,7 @@ export type ReceiptFields = {
   line_items?: ReceiptLineItemField[];
   purchase_category?: MindeeField<string> | string | null;
   purchase_subcategory?: MindeeField<string> | string | null;
+  records?: ReceiptRecord[];
 };
 
 export type ExpenseLineItem = {

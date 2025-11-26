@@ -143,6 +143,51 @@ export const mapReceiptToExpense = (fields?: ReceiptFields | null): ReceiptImpor
     return null;
   }
 
+  // If records are provided in the response, use them directly
+  if (fields.records && fields.records.length > 0) {
+    const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
+    const merchant = normalizeCasing(merchantRaw) ?? '';
+    const amountValue = pickFirstNumber([fields.total_amount, fields.amount, fields.tip]);
+    const taxValue = pickFirstNumber([fields.total_tax]);
+    const date = pickFirstString([fields.date]) ?? null;
+    const time = pickFirstString([fields.time]) ?? null;
+
+    const draftPatch: ReceiptDraftPatch = {};
+    if (amountValue !== undefined) {
+      draftPatch.amount = formatAmountString(amountValue);
+    }
+    if (merchant) {
+      draftPatch.payee = merchant;
+    }
+    if (merchant) {
+      draftPatch.note = merchant;
+    }
+    draftPatch.category = 'shopping'; // Default category
+    draftPatch.subcategoryId = 'other';
+
+    const items = buildLineItems(fields.line_items);
+    const taxes = buildTaxes(fields.taxes);
+
+    return {
+      draftPatch,
+      expense: {
+        amount: draftPatch.amount ?? '',
+        payee: draftPatch.payee ?? '',
+        note: draftPatch.note ?? '',
+        category: draftPatch.category ?? '',
+        subcategoryId: draftPatch.subcategoryId ?? '',
+        merchant,
+        total: amountValue ?? null,
+        tax: taxValue ?? null,
+        date,
+        time,
+        items,
+        taxes,
+      },
+    };
+  }
+
+  // Fallback to original logic if no records
   const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
   const descriptionRaw = pickFirstString([fields.purchase_description, fields.description, merchantRaw]) ?? '';
   const merchant = normalizeCasing(merchantRaw) ?? '';

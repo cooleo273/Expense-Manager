@@ -143,35 +143,34 @@ export default function LogExpensesReviewScreen() {
 
       try {
         const timestamp = recordDate.getTime();
-        await StorageService.addBatchTransactions(
-          reviewRecords.map((record, idx) => {
-            const amount = Number(record.amount);
-            const normalized = transactionType === 'expense' ? -Math.abs(amount) : Math.abs(amount);
-            const candidateDate = record.occurredAt ? new Date(record.occurredAt) : null;
-            const resolvedDate = candidateDate && !Number.isNaN(candidateDate.getTime())
-              ? candidateDate
-              : new Date(timestamp + idx);
-            const occurredAt = resolvedDate.toISOString();
+      await StorageService.addBatchTransactions(
+        reviewRecords.map((record, idx) => {
+          const amount = Number(record.amount);
+          const normalized = transactionType === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+          const candidateDate = record.occurredAt ? new Date(record.occurredAt) : null;
+          const resolvedDate = candidateDate && !Number.isNaN(candidateDate.getTime())
+            ? candidateDate
+            : new Date(timestamp + idx);
+          const occurredAt = resolvedDate.toISOString();
 
-            return {
-              id: `${timestamp}-${idx}`,
-              title: record.note || 'Transaction',
-              account: resolvedAccountName,
-              accountId: resolvedAccountId,
-              note: record.note,
-              amount: normalized,
-              date: occurredAt,
-              type: transactionType,
-              icon: 'cash',
-              categoryId: record.category,
-              subcategoryId: record.subcategoryId,
-              labels: record.labels,
-              userId: 'default-user',
-            };
-          })
-        );
-
-        showToast(`Added ${reviewRecords.length} record${reviewRecords.length > 1 ? 's' : ''}`);
+          return {
+            id: `${timestamp}-${idx}`,
+            title: record.note || 'Transaction',
+            account: resolvedAccountName,
+            accountId: resolvedAccountId,
+            note: record.note,
+            amount: normalized,
+            date: occurredAt,
+            type: transactionType,
+            icon: 'cash',
+            categoryId: record.category,
+            subcategoryId: record.subcategoryId,
+            labels: record.labels,
+            payee: record.payee,
+            userId: 'default-user',
+          };
+        })
+      );        showToast(`Added ${reviewRecords.length} record${reviewRecords.length > 1 ? 's' : ''}`);
         try {
           await Promise.all(
             reviewRecords.map((record) =>
@@ -474,7 +473,7 @@ export default function LogExpensesReviewScreen() {
             style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
           >
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <View style={[styles.inputWrapperNoBorder, { backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Categories</ThemedText>
                 <ThemedText style={[styles.notchedInput, { color: palette.text }]} numberOfLines={1} ellipsizeMode="tail">
                   {categoriesSummary}
