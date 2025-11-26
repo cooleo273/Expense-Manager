@@ -8,11 +8,11 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { categoryList, subcategoryList } from '@/constants/categories';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { mapReceiptToExpense } from '@/utils/receipt-mapper';
-import { categoryList, subcategoryList } from '@/constants/categories';
 
 export const options = {
   headerShown: false,

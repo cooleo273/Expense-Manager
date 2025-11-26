@@ -3,14 +3,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -307,10 +307,10 @@ export default function LogExpensesReviewScreen() {
       const labels = Array.isArray(record.labels) ? record.labels : [];
       const trimmed = labels
         .map((label) => (typeof label === 'string' ? label.trim() : ''))
-        .filter((label): label is string => Boolean(label));
+        .filter((label): label is string => Boolean(label) && !sharedLabels.includes(label));
       return count + trimmed.length;
     }, 0);
-  }, [reviewRecords]);
+  }, [reviewRecords, sharedLabels]);
 
   const categoriesSummary = useMemo(() => {
     const orderedNames: string[] = [];
@@ -395,6 +395,8 @@ export default function LogExpensesReviewScreen() {
   const addSharedLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
+      setShowLabelInput(false);
+      setCurrentLabelInput('');
       return;
     }
 
@@ -493,61 +495,21 @@ export default function LogExpensesReviewScreen() {
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
                 <View style={styles.labelsSummaryRow}>
-                  <View
-                    style={[styles.labelSummaryPill, { borderColor: palette.border, backgroundColor: palette.highlight }]}
+                  <ScrollView
+                    horizontal
+                    style={[styles.labelsScrollArea, { flex: 1 }]}
+                    contentContainerStyle={styles.labelsScrollInner}
+                    showsHorizontalScrollIndicator={false}
                   >
-                    <ThemedText style={[styles.labelText, { color: palette.text }]}>
-                      {individualLabelCount > 0
-                        ? `${individualLabelCount} Individual Label${individualLabelCount > 1 ? 's' : ''}`
-                        : 'No Individual Labels'}
-                    </ThemedText>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
-                    onPress={() => {
-                      setShowLabelInput(true);
-                      setCurrentLabelInput('');
-                    }}
-                  >
-                    <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
-                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
-                  </TouchableOpacity>
-                </View>
-                {showLabelInput ? (
-                  <View style={styles.sharedLabelInputRow}>
-                    <TextInput
-                      style={[
-                        styles.sharedLabelInput,
-                        { borderColor: palette.border, backgroundColor: palette.card, color: palette.text },
-                      ]}
-                      placeholder="Label name"
-                      placeholderTextColor={palette.icon}
-                      value={currentLabelInput}
-                      onChangeText={setCurrentLabelInput}
-                      onSubmitEditing={addSharedLabel}
-                      autoFocus
-                    />
-                    <TouchableOpacity
-                      onPress={addSharedLabel}
-                      style={[styles.sharedLabelAction, { backgroundColor: palette.tint, borderColor: palette.tint }]}
+                    <View
+                      style={[styles.labelSummaryPill, { borderColor: palette.border, backgroundColor: palette.highlight }]}
                     >
-                      <ThemedText style={{ color: '#FFFFFF', fontWeight: '600' }}>Add</ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setShowLabelInput(false);
-                        setCurrentLabelInput('');
-                      }}
-                      style={[styles.sharedLabelAction, { backgroundColor: palette.muted, borderColor: palette.border }]}
-                    >
-                      <ThemedText style={{ color: palette.text }}>Cancel</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </View>
-              {sharedLabels.length > 0 && (
-                <View style={{ marginTop: Spacing.sm }}>
-                  <View style={styles.labelsContainer}>
+                      <ThemedText style={[styles.labelText, { color: palette.text }]}>
+                        {individualLabelCount > 0
+                          ? `${individualLabelCount} Individual Label${individualLabelCount > 1 ? 's' : ''}`
+                          : 'No Individual Labels'}
+                      </ThemedText>
+                    </View>
                     {sharedLabels.map((label) => (
                       <View
                         key={label}
@@ -559,28 +521,65 @@ export default function LogExpensesReviewScreen() {
                         </TouchableOpacity>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    onPress={() => {
+                      setShowLabelInput(true);
+                      setCurrentLabelInput('');
+                    }}
+                  >
+                    <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
+                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
+                  </TouchableOpacity>
                 </View>
-              )}
+              </View>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
-              <View style={styles.dateTimeRow}>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => setPickerMode('date')}
-                >
-                  <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => setPickerMode('time')}
-                >
-                  <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
-                </TouchableOpacity>
+            {showLabelInput && (
+              <View style={styles.sharedLabelInputRow}>
+                <View style={styles.sharedLabelInputContainer}>
+                  <TextInput
+                    style={[
+                      styles.sharedLabelInput,
+                      { backgroundColor: palette.card, color: palette.text },
+                    ]}
+                    placeholder="Add Label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addSharedLabel}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    onPress={addSharedLabel}
+                    style={styles.sharedLabelIconButton}
+                  >
+                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Date &amp; Time</ThemedText>
+                <View style={styles.dateTimeRow}>
+                  <TouchableOpacity
+                    style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    onPress={() => setPickerMode('date')}
+                  >
+                    <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    onPress={() => setPickerMode('time')}
+                  >
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </ThemedView>

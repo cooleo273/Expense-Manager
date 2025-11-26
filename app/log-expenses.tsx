@@ -133,6 +133,8 @@ export default function LogExpensesScreen() {
   const addLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
+      setIsAddingLabel(false);
+      setCurrentLabelInput('');
       return;
     }
 
@@ -149,6 +151,7 @@ export default function LogExpensesScreen() {
       return next;
     });
     setCurrentLabelInput('');
+    setIsAddingLabel(false);
   }, [currentLabelInput]);
 
   const removeLabel = useCallback((labelToRemove: string) => {
@@ -681,7 +684,12 @@ export default function LogExpensesScreen() {
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
                 <View style={styles.labelsContainerInline}>
-                  <View style={styles.labelChipsRow}>
+                  <ScrollView
+                    horizontal
+                    style={{ flex: 1 }}
+                    contentContainerStyle={styles.labelChipsRow}
+                    showsHorizontalScrollIndicator={false}
+                  >
                     {singleDraft.labels.map((label) => (
                       <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border, marginRight: Spacing.xs }]}> 
                         <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
@@ -690,54 +698,50 @@ export default function LogExpensesScreen() {
                         </TouchableOpacity>
                       </View>
                     ))}
-                    {!isAddingLabel ? (
-                      <TouchableOpacity
-                        onPress={() => {
-                          setIsAddingLabel(true);
-                          setTimeout(() => labelInputRef.current?.focus(), 60);
-                        }}
-                        style={[styles.addLabelButtonInline, styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
-                        accessibilityLabel="Add label"
-                      >
-                        <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
-                        <ThemedText style={[styles.labelAddButtonText, { color: palette.tint }]}>Add label</ThemedText>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.sharedLabelInputRow}>
-                        <TextInput
-                          ref={labelInputRef}
-                          style={[styles.labelsInlineInput, { color: palette.text }]}
-                          placeholder="Add a label"
-                          placeholderTextColor={palette.icon}
-                          value={currentLabelInput}
-                          onChangeText={setCurrentLabelInput}
-                          onSubmitEditing={() => {
-                            addLabel();
-                            setIsAddingLabel(false);
-                          }}
-                          onBlur={() => setIsAddingLabel(false)}
-                        />
-                        <TouchableOpacity
-                          onPress={() => {
-                            addLabel();
-                            setIsAddingLabel(false);
-                          }}
-                          style={[styles.sharedLabelAction, { borderColor: palette.border }]}
-                        >
-                          <MaterialCommunityIcons name="check" size={16} color={palette.tint} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
+                  </ScrollView>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setIsAddingLabel(true);
+                      setTimeout(() => labelInputRef.current?.focus(), 60);
+                    }}
+                    style={[styles.addLabelButtonInline, styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    accessibilityLabel="Add label"
+                  >
+                    <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.labelAddButtonText, { color: palette.tint }]}>Add label</ThemedText>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
+
+            {isAddingLabel && (
+              <View style={styles.sharedLabelInputRow}>
+                <View style={styles.sharedLabelInputContainer}>
+                  <TextInput
+                    ref={labelInputRef}
+                    style={[styles.sharedLabelInput, { backgroundColor: palette.card, color: palette.text }]}
+                    placeholder="Add Label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    onPress={addLabel}
+                    style={styles.sharedLabelIconButton}
+                  >
+                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             
 
             {/* labels are rendered inline inside the Labels input wrapper */}
 
-            <View style={styles.fieldGroup}>
+            <View style={[styles.fieldGroup, isAddingLabel && { marginTop: Spacing.md }]}>
               <View style={styles.dateTimeRow}>
                 <View
                   style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
