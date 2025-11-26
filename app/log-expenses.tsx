@@ -270,6 +270,7 @@ export default function LogExpensesScreen() {
           categoryId: record.category,
           subcategoryId: record.subcategoryId,
           labels: record.labels,
+          payee: record.payee,
           userId: 'default-user',
         }))
       );
@@ -334,7 +335,7 @@ export default function LogExpensesScreen() {
 
     // Payee validation
     if (!singleDraft.payee || singleDraft.payee.trim() === '') {
-      setPayeeError('Payee is required');
+      setPayeeError(`${transactionType === 'income' ? 'Payer' : 'Payee'} is required`);
       hasError = true;
     } else {
       setPayeeError('');

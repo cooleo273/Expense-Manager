@@ -47,9 +47,28 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                 <View style={recordsStyles.itemContent}>
                   <ThemedText style={[recordsStyles.itemTitle, { color: palette.text }]}>{getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}</ThemedText>
                   <ThemedText style={[recordsStyles.itemSubtitle, { color: palette.icon }]}>{item.account ?? item.accountId}</ThemedText>
-                  { (item.note || (item.labels && item.labels.length > 0)) ? (
-                    <ThemedText style={[recordsStyles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>{item.note ? item.note : (item.labels && item.labels.length > 0 ? item.labels[0] : '')}</ThemedText>
-                  ) : null}
+                  {(() => {
+                    const noteText = item.note;
+                    const payeeText = item.payee;
+                    const labelText = (item.labels && item.labels.length > 0) ? item.labels[0] : null;
+                    
+                    let combinedText = '';
+                    if (noteText && payeeText) {
+                      combinedText = `${noteText} - ${payeeText}`;
+                    } else if (noteText) {
+                      combinedText = noteText;
+                    } else if (payeeText) {
+                      combinedText = payeeText;
+                    } else if (labelText) {
+                      combinedText = labelText;
+                    }
+                    
+                    return combinedText ? (
+                      <ThemedText style={[recordsStyles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>
+                        "{combinedText}"
+                      </ThemedText>
+                    ) : null;
+                  })()}
                 </View>
                 <View style={recordsStyles.itemMeta}>
                   <ThemedText style={[recordsStyles.itemAmount, { color: amountColor }]}>{formatCurrency ? formatCurrency(item.amount, item.type) : (item.type === 'income' ? '+' : '-') + `$${Math.abs(item.amount).toFixed(2)}`}</ThemedText>
@@ -71,11 +90,28 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
               <View style={homeStyles.recordContent}>
                 <ThemedText style={homeStyles.recordTitle}>{getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}</ThemedText>
                 <ThemedText style={[homeStyles.recordSubtitle, { color: palette.icon }]}>{item.account ?? item.accountId}</ThemedText>
-                { (item.note || (item.labels && item.labels.length > 0)) ? (
-                  <ThemedText style={[homeStyles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
-                    {item.note ? item.note : (item.labels && item.labels.length > 0 ? item.labels[0] : '')}
-                  </ThemedText>
-                ) : null}
+                {(() => {
+                  const noteText = item.note;
+                  const payeeText = item.payee;
+                  const labelText = (item.labels && item.labels.length > 0) ? item.labels[0] : null;
+                  
+                  let combinedText = '';
+                  if (noteText && payeeText) {
+                    combinedText = `${noteText} - ${payeeText}`;
+                  } else if (noteText) {
+                    combinedText = noteText;
+                  } else if (payeeText) {
+                    combinedText = payeeText;
+                  } else if (labelText) {
+                    combinedText = labelText;
+                  }
+                  
+                  return combinedText ? (
+                    <ThemedText style={[homeStyles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
+                      "{combinedText}"
+                    </ThemedText>
+                  ) : null;
+                })()}
               </View>
               <View style={homeStyles.recordMeta}>
                 <ThemedText style={[homeStyles.recordAmount, { color: amountColor }]}>{formatCurrency ? formatCurrency(item.amount, item.type) : (item.type === 'income' ? '+' : '-') + `$${Math.abs(item.amount).toFixed(2)}`}</ThemedText>

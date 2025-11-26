@@ -484,7 +484,9 @@ export default function LogExpensesReviewScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Payee</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  {transactionType === 'income' ? 'Payer' : 'Payee'}
+                </ThemedText>
                 <ThemedText style={[styles.notchedInput, { color: palette.text }]} numberOfLines={1} ellipsizeMode="tail">
                   {primaryPayee}
                 </ThemedText>

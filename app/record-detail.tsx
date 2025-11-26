@@ -117,6 +117,7 @@ export default function RecordDetailScreen() {
   }));
   const [errors, setErrors] = useState<DraftErrors>({});
   const [currentLabelInput, setCurrentLabelInput] = useState('');
+  const [showLabelInput, setShowLabelInput] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
   useEffect(() => {
@@ -367,10 +368,12 @@ export default function RecordDetailScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Payee</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                  {recordType === 'income' ? 'Payer' : 'Payee'}
+                </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Eg: Grocery Store"
+                  placeholder={recordType === 'income' ? 'Eg: Company X' : 'Eg: Grocery Store'}
                   placeholderTextColor={palette.icon}
                   value={draft.payee}
                   onChangeText={(value) => setDraft((prev) => ({ ...prev, payee: value }))}
