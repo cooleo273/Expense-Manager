@@ -1,11 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { categoryList, getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
 import { mockRecordsData } from '@/constants/mock-data';
 import { Colors, Spacing } from '@/constants/theme';
@@ -52,14 +51,29 @@ export default function CategoriesScreen() {
   // If opened for a specific type (e.g., expense) prefer the last selected category
   // — show it at the top of MOST FREQUENT so the user sees it immediately.
   const mostFrequentWithLastUsed = useMemo(() => {
-    if (!typeParam) return mostFrequentFiltered;
-    const last = transactionDraftState.getLastSelectedCategory(typeParam);
-    if (!last) return mostFrequentFiltered;
-    if (mostFrequentFiltered.includes(last)) return mostFrequentFiltered;
-    return [last, ...mostFrequentFiltered];
+    if (!typeParam) {
+      return mostFrequentFiltered;
+    }
+    const ordered = [...mostFrequentFiltered];
+    const lastSub = transactionDraftState.getLastSelectedSubcategory(typeParam);
+    if (lastSub) {
+      if (!ordered.includes(lastSub)) {
+        ordered.unshift(lastSub);
+      }
+      return ordered;
+    }
+    const lastCategory = transactionDraftState.getLastSelectedCategory(typeParam);
+    if (!lastCategory) {
+      return ordered;
+    }
+    if (ordered.includes(lastCategory)) {
+      return ordered;
+    }
+    ordered.unshift(lastCategory);
+    return ordered;
   }, [mostFrequentFiltered, typeParam]);
 
-  const toUniqueCategoryIds = useCallback((ids: string[]): string[] => {
+  const toUniqueIds = useCallback((ids: string[]): string[] => {
     const seen = new Set<string>();
     const unique: string[] = [];
     ids.forEach((id) => {
@@ -67,11 +81,11 @@ export default function CategoriesScreen() {
       if (!def) {
         return;
       }
-      if (seen.has(def.id)) {
+      if (seen.has(id)) {
         return;
       }
-      seen.add(def.id);
-      unique.push(def.id);
+      seen.add(id);
+      unique.push(id);
     });
     return unique;
   }, []);
@@ -99,14 +113,14 @@ export default function CategoriesScreen() {
           }
         }
         const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-        const unique = toUniqueCategoryIds(sorted);
+        const unique = toUniqueIds(sorted);
         if (mounted) setMostFrequent(unique.slice(0, 5));
       } catch (err) {
         // ignore
       }
     })();
     return () => { mounted = false; };
-  }, [toUniqueCategoryIds]);
+  }, [toUniqueIds]);
 
   const toggleCategorySelection = (categoryId: CategoryKey) => {
     setSelectedIds(prev => {
@@ -151,14 +165,16 @@ export default function CategoriesScreen() {
     });
   };
 
-  const navigateToSubcategories = async (categoryId: CategoryKey) => {
+  const navigateToSubcategories = async (categoryId: CategoryKey, selectedSubcategory?: string) => {
     const paramsToPass: Record<string, string> = {
       category: categoryId,
     };
     if (batchIndex) {
       paramsToPass.batchIndex = batchIndex;
     }
-    if (currentCategory === categoryId && currentSubcategory) {
+    if (selectedSubcategory) {
+      paramsToPass.selected = selectedSubcategory;
+    } else if (currentCategory === categoryId && currentSubcategory) {
       paramsToPass.selected = currentSubcategory;
     }
     if (returnTo) {
@@ -169,7 +185,9 @@ export default function CategoriesScreen() {
     }
     // Increment usage for most-frequent list (persist locally)
     try {
-      await StorageService.incrementCategoryUsage(categoryId);
+      if (!selectedSubcategory) {
+        await StorageService.incrementCategoryUsage(categoryId);
+      }
       let usage = await StorageService.getCategoryUsage();
       // try to read persisted usage. If none exists seed it from transactions
       if (!usage || Object.keys(usage).length === 0) {
@@ -187,7 +205,7 @@ export default function CategoriesScreen() {
         }
       }
       const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-      const unique = toUniqueCategoryIds(sorted);
+      const unique = toUniqueIds(sorted);
       setMostFrequent(unique.slice(0, 5));
     } catch (err) {
       // ignore
@@ -215,53 +233,72 @@ export default function CategoriesScreen() {
     router.back();
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['top']}>
-              {isFilterMode && (
+  React.useEffect(() => {
+    if (!isFilterMode) {
+      return;
+    }
+    router.setParams?.({});
+    return () => {
+      (router as any)?.setOptions?.({ headerRight: undefined });
+    };
+  }, [isFilterMode, router]);
 
-      <ThemedView style={{ paddingHorizontal: Spacing.lg, paddingVertical: 0, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <TouchableOpacity onPress={handleDone}>
-            <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>DONE</ThemedText>
-          </TouchableOpacity>
-        
-      </ThemedView>
-      )}
-      <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.tiny, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
-        <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>MOST FREQUENT</ThemedText>
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          headerRight: isFilterMode
+            ? () => (
+                <TouchableOpacity onPress={handleDone} style={{ paddingHorizontal: Spacing.md }}>
+                  <MaterialCommunityIcons name="check" size={22} color={palette.tint} />
+                </TouchableOpacity>
+              )
+            : undefined,
+        }}
+      />
+      <View style={{ paddingVertical: Spacing.tiny, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border }}>
+        <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8, marginHorizontal: Spacing.lg, padding: Spacing.tiny }}>MOST FREQUENT</ThemedText>
         {mostFrequentWithLastUsed.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: Spacing.lg }}
-          >
+          <View style={{ backgroundColor: palette.card, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 0 }}
+            >
             {mostFrequentWithLastUsed.map((id: string, index: number) => {
               const catDef = getCategoryDefinition(id);
-              const cat = catDef ? categoryList.find((c) => c.id === catDef.id) : undefined;
-              if (!cat) return null;
-              const categoryColor = getCategoryColor(cat.id, palette.tint);
-              const iconName = getCategoryIcon(cat.id);
+              if (!catDef) return null;
+              const subcategory = isSubcategoryId(id) ? getSubcategoryDefinition(id) : undefined;
+              const parentId = subcategory ? subcategory.parentId : catDef.id;
+              const categoryColor = getCategoryColor(parentId, palette.tint);
+              const iconName = getCategoryIcon(subcategory ? subcategory.id : parentId);
+              const label = subcategory ? subcategory.name : catDef.name;
               const isLast = index === mostFrequentWithLastUsed.length - 1;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  onPress={() => navigateToSubcategories(cat.id)}
-                  style={{
-                    alignItems: 'center',
-                    backgroundColor: palette.card,
-                    paddingVertical: Spacing.sm,
-                    paddingHorizontal: Spacing.md,
-                    borderRadius: 12,
-                    marginRight: isLast ? 0 : Spacing.md,
-                  }}
-                >
-                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: `${categoryColor}20`, alignItems: 'center', justifyContent: 'center' }}>
-                    <MaterialCommunityIcons name={iconName as any} size={20} color={categoryColor} />
-                  </View>
-                  <ThemedText style={{ color: palette.text, marginTop: 8 }}>{cat.name}</ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                return (
+                  <TouchableOpacity
+                    key={id}
+                    onPress={() => navigateToSubcategories(parentId, subcategory?.id)}
+                    style={{
+                      alignItems: 'center',
+                      backgroundColor: palette.card,
+                      paddingVertical: Spacing.sm,
+                      paddingHorizontal: Spacing.sm,
+                      borderRadius: 12,
+                      marginRight: isLast ? 0 : Spacing.sm,
+                      width: 110,
+                    }}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${categoryColor}20`, alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialCommunityIcons name={iconName as any} size={16} color={categoryColor} />
+                    </View>
+                    <ThemedText style={{ color: palette.text, marginTop: 6, textAlign: 'center', fontSize: 12 }} numberOfLines={2}>
+                      {label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         ) : (
           <ThemedText style={{ color: palette.icon }}>No categories selected</ThemedText>
         )}
@@ -270,7 +307,7 @@ export default function CategoriesScreen() {
       <FlatList
         ListHeaderComponent={() => (
           <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
-            <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600' }}>ALL CATEGORIES</ThemedText>
+            <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', padding: Spacing.tiny }}>ALL CATEGORIES</ThemedText>
           </View>
         )}
         data={typeParam ? categoryList.filter(c => c.type === typeParam) : categoryList}

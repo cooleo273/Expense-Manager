@@ -18,6 +18,7 @@ let transactionTypeMemory: RecordType = 'expense';
 let lastSelectedCategoryMemory: { income?: string; expense?: string } = {
   expense: INITIAL_SINGLE_DRAFT.category,
 };
+let lastSelectedSubcategoryMemory: { income?: string; expense?: string } = {};
 
 const ensureCategory = (category?: string): string => category || lastSelectedCategoryMemory.expense || INITIAL_SINGLE_DRAFT.category;
 
@@ -81,7 +82,30 @@ export const transactionDraftState = {
     if (category) {
       const key = type ?? transactionTypeMemory;
       lastSelectedCategoryMemory[key] = category;
+      // Reset any tracked subcategory if it no longer matches the parent
+      if (lastSelectedSubcategoryMemory[key]) {
+        const current = lastSelectedSubcategoryMemory[key];
+        if (current && !current.startsWith(`${category}:`)) {
+          delete lastSelectedSubcategoryMemory[key];
+        }
+      }
     }
+  },
+
+  getLastSelectedSubcategory(type?: RecordType): string | undefined {
+    if (type) {
+      return lastSelectedSubcategoryMemory[type];
+    }
+    return lastSelectedSubcategoryMemory[transactionTypeMemory];
+  },
+
+  setLastSelectedSubcategory(subcategory: string | undefined, type?: RecordType) {
+    const key = type ?? transactionTypeMemory;
+    if (!subcategory) {
+      delete lastSelectedSubcategoryMemory[key];
+      return;
+    }
+    lastSelectedSubcategoryMemory[key] = subcategory;
   },
 
   resetAll(category?: string) {
@@ -94,5 +118,6 @@ export const transactionDraftState = {
     };
     singleDraftMemory = cloneSingle(baseSingle);
     batchDraftsMemory = createInitialBatchDrafts(baseCategory);
+    lastSelectedSubcategoryMemory = {};
   },
 };

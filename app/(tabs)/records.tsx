@@ -3,22 +3,27 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import RecordList from '@/components/RecordList';
 import { ThemedText } from '@/components/themed-text';
 // imports consolidated below
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
-import { getCategoryColor, getCategoryIcon, getNodeDisplayName, isSubcategoryId } from '@/constants/categories';
+import { getNodeDisplayName, isSubcategoryId } from '@/constants/categories';
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Transaction } from '@/services/storage';
 import { recordsStyles } from '@/styles/records.styles';
-import { formatFriendlyDate, isSameDay, startOfDay } from '@/utils/date';
+import { isSameDay, startOfDay } from '@/utils/date';
 import { getAccountMeta, mockAccounts, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
+// @ts-ignore
+import KeyTermsEditor from '@/components/KeyTermsEditor';
+import Slider from '@react-native-community/slider';
+import { StorageService } from '../../services/storage';
 // @ts-ignore - optional dependency, install with `npm install @react-native-community/slider`
 // prefer a dual-handle slider; if the dependency isn't installed fallback to two single sliders
 // dynamic require so app stays resilient if the package isn't installed
@@ -32,10 +37,6 @@ try {
 } catch (err) {
   MultiSlider = undefined;
 }
-// @ts-ignore
-import KeyTermsEditor from '@/components/KeyTermsEditor';
-import Slider from '@react-native-community/slider';
-import { StorageService } from '../../services/storage';
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
@@ -620,58 +621,7 @@ export default function RecordsScreen() {
         </View>
 
         <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}> 
-          <FlatList
-            data={filteredAndSortedData}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => {
-              const isLast = index === filteredAndSortedData.length - 1;
-              const amountColor = item.type === 'income' ? palette.success : palette.error;
-
-              return (
-                <View style={styles.itemContainer}>
-                  <View style={styles.itemRow}>
-                    <View
-                      style={[
-                        styles.iconBadge,
-                        {
-                          backgroundColor: `${getCategoryColor(item.categoryId, palette.tint)}15`,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name={getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline')}
-                        size={20}
-                        color={getCategoryColor(item.categoryId, palette.tint)}
-                      />
-                    </View>
-                    <View style={styles.itemContent}>
-                      <ThemedText style={[styles.itemTitle, { color: palette.text }]}>{getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}</ThemedText>
-                      <ThemedText style={[styles.itemSubtitle, { color: palette.icon }]}>{getAccountMeta(item.accountId)?.name ?? item.account}</ThemedText>
-                      {/* show note or first label (only one) */}
-                      { (item.note || (item.labels && item.labels.length > 0)) ? (
-                        <ThemedText style={[styles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>{item.note ? item.note : (item.labels && item.labels.length > 0 ? item.labels[0] : '')}</ThemedText>
-                      ) : null}
-                    </View>
-                    <View style={styles.itemMeta}>
-                      <ThemedText
-                        style={[
-                          styles.itemAmount,
-                          { color: amountColor },
-                        ]}
-                      >
-                        {formatCurrency(item.amount, item.type)}
-                      </ThemedText>
-                      <ThemedText style={[styles.itemDate, { color: palette.icon }]}>{formatFriendlyDate(item.date)}</ThemedText>
-                    </View>
-                  </View>
-                  {!isLast && <View style={[styles.listSeparator, { backgroundColor: palette.border }]} />}
-                </View>
-              );
-            }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: Spacing.lg }}
-            ListFooterComponent={<View style={{ height: Spacing.md }} />}
-          />
+          <RecordList records={filteredAndSortedData} variant="records" style={{ flex: 1 }} formatCurrency={(value, type = 'expense') => formatCurrency(value, type)} onPressItem={(item) => router.push({ pathname: '/record-detail', params: { id: item.id, payload: encodeURIComponent(JSON.stringify(item)), type: item.type } })} />
         </View>
       </View>
 

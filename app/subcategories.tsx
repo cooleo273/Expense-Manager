@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StackActions, useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +31,15 @@ export default function SubcategoriesScreen() {
   const categoryColor = getCategoryColor(categoryId, palette.tint);
   const iconName = getCategoryIcon(categoryId);
 
+  useEffect(() => {
+    if (!category) {
+      return;
+    }
+    navigation.setOptions({
+      headerTitle: category.name,
+    });
+  }, [category, navigation]);
+
   const parsedRecordIndex = useMemo(() => {
     if (typeof recordIndex === 'string') {
       const parsed = parseInt(recordIndex, 10);
@@ -50,7 +59,7 @@ export default function SubcategoriesScreen() {
   const handleEmitSelection = useCallback((subcategoryId?: string) => {
     // persist that the user selected this category
     try {
-      StorageService.incrementCategoryUsage(categoryId);
+      StorageService.incrementCategoryUsage(subcategoryId ?? categoryId);
     } catch (err) {
       // ignore errors
     }
@@ -59,6 +68,7 @@ export default function SubcategoriesScreen() {
       const catDef = getCategoryDefinition(categoryId);
       if (catDef) {
         transactionDraftState.setLastSelectedCategory(categoryId, catDef.type);
+        transactionDraftState.setLastSelectedSubcategory(subcategoryId, catDef.type);
       }
     } catch (err) {
       // non-fatal
@@ -91,11 +101,11 @@ export default function SubcategoriesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['bottom']}>
       <ScrollView style={{ backgroundColor: palette.card }}>
         {/* General Section */}
         <View style={{ backgroundColor: `${palette.surface}80`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>General</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>GENERAL</ThemedText>
         </View>
         <TouchableOpacity
           onPress={handleGeneralSelect}
@@ -129,7 +139,7 @@ export default function SubcategoriesScreen() {
 
         {/* SubCategory Section */}
         <View style={{ backgroundColor: `${palette.surface}60`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 16 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SubCategory</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SUBCATEGORIES</ThemedText>
         </View>
         {subcategories.map((sub) => {
           const isSelected = sub.id === selectedSubcategory;

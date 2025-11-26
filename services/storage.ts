@@ -41,6 +41,7 @@ export interface Transaction {
   subcategoryId?: string;
   userId?: string;
   labels?: string[];
+  payee?: string;
 }
 
 const TRANSACTIONS_KEY = '@transactions';

@@ -9,9 +9,11 @@ export const logExpensesStyles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
+    // reduce top space between header and content by lowering top padding
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 250, // Increased back to 250 for better keyboard space
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
   summaryContainer: {
     borderWidth: 1,
@@ -82,7 +84,7 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.md,
+    gap: Spacing.sm,
     flexWrap: 'wrap',
   },
   addListButton: {
@@ -93,6 +95,22 @@ export const logExpensesStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignSelf: 'flex-end',
+  },
+  templatesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignSelf: 'flex-end',
+  },
+  templatesBadge: {
+    fontSize: FontSizes.xs,
+    lineHeight: FontSizes.xs,
+    marginLeft: Spacing.xs,
+    alignSelf: 'flex-start',
+    paddingTop: 2,
   },
   addListLabel: {
     fontWeight: FontWeights.semibold as any,
@@ -109,9 +127,11 @@ export const logExpensesStyles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     gap: Spacing.md,
+    position: 'relative',
   },
   fieldGroup: {
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   fieldLabel: {
     fontSize: FontSizes.sm,
@@ -124,12 +144,22 @@ export const logExpensesStyles = StyleSheet.create({
   },
   noteRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   noteMenuButton: {
-    alignSelf: 'stretch',
+    alignSelf: 'center',
     justifyContent: 'center',
+  },
+  // small touch area for stacked actions (edit/delete) in top-right
+  stackedIconGroup: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallIconTouch: {
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
   noteInput: {
     flex: 1,
@@ -146,37 +176,70 @@ export const logExpensesStyles = StyleSheet.create({
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingTop: Spacing.sm,
+    gap: Spacing.tiny,
+    justifyContent: 'flex-end',
+    height: 48,
   },
   currencySymbol: {
-    fontSize: FontSizes.massive,
+    fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
-    lineHeight: FontSizes.massive + 4,
+    lineHeight: FontSizes.huge + 4,
     textAlignVertical: 'center',
   },
   amountInput: {
-    flex: 1,
-    fontSize: FontSizes.massive,
+    flexGrow: 0,
+    flexShrink: 1,
+    fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
     padding: 0,
-    lineHeight: FontSizes.massive + 4,
+    lineHeight: FontSizes.huge + 4,
     textAlignVertical: 'center',
+    textAlign: 'right',
+    minWidth: 0,
+    height: 48,
   },
   amountCompactInput: {
-    minWidth: 60,
+    minWidth: 36,
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     padding: 0,
     lineHeight: FontSizes.lg + 4,
     textAlignVertical: 'center',
+    textAlign: 'right',
   },
   inputWrapper: {
     position: 'relative',
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
+    minHeight: 64,
+    justifyContent: 'center',
+  },
+  inputWrapperNoBorder: {
+    position: 'relative',
+    borderWidth: 0,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  // A variant of inputWrapper that allows its height to expand when contents wrap
+  inputWrapperTall: {
+    // keep same minHeight but allow more vertical padding and flex-start so chips
+    // and other multi-line content can stack without overlapping the notched label
+    paddingTop: Spacing.md,
     paddingVertical: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    minHeight: 84,
+    // zIndex should not force overlay; set to default stacking
+    zIndex: 0,
+    marginBottom: Spacing.md,
+    justifyContent: 'flex-start',
+    // Prevent the input from growing indefinitely when a user adds many labels
+    // Allow more room for many labels; content should push layout instead
+    maxHeight: 200,
   },
   notchedLabel: {
     position: 'absolute',
@@ -189,6 +252,8 @@ export const logExpensesStyles = StyleSheet.create({
   notchedInput: {
     paddingTop: Spacing.sm,
     fontSize: FontSizes.lg,
+    height: 48,
+    textAlignVertical: 'center',
   },
   batchSummary: {
     flexDirection: 'row',
@@ -211,10 +276,10 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     gap: Spacing.md,
-    minHeight: 56,
+    height: 48,
   },
   categoryIconBadge: {
     width: 32,
@@ -230,35 +295,42 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold as any,
   },
-  amountField: {
-    minWidth: 110,
-    maxWidth: 140,
+  categoryPillCompact: {
+    minWidth: 48,
+    maxWidth: 80,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    minHeight: 56,
+    height: 48,
     justifyContent: 'center',
   },
   amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.tiny,
+    justifyContent: 'flex-end',
   },
   currencyTiny: {
-    fontSize: FontSizes.md,
+    // Use the same font-size and lineHeight as the compact amount input so
+    // the currency symbol aligns perfectly with the numeric text.
+    fontSize: FontSizes.lg,
     fontWeight: FontWeights.semibold as any,
-    // Align to the larger compact amount line (FontSizes.lg) so the dollar sign
-    // sits on the same baseline as the numeric input.
     lineHeight: FontSizes.lg + 4,
     textAlignVertical: 'center',
+    alignSelf: 'center',
   },
+  // deleteButton and menuButton moved to stack inside noteRow. Keep old classes if used elsewhere but keep them neutral
   deleteButton: {
     padding: Spacing.sm,
+  },
+  menuButton: {
+    padding: Spacing.xs,
   },
   categoryInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Spacing.sm,
+    height: 56,
+    paddingVertical: 0,
   },
   batchTotal: {
     fontSize: FontSizes.huge,
@@ -270,16 +342,34 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  datePartWrapper: {
+    flex: 1,
+    // Keep the border and add consistent padding so icons are not tight to the edge
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
   },
   dateTimeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    width: '100%',
+    height: 48,
+    paddingLeft: Spacing.sm,
+  },
+  dateTimeButtonOutlined: {
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
+    paddingHorizontal: Spacing.sm,
+  },
+  dateTimeButtonInput: {
+    borderWidth: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   dateTimeText: {
     fontSize: FontSizes.md,
@@ -364,7 +454,8 @@ export const logExpensesStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: BorderRadius.xl,
     paddingVertical: Spacing.sm,
-    gap: Spacing.xs,
+    gap: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   menuItem: {
     flexDirection: 'row',
@@ -378,7 +469,7 @@ export const logExpensesStyles = StyleSheet.create({
   },
   labelsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: Spacing.sm,
     marginBottom: Spacing.sm,
   },
@@ -386,6 +477,7 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: Spacing.sm,
     marginTop: Spacing.sm,
   },
@@ -396,6 +488,7 @@ export const logExpensesStyles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
+    
   },
   labelActionPill: {
     flexDirection: 'row',
@@ -410,10 +503,10 @@ export const logExpensesStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.tiny,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
+     borderWidth: 1,
   },
   labelText: {
     fontSize: FontSizes.sm,
@@ -431,23 +524,133 @@ export const logExpensesStyles = StyleSheet.create({
   sharedLabelInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 0,
     marginTop: Spacing.sm,
+  },
+  sharedLabelInputContainer: {
+    position: 'relative',
+    flex: 1,
   },
   sharedLabelInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
+    borderWidth: 0,
+    borderTopLeftRadius: BorderRadius.md,
+    borderBottomLeftRadius: BorderRadius.md,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
+    paddingRight: 50, // Space for the icon
     fontSize: FontSizes.md,
   },
-  sharedLabelAction: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.md,
+  sharedLabelIconButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopRightRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
+    backgroundColor: 'transparent', // Or tint if needed
+  },
+  labelsContainerInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'nowrap',
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
+  labelsScrollArea: {
+    // Lock to a single row height so the container does not expand vertically.
+    maxHeight: 72,
+    flex: 1,
+    width: '100%',
+  },
+  labelsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  labelsScrollInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  addLabelButtonStatic: {
+    minWidth: 56,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    marginLeft: Spacing.sm,
+  },
+  labelChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexWrap: 'nowrap',
+    flex: 1,
+    marginTop: Spacing.sm,
+    minHeight: 56,
+  },
+  labelsAddRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  addLabelButtonCentered: {
+    minWidth: 96,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  
+  addLabelButtonInline: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  labelAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    gap: Spacing.xs,
+    // subtle elevation/shadow for visual depth
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  labelAddButtonText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold as any,
+  },
+  // Reusable input base style for consistent height/padding
+  inputBase: {
+    height: 48,
+    justifyContent: 'center',
+  },
+  labelsInlineInput: {
+    minWidth: 120,
+    flex: 1,
+    borderWidth: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    fontSize: FontSizes.md,
+    height: 48,
+    alignSelf: 'center',
+    textAlignVertical: 'center',
   },
 });
