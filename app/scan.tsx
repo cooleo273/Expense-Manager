@@ -12,6 +12,7 @@ import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { mapReceiptToExpense } from '@/utils/receipt-mapper';
+import { categoryList, subcategoryList } from '@/constants/categories';
 
 export const options = {
   headerShown: false,
@@ -35,6 +36,7 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { showToast } = useToast();
   const cameraRef = useRef<CameraView>(null);
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
@@ -116,8 +118,86 @@ export default function ScanScreen() {
           })) as any[]
         : undefined;
 
-      const payloadToSend: any = records && records.length > 0
-        ? { records }
+      // before sending the payload, run a (local) categorization step so the
+      // user sees categories derived from our list. We call a simple heuristic
+      // matcher here; a backend Gemini model integration could be used in the
+      // future — for now this avoids uncategorized results where we can map.
+      const categorizeText = (text?: string) => {
+        if (!text) return { categoryId: 'others', subcategoryId: undefined };
+        const low = text.toLowerCase();
+        // try subcategories first
+        for (const sc of subcategoryList) {
+          if (low.includes(sc.name.toLowerCase())) {
+            return { categoryId: sc.parentId, subcategoryId: sc.id };
+          }
+        }
+        // try categories next
+        for (const c of categoryList) {
+          if (low.includes(c.name.toLowerCase())) {
+            return { categoryId: c.id, subcategoryId: undefined };
+          }
+        }
+        return { categoryId: 'others', subcategoryId: undefined };
+      };
+
+      // Categorize using a simple heuristic (token match on subcategory -> category name)
+      setIsProcessing(false);
+      setIsAnalyzing(true);
+      let resolvedRecords: any[] | undefined = undefined;
+      try {
+        let classifierResult: any | null = null;
+        try {
+          const classifyResponse = await fetch(`${apiBaseUrl}/api/receipt/categorize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items, merchant: mappedExpense.expense?.merchant, note: mappedExpense.expense?.note }),
+          });
+          if (classifyResponse.ok) {
+            classifierResult = await classifyResponse.json();
+          }
+        } catch (err) {
+          // ignore – fallback to local heuristics
+          console.debug('Classifier endpoint not available', err);
+        }
+        if (items.length > 0) {
+          resolvedRecords = items.map((it, idx) => {
+            const text = `${it.description ?? ''} ${mappedExpense.expense?.merchant ?? ''} ${mappedExpense.expense?.note ?? ''}`;
+            let match = categorizeText(text);
+            if (classifierResult) {
+              // classifierResult expected to be array of results with the same order
+              // as items. If the server returns something unexpected, fallback.
+              const serverMatch = classifierResult?.items?.[idx];
+              if (serverMatch?.categoryId || serverMatch?.subcategoryId) {
+                match = { categoryId: serverMatch.categoryId ?? serverMatch.category, subcategoryId: serverMatch.subcategoryId };
+              }
+            }
+            return {
+              amount: (typeof it.total === 'number' ? it.total.toFixed(2) : `${it.total}`),
+              category: match.subcategoryId ? match.categoryId : (mappedExpense.expense?.category ?? ''),
+              subcategoryId: match.subcategoryId ?? '',
+              payee: mappedExpense.expense?.payee ?? mappedExpense.expense?.merchant ?? '',
+              note: it.description ?? mappedExpense.expense?.note ?? '',
+              labels: [],
+              occurredAt: occurredAtForRecord,
+            } as any;
+          });
+        } else {
+          // Single draft — categorize the overall receipt
+          const text = `${mappedExpense.expense?.note ?? ''} ${mappedExpense.expense?.merchant ?? ''}`;
+          const match = categorizeText(text);
+          if (match.subcategoryId) {
+            mappedExpense.draftPatch.subcategoryId = match.subcategoryId;
+            mappedExpense.draftPatch.category = match.categoryId;
+          } else {
+            mappedExpense.draftPatch.category = match.categoryId;
+          }
+        }
+      } finally {
+        setIsAnalyzing(false);
+      }
+
+      const payloadToSend: any = (resolvedRecords && resolvedRecords.length > 0)
+        ? { records: resolvedRecords }
         : {
             draftPatch: {
               ...(mappedExpense.draftPatch ?? {}),
@@ -273,10 +353,12 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      {isProcessing && (
-        <View style={styles.processingOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.processingText}>Processing receipt…</Text>
+      {(isProcessing || isAnalyzing) && (
+        <View style={[styles.processingOverlay, { backgroundColor: '#FFFFFF' }]}>
+          <ActivityIndicator size="large" color={palette.tint} />
+          <Text style={[styles.processingText, { color: palette.text }]}>
+            {isProcessing ? 'Processing receipt…' : 'Analyzing category…'}
+          </Text>
         </View>
       )}
     </View>
