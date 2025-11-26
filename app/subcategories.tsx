@@ -105,7 +105,7 @@ export default function SubcategoriesScreen() {
       <ScrollView style={{ backgroundColor: palette.card }}>
         {/* General Section */}
         <View style={{ backgroundColor: `${palette.surface}80`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>General</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>GENERAL</ThemedText>
         </View>
         <TouchableOpacity
           onPress={handleGeneralSelect}
@@ -139,7 +139,7 @@ export default function SubcategoriesScreen() {
 
         {/* SubCategory Section */}
         <View style={{ backgroundColor: `${palette.surface}60`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 16 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SubCategory</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SUBCATEGORIES</ThemedText>
         </View>
         {subcategories.map((sub) => {
           const isSelected = sub.id === selectedSubcategory;

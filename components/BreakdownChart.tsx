@@ -53,6 +53,23 @@ const isThisMonth = (range: DateRange) => {
   return range.start.getTime() === start.getTime() && range.end.getTime() === end.getTime();
 };
 
+const isAnyMonth = (range: DateRange) => {
+  const start = new Date(range.start);
+  const end = new Date(range.end);
+  
+  // Check if start is the 1st of its month
+  const isStartFirstOfMonth = start.getDate() === 1;
+  
+  // Check if end is the last day of its month
+  const lastDayOfEndMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+  const isEndLastOfMonth = end.getDate() === lastDayOfEndMonth;
+  
+  // Check if start and end are in the same month
+  const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+  
+  return isStartFirstOfMonth && isEndLastOfMonth && sameMonth;
+};
+
 const isThisYear = (range: DateRange) => {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 1);
@@ -65,7 +82,7 @@ const isThisYear = (range: DateRange) => {
 const getBreakdownType = (dateRange: DateRange | null): BreakdownType => {
   if (!dateRange) return 'all';
   if (isThisWeek(dateRange)) return 'week';
-  if (isThisMonth(dateRange)) return 'month';
+  if (isAnyMonth(dateRange)) return 'month';
   if (isThisYear(dateRange)) return 'year';
   // Default to week for custom ranges
   return 'week';
@@ -108,25 +125,47 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
         }
       });
     } else if (breakdownType === 'month') {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const weeksInMonth = Math.ceil(daysInMonth / 7);
-      numPeriods = weeksInMonth;
-      labels = Array.from({ length: weeksInMonth }, (_, i) => `Week ${i + 1}`);
-      amounts = new Array(weeksInMonth).fill(0);
+      if (!dateRange) {
+        // Fallback to current month if somehow dateRange is null
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const weeksInMonth = Math.ceil(daysInMonth / 7);
+        numPeriods = weeksInMonth;
+        labels = Array.from({ length: weeksInMonth }, (_, i) => `Week ${i + 1}`);
+        amounts = new Array(weeksInMonth).fill(0);
 
-      transactions.forEach((transaction) => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
-          const day = transactionDate.getDate() - 1;
-          const weekIndex = Math.floor(day / 7);
-          if (transaction.type === selectedType) {
-            amounts[weekIndex] += Math.abs(transaction.amount);
+        transactions.forEach((transaction) => {
+          const transactionDate = new Date(transaction.date);
+          if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
+            const day = transactionDate.getDate() - 1;
+            const weekIndex = Math.floor(day / 7);
+            if (transaction.type === selectedType) {
+              amounts[weekIndex] += Math.abs(transaction.amount);
+            }
           }
-        }
-      });
+        });
+      } else {
+        const year = dateRange.start.getFullYear();
+        const month = dateRange.start.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const weeksInMonth = Math.ceil(daysInMonth / 7);
+        numPeriods = weeksInMonth;
+        labels = Array.from({ length: weeksInMonth }, (_, i) => `Week ${i + 1}`);
+        amounts = new Array(weeksInMonth).fill(0);
+
+        transactions.forEach((transaction) => {
+          const transactionDate = new Date(transaction.date);
+          if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
+            const day = transactionDate.getDate() - 1;
+            const weekIndex = Math.floor(day / 7);
+            if (transaction.type === selectedType) {
+              amounts[weekIndex] += Math.abs(transaction.amount);
+            }
+          }
+        });
+      }
     } else if (breakdownType === 'year') {
       numPeriods = 12;
       labels = YEAR_LABELS;
