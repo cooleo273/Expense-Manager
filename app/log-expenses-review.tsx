@@ -562,18 +562,33 @@ export default function LogExpensesReviewScreen() {
             )}
 
             <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Date &amp; Time</ThemedText>
-                <View style={styles.dateTimeRow}>
+              <View style={styles.dateTimeRow}>
+                <View
+                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
+                >
+                  <ThemedText
+                    style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
+                  >
+                    Date
+                  </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
                     onPress={() => setPickerMode('date')}
                   >
                     <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
                     <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
                   </TouchableOpacity>
+                </View>
+                <View
+                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
+                >
+                  <ThemedText
+                    style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
+                  >
+                    Time
+                  </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
                     onPress={() => setPickerMode('time')}
                   >
                     <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
