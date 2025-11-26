@@ -684,15 +684,15 @@ export default function LogExpensesScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
-                <View style={styles.labelsContainerInline}>
+                <View style={styles.labelsSummaryRow}>
                   <ScrollView
                     horizontal
-                    style={{ flex: 1 }}
-                    contentContainerStyle={styles.labelChipsRow}
+                    style={[styles.labelsScrollArea, { flex: 1 }]}
+                    contentContainerStyle={styles.labelsScrollInner}
                     showsHorizontalScrollIndicator={false}
                   >
                     {singleDraft.labels.map((label) => (
-                      <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border, marginRight: Spacing.xs }]}> 
+                      <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}> 
                         <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
                         <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
                           <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
@@ -705,11 +705,11 @@ export default function LogExpensesScreen() {
                       setIsAddingLabel(true);
                       setTimeout(() => labelInputRef.current?.focus(), 60);
                     }}
-                    style={[styles.addLabelButtonInline, styles.labelAddButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
                     accessibilityLabel="Add label"
                   >
-                    <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
-                    <ThemedText style={[styles.labelAddButtonText, { color: palette.tint }]}>Add label</ThemedText>
+                    <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
+                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -139,6 +139,7 @@ export default function RecordDetailScreen() {
     setRecordDate(resolvedDate);
     setErrors({});
     setCurrentLabelInput('');
+    setShowLabelInput(false);
   }, [initialDate, initialDraft]);
 
   useEffect(() => {
@@ -161,20 +162,26 @@ export default function RecordDetailScreen() {
   const addLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
+      setShowLabelInput(false);
+      setCurrentLabelInput('');
       return;
     }
 
     setDraft((prev) => {
       const labels = Array.isArray(prev.labels) ? prev.labels : [];
       if (labels.includes(trimmed)) {
+        setShowLabelInput(false);
+        setCurrentLabelInput('');
         return prev;
       }
-      return {
+      const next = {
         ...prev,
         labels: [...labels, trimmed],
       };
+      setShowLabelInput(false);
+      setCurrentLabelInput('');
+      return next;
     });
-    setCurrentLabelInput('');
   }, [currentLabelInput]);
 
   const removeLabel = useCallback((labelToRemove: string) => {
@@ -400,23 +407,13 @@ export default function RecordDetailScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Labels</ThemedText>
-                <View style={{ marginTop: (draft.labels?.length ?? 0) > 0 ? Spacing.sm : 0 }}>
-                  <TextInput
-                    style={[styles.notchedInput, { color: palette.text }]}
-                    placeholder="Add a label"
-                    placeholderTextColor={palette.icon}
-                    value={currentLabelInput}
-                    onChangeText={setCurrentLabelInput}
-                    onSubmitEditing={addLabel}
-                  />
-                  <TouchableOpacity onPress={addLabel} style={styles.addLabelButton}>
-                    <MaterialCommunityIcons name="plus" size={20} color={palette.tint} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {(draft.labels?.length ?? 0) > 0 ? (
-                <View style={{ marginTop: Spacing.sm }}>
-                  <View style={styles.labelsContainer}>
+                <View style={styles.labelsSummaryRow}>
+                  <ScrollView
+                    horizontal
+                    style={[styles.labelsScrollArea, { flex: 1 }]}
+                    contentContainerStyle={styles.labelsScrollInner}
+                    showsHorizontalScrollIndicator={false}
+                  >
                     {draft.labels?.map((label) => (
                       <View
                         key={label}
@@ -428,12 +425,47 @@ export default function RecordDetailScreen() {
                         </TouchableOpacity>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
+                    onPress={() => {
+                      setShowLabelInput(true);
+                      setCurrentLabelInput('');
+                    }}
+                  >
+                    <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
+                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
+                  </TouchableOpacity>
                 </View>
-              ) : null}
+              </View>
             </View>
 
-            <View style={styles.fieldGroup}>
+            {showLabelInput && (
+              <View style={styles.sharedLabelInputRow}>
+                <View style={styles.sharedLabelInputContainer}>
+                  <TextInput
+                    style={[
+                      styles.sharedLabelInput,
+                      { backgroundColor: palette.card, color: palette.text },
+                    ]}
+                    placeholder="Add Label"
+                    placeholderTextColor={palette.icon}
+                    value={currentLabelInput}
+                    onChangeText={setCurrentLabelInput}
+                    onSubmitEditing={addLabel}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    onPress={addLabel}
+                    style={styles.sharedLabelIconButton}
+                  >
+                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
               <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
                 <TouchableOpacity
