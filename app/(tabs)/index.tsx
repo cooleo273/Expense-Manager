@@ -150,15 +150,6 @@ export default function HomeScreen() {
         }
       }
 
-      if (filters.searchCategory && filters.searchCategory !== 'all') {
-        if (filters.searchCategory === 'income' && record.type !== 'income') {
-          return false;
-        }
-        if (filters.searchCategory === 'expense' && record.type !== 'expense') {
-          return false;
-        }
-      }
-
       if (filters.dateRange) {
         if (record.date < filters.dateRange.start || record.date > filters.dateRange.end) {
           return false;
