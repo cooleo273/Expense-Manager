@@ -1,9 +1,10 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountDropdown } from '@/components/AccountDropdown';
 import { BreakdownChart } from '@/components/BreakdownChart';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -72,6 +73,7 @@ export default function Statistics() {
   const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
   const tabBarHeight = useBottomTabBarHeight();
   const { filters } = useFilterContext();
+  const navigation = useNavigation();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -101,7 +103,13 @@ export default function Statistics() {
 
   useEffect(() => {
     loadTransactions();
-  }, [loadTransactions]);
+    // set header with account dropdown so users can change selectedAccount and filter statistics
+    navigation.setOptions({
+      headerTitle: () => (
+        <AccountDropdown allowAll useGlobalState />
+      ),
+    } as any);
+  }, [loadTransactions, navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -135,9 +143,15 @@ export default function Statistics() {
         }
       }
 
+      if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+        if (record.accountId !== filters.selectedAccount) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [filters.dateRange, filters.searchTerm, transactions]);
+  }, [filters.dateRange, filters.searchTerm, filters.selectedAccount, transactions]);
 
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
