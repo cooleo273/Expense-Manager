@@ -27,7 +27,7 @@ import { ReceiptImportResult } from '@/types/receipt';
 import { RecordType, SingleDraft } from '@/types/transactions';
 import { subscribeToCategorySelection, subscribeToRecordDetailUpdates } from '@/utils/navigation-events';
 
-type EditableDraftKey = 'amount' | 'category' | 'subcategoryId' | 'payee' | 'note';
+type EditableDraftKey = 'amount' | 'category' | 'subcategoryId' | 'note';
 
 const isReceiptImportResult = (payload: unknown): payload is ReceiptImportResult => {
   if (!payload || typeof payload !== 'object') {
@@ -97,7 +97,7 @@ export default function LogExpensesListScreen() {
   const [recordErrors, setRecordErrors] = useState<string[]>(['']);
   const [recordCategoryErrors, setRecordCategoryErrors] = useState<string[]>(['']);
   const [recordNoteErrors, setRecordNoteErrors] = useState<string[]>(['']);
-  const [recordPayeeErrors, setRecordPayeeErrors] = useState<string[]>(['']);
+  
 
   const updateRecord = useCallback((index: number, key: EditableDraftKey, value: string) => {
     setRecords(prev => prev.map((record, i) =>
@@ -112,9 +112,7 @@ export default function LogExpensesListScreen() {
     if (key === 'note') {
       setRecordNoteErrors(prev => prev.map((err, i) => i === index ? '' : err));
     }
-    if (key === 'payee') {
-      setRecordPayeeErrors(prev => prev.map((err, i) => i === index ? '' : err));
-    }
+    // payee UI was removed; keep underlying data but no validation UI here
   }, []);
 
   const handleNoteChange = useCallback((index: number, value: string) => {
@@ -148,19 +146,17 @@ export default function LogExpensesListScreen() {
     setRecordErrors(prev => [...prev, '']);
     setRecordCategoryErrors(prev => [...prev, '']);
     setRecordNoteErrors(prev => [...prev, '']);
-    setRecordPayeeErrors(prev => [...prev, '']);
     showToast('Record added successfully');
   }, [params.defaultCategory, showToast]);
 
   const isRecordEdited = useCallback((record: SingleDraft) => {
     const amountSet = (record.amount ?? '').trim() !== '';
     const noteSet = (record.note ?? '').trim() !== '';
-    const payeeSet = (record.payee ?? '').trim() !== '';
     const subcategorySet = !!record.subcategoryId;
     const categorySet = !!record.category;
     const labelsSet = Array.isArray(record.labels) && record.labels.length > 0;
     const occurredAtSet = !!record.occurredAt;
-    const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
+    const anyOther = amountSet || noteSet || subcategorySet || labelsSet || occurredAtSet;
     return anyOther || (categorySet && subcategorySet);
   }, []);
 
@@ -170,7 +166,6 @@ export default function LogExpensesListScreen() {
       setRecordErrors(prev => prev.filter((_, i) => i !== index));
       setRecordCategoryErrors(prev => prev.filter((_, i) => i !== index));
       setRecordNoteErrors(prev => prev.filter((_, i) => i !== index));
-      setRecordPayeeErrors(prev => prev.filter((_, i) => i !== index));
     }
   }, [records.length]);
 
@@ -229,17 +224,11 @@ export default function LogExpensesListScreen() {
       }
       return '';
     });
-    const payeeErrors = records.map((record) => {
-      if (!record.payee || record.payee.trim() === '') {
-        hasErrors = true;
-        return `${transactionType === 'income' ? 'Payer' : 'Payee'} is required`;
-      }
-      return '';
-    });
+    // payee validation removed (field is no longer shown)
     setRecordErrors(amountErrors);
     setRecordCategoryErrors(categoryErrors);
     setRecordNoteErrors(noteErrors);
-    setRecordPayeeErrors(payeeErrors);
+    
     if (hasErrors) {
       showToast('Please fix the errors before proceeding', { tone: 'error' });
       return;
@@ -291,9 +280,8 @@ export default function LogExpensesListScreen() {
 
         setRecords(incoming);
         setRecordErrors(Array(incoming.length).fill(''));
-        setRecordNoteErrors(Array(incoming.length).fill(''));
-        setRecordCategoryErrors(Array(incoming.length).fill(''));
-        setRecordPayeeErrors(Array(incoming.length).fill(''));
+          setRecordNoteErrors(Array(incoming.length).fill(''));
+          setRecordCategoryErrors(Array(incoming.length).fill(''));
         showToast('Receipt items imported');
         scanPrefillRef.current = parsedParam;
         return;
@@ -326,7 +314,7 @@ export default function LogExpensesListScreen() {
       setRecordErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordNoteErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordCategoryErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
-      setRecordPayeeErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
+        
 
       showToast('Receipt fields imported');
       scanPrefillRef.current = parsedParam;
@@ -550,20 +538,7 @@ export default function LogExpensesListScreen() {
                     <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                   </TouchableOpacity>
                 </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-                      <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
-                        {transactionType === 'income' ? 'Payer' : 'Payee'}
-                      </ThemedText>
-                      <TextInput
-                        style={[styles.amountCompactInput, styles.notchedInput, { color: palette.text, paddingTop: 0 }]}
-                        placeholder={transactionType === 'income' ? 'Company X' : 'Boardwalk Housing'}
-                        placeholderTextColor={palette.icon}
-                        value={record.payee}
-                        onChangeText={(value) => updateRecord(index, 'payee', value)}
-                      />
-                    </View>
-                  </View>
+                
                   <View style={{ flex: 1 }}>
                     <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                       <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
@@ -586,11 +561,7 @@ export default function LogExpensesListScreen() {
                     ) : null}
                   </View>
                 </View>
-                {recordPayeeErrors[index] ? (
-                  <ThemedText style={{ color: palette.error, fontSize: 12 }}>
-                    {recordPayeeErrors[index]}
-                  </ThemedText>
-                ) : null}
+                
                 {recordCategoryErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
                     {recordCategoryErrors[index]}
