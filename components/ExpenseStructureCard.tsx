@@ -27,7 +27,6 @@ type ExpenseStructureCardProps = {
   valueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
   containerStyle?: StyleProp<ViewStyle>;
   chartSize?: number;
-  /** Limit how many segments are shown; when exceeded smaller segments are grouped as 'Others' */
   maxLegendItems?: number;
   footer?: ReactNode;
   footerSeparator?: boolean;
@@ -118,23 +117,14 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
-  // If `maxLegendItems` is provided and segments exceed that limit, aggregate the
-  // smallest segments into an 'Others' slice so both the chart and legend
-  // remain legible on small screens (e.g. the Home page wants only top 5).
   const { displayedSegments, aggregatedPieData } = useMemo(() => {
-    // If no limit specified or segments fit within the desired number, no aggregation
     if (!maxLegendItems) {
       return { displayedSegments: segments, aggregatedPieData: pieData };
     }
-
-    // maxLegendItems is the total count for the legend including the ALL item and a possible 'Others'
-    // Reserve one slot for 'ALL', so the restSlots are for categories + optional 'Others'
     const totalSlots = maxLegendItems;
     const slotsForCategoriesPlusMaybeOthers = Math.max(0, totalSlots - 1);
-
     const sorted = [...segments].sort((a, b) => b.value - a.value);
 
-    // If there are fewer or equal segments than the slots available, just show them
     if (sorted.length <= slotsForCategoriesPlusMaybeOthers) {
       const displayed = sorted.slice(0, slotsForCategoriesPlusMaybeOthers);
       return {
@@ -142,8 +132,6 @@ export function ExpenseStructureCard({
         aggregatedPieData: displayed.map((segment) => ({ x: segment.label, y: segment.value, color: segment.color, segment })),
       };
     }
-
-    // Need to show 'Others' — it will occupy one slot
     const slotsLeftForTop = Math.max(0, slotsForCategoriesPlusMaybeOthers - 1);
     const top = sorted.slice(0, slotsLeftForTop);
     const rest = sorted.slice(slotsLeftForTop);
@@ -162,11 +150,9 @@ export function ExpenseStructureCard({
     };
   }, [segments, maxLegendItems, pieData, totalValue]);
 
-  // Default to 'all' so the center shows total amount on first render
   const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => 'all');
 
   useEffect(() => {
-    // If activeSegmentId is 'all' (special state) keep it — don't overwrite.
     if (activeSegmentId === 'all') {
       return;
     }
@@ -204,14 +190,12 @@ export function ExpenseStructureCard({
   const centerValueText = activeSegment
     ? formatValue(activeSegment.value, activeSegment)
     : formattedTotalValue;
-  // When all is active, the caption should say ALL and the percent should be unchecked
   const centerCaptionText = activeSegment
     ? activeSegment.label
     : activeSegmentId === 'all'
     ? 'Total Expenses'
     : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
-  // Make small screens adapt by reducing the chart size and switching to vertical layout
   const window = useWindowDimensions();
   const isNarrow = window.width <= 360;
   const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
@@ -338,7 +322,6 @@ export function ExpenseStructureCard({
             id: 'all',
             label: 'ALL',
             value: totalValue,
-            // Render 'ALL' label in white; swatch will be white too
             color: '#FFFFFF',
           } as ExpenseStructureSegment, ...displayedSegments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
@@ -489,7 +472,6 @@ const styles = StyleSheet.create({
   legendContainer: {
     flex: 1,
     gap: Spacing.md,
-    // Allow the legend to shrink on small phones / narrow widths so it doesn't overflow
     minWidth: 0,
   },
   legendItem: {

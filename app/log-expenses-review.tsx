@@ -13,7 +13,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -97,7 +96,6 @@ export default function LogExpensesReviewScreen() {
   const accountMeta = useMemo(() => getAccountMeta(localAccountId ?? '') ?? (localAccountId ? null : fallbackAccount), [fallbackAccount, localAccountId]);
   const accountName = accountMeta?.name ?? payload?.accountName ?? 'Select account';
   const transactionType = payload?.transactionType ?? 'expense';
-
   const [reviewRecords, setReviewRecords] = useState<SingleDraft[]>(() => payload?.records ?? []);
   const [recordDate, setRecordDate] = useState<Date>(() => {
     const source = payload?.records?.[0]?.occurredAt;

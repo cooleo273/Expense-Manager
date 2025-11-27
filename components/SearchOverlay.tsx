@@ -98,7 +98,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
     });
   };
 
-  // Live search logic: find matching transactions as the user types.
   useEffect(() => {
     let canceled = false;
     const doSearch = async () => {
@@ -106,7 +105,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
       try {
         const txns = await StorageService.getTransactions();
         const query = tempSearch.trim().toLowerCase();
-        // tokens-based match: every token must appear somewhere in the record
         const queryTokens = query.split(/\s+/).filter(Boolean);
         const filtered = txns.filter((t: any) => {
           if (filters.searchCategory && filters.searchCategory !== 'all' && t.type !== filters.searchCategory) {
@@ -115,14 +113,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
           if (!query) {
             return false;
           }
-          // Build a single searchable string per token check
           const categoryName = getNodeDisplayName(t.subcategoryId) ?? getNodeDisplayName(t.categoryId) ?? '';
           const accountName = (t.account || '').toLowerCase();
           const title = (t.title || '').toLowerCase();
           const note = (t.note || '').toLowerCase();
           const payee = (t.payee || '').toLowerCase();
           const labels = ((t.labels || []) as string[]).map((l) => l.toLowerCase()).join(' ');
-          // Check every token is in any of the searchable fields
           const matchesToken = (token: string) => {
             return (
               title.includes(token) ||
@@ -154,7 +150,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   const handleSelectHistory = (term: string) => {
     setTempSearch(term);
     setSearchTerm(term);
-    // keep overlay open and show results
   };
 
   const handleSelectCategory = (category: 'all' | 'income' | 'expense') => {
@@ -167,7 +162,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   };
 
   const openRecordDetail = (record: any) => {
-    // Pass payload to record detail similar to other navigation helpers
     const payload = encodeURIComponent(JSON.stringify(record));
     router.push({ pathname: '/record-detail', params: { payload } });
     animateClose();
@@ -313,7 +307,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
             )}
           </View>
 
-          {/* Remove apply search: results update live */}
         </Animated.View>
       </View>
     </Modal>

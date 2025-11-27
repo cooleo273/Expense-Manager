@@ -17,7 +17,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colorScheme: ResolvedScheme = 'light';
 
   const setPreference = (next: ThemePreference) => {
-    // Lock the experience to light mode while preserving the existing API surface.
     setPreferenceState('light');
   };
 

@@ -57,21 +57,17 @@ export default function SubcategoriesScreen() {
   }, [navigation, returnTo]);
 
   const handleEmitSelection = useCallback((subcategoryId?: string) => {
-    // persist that the user selected this category
     try {
       StorageService.incrementCategoryUsage(subcategoryId ?? categoryId);
     } catch (err) {
-      // ignore errors
     }
     try {
-      // store last selected category by its type (income/expense)
       const catDef = getCategoryDefinition(categoryId);
       if (catDef) {
         transactionDraftState.setLastSelectedCategory(categoryId, catDef.type);
         transactionDraftState.setLastSelectedSubcategory(subcategoryId, catDef.type);
       }
     } catch (err) {
-      // non-fatal
     }
     emitCategorySelection({
       target: returnTo ?? '',
@@ -103,7 +99,6 @@ export default function SubcategoriesScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['bottom']}>
       <ScrollView style={{ backgroundColor: palette.card }}>
-        {/* General Section */}
         <View style={{ backgroundColor: `${palette.surface}80`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8 }}>
           <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>GENERAL</ThemedText>
         </View>
@@ -137,7 +132,6 @@ export default function SubcategoriesScreen() {
           {!selectedSubcategory && <MaterialCommunityIcons name="check" size={20} color={categoryColor} />}
         </TouchableOpacity>
 
-        {/* SubCategory Section */}
         <View style={{ backgroundColor: `${palette.surface}60`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 16 }}>
           <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SUBCATEGORIES</ThemedText>
         </View>

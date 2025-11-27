@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
 import { FlatList, TouchableOpacity, View, ViewStyle } from 'react-native';
 
+
 import { ThemedText } from '@/components/themed-text';
 import { getCategoryColor, getCategoryIcon, getNodeDisplayName } from '@/constants/categories';
 import { Colors, Spacing } from '@/constants/theme';
@@ -9,6 +10,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { homeStyles } from '@/styles/home.styles';
 import { recordsStyles } from '@/styles/records.styles';
 import { formatFriendlyDate } from '@/utils/date';
+
 
 type RecordListProps = {
   records: any[];
@@ -18,13 +20,18 @@ type RecordListProps = {
   formatCurrency?: (value: number, type?: 'income' | 'expense') => string;
   /** Variant controls which row styles to use (home or records) */
   variant?: 'home' | 'records';
+  /** Extra padding at the bottom for safe area or tab bar */
+  bottomInset?: number;
 };
 
-export default function RecordList({ records, limit, style, onPressItem, formatCurrency, variant = 'records' }: RecordListProps) {
+
+export default function RecordList({ records, limit, style, onPressItem, formatCurrency, variant = 'records', bottomInset = 0 }: RecordListProps) {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
 
+
   const data = limit && records.length > limit ? records.slice(0, limit) : records;
+
 
   return (
     <FlatList
@@ -51,7 +58,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                     const noteText = item.note;
                     const payeeText = item.payee;
                     const labelText = (item.labels && item.labels.length > 0) ? item.labels[0] : null;
-                    
+                   
                     let combinedText = '';
                     if (noteText && payeeText) {
                       combinedText = `${noteText} - ${payeeText}`;
@@ -62,7 +69,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                     } else if (labelText) {
                       combinedText = labelText;
                     }
-                    
+                   
                     return combinedText ? (
                       <ThemedText style={[recordsStyles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>
                         "{combinedText}"
@@ -80,6 +87,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
           );
         }
 
+
         // default to home style
         return (
           <TouchableOpacity onPress={() => onPressItem?.(item)} style={{ paddingVertical: Spacing.sm }}>
@@ -94,7 +102,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                   const noteText = item.note;
                   const payeeText = item.payee;
                   const labelText = (item.labels && item.labels.length > 0) ? item.labels[0] : null;
-                  
+                 
                   let combinedText = '';
                   if (noteText && payeeText) {
                     combinedText = `${noteText} - ${payeeText}`;
@@ -105,7 +113,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                   } else if (labelText) {
                     combinedText = labelText;
                   }
-                  
+                 
                   return combinedText ? (
                     <ThemedText style={[homeStyles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
                       "{combinedText}"
@@ -125,7 +133,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled
       scrollEnabled={variant === 'records'}
-      contentContainerStyle={[{ paddingBottom: Spacing.lg }, style]}
+      contentContainerStyle={{ paddingBottom: Spacing.lg + bottomInset }}
     />
   );
 }

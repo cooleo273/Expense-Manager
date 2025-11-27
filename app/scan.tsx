@@ -20,12 +20,8 @@ export const options = {
 export default function ScanScreen() {
   const navigation = useNavigation();
   React.useEffect(() => {
-    // Ensure the header is hidden when this screen mounts. Some parent layout
-    // configuration can occasionally re-enable the default header for routes.
     navigation.setOptions({ headerShown: false, headerLeft: () => null, headerTitle: '' });
     return () => {
-      // Resetting headerShown isn't necessary for the app, but keep a noop cleanup
-      // to be explicit for the lifecycle.
     };
   }, [navigation]);
   const colorScheme = useColorScheme();
@@ -73,7 +69,6 @@ export default function ScanScreen() {
     }
 
     const json = await response.json();
-    // Log the full response from the receipt parsing endpoint for debugging
     console.debug('[Scan] receipt parse response', JSON.stringify(json, null, 2));
     return json;
   }, [apiBaseUrl]);
@@ -81,17 +76,13 @@ export default function ScanScreen() {
   const processReceipt = useCallback(
     async (uri: string) => {
       const proxyResponse = await uploadReceipt(uri);
-      // Log the complete proxy response for debugging mapping
       console.debug('[Scan] proxyResponse', JSON.stringify(proxyResponse, null, 2));
       const mappedExpense = mapReceiptToExpense(proxyResponse?.fields);
-      // Log the mapped expense so we can check for incorrect field mappings
       console.debug('[Scan] mappedExpense', JSON.stringify(mappedExpense, null, 2));
       if (!mappedExpense) {
         throw new Error('Receipt fields unavailable');
       }
 
-      // If the parsed receipt contains individual records, create a draft per record
-      // so the log expenses list shows each item separately with correct subcategories.
       const apiRecords = proxyResponse?.fields?.records ?? [];
       const items = mappedExpense.expense?.items ?? [];
       const receiptDate = mappedExpense.expense?.date ?? null;
@@ -107,13 +98,11 @@ export default function ScanScreen() {
       };
       const occurredAtForRecord = computeOccurredAt();
 
-      // Use the API records directly since they have correct subcategories
       setIsProcessing(false);
       setIsAnalyzing(true);
       let resolvedRecords: any[] | undefined = undefined;
       try {
         if (apiRecords.length > 0) {
-          // Use the API records directly since they have correct subcategories
           resolvedRecords = apiRecords.map((record: any) => ({
             amount: (typeof record.amount === 'number' ? record.amount.toFixed(2) : `${record.amount}`),
             category: record.category ?? '',
@@ -124,7 +113,6 @@ export default function ScanScreen() {
             occurredAt: record.occurredAt ? new Date(record.occurredAt).toISOString() : occurredAtForRecord,
           })) as any[];
         } else if (items.length > 0) {
-          // Fallback to items if no API records
           resolvedRecords = items.map((it) => ({
             amount: (typeof it.total === 'number' ? it.total.toFixed(2) : `${it.total}`),
             category: mappedExpense.expense?.category ?? '',
@@ -205,7 +193,6 @@ export default function ScanScreen() {
         throw new Error('No image selected');
       }
 
-      // Only accept images (ignore videos or other media for now).
       if (asset.type && asset.type !== 'image') {
         Alert.alert('Invalid selection', 'Please select an image file from your library.');
         return;

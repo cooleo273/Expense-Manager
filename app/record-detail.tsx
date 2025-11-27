@@ -78,7 +78,6 @@ export default function RecordDetailScreen() {
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
 
-  // Keep the parsed payload (if any) accessible so we can infer record type and original id
   const parsedPayload = useMemo(() => {
     const payloadStr = typeof params.payload === 'string' ? params.payload : undefined;
     if (!payloadStr) return undefined;
@@ -261,7 +260,6 @@ export default function RecordDetailScreen() {
     };
     setDraft(nextDraft);
 
-    // If editing an existing stored record (id provided), persist changes to storage
     const existingId = typeof params.id === 'string' ? params.id : undefined;
     if (existingId) {
       try {
@@ -287,7 +285,6 @@ export default function RecordDetailScreen() {
       return;
     }
 
-    // Default: notify log-expenses-list about the change so it can update in-memory drafts
     emitRecordDetailUpdate({
       target: 'log-expenses-list',
       recordIndex,
@@ -368,7 +365,6 @@ export default function RecordDetailScreen() {
                   <ThemedText style={[styles.categoryText, { color: palette.text }]} numberOfLines={1}>
                     {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
                   </ThemedText>
-                  {/* chevron removed — category label shouldn't look like a dropdown */}
                 </TouchableOpacity>
               </View>
             </View>

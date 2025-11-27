@@ -36,13 +36,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const handleNavigate = (route: string, label: string) => {
     onClose();
 
-    // Show toast for features that are not available
     if (['Debts', 'Budgets', 'Accounts', 'Category', 'Templates'].includes(label)) {
       showToast(`${label} feature is not available yet`);
       return;
     }
 
-    // Navigate for available features
     if (route) {
       router.push(route as any);
     }

@@ -51,7 +51,6 @@ export default function HomeScreen() {
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      // Fallback to mock data on error
       const transformedData = mockRecordsData.map((transaction: any) => ({
         ...transaction,
         accountId: resolveAccountId(transaction.accountId, transaction.account),
@@ -83,7 +82,6 @@ export default function HomeScreen() {
   const handleFabNavigate = useCallback(
     (path: Parameters<typeof router.push>[0]) => {
       setFabOpen(false);
-      // `router.push` expects a route union; cast the path to the expected type so we can call it safely
       router.push(path as Parameters<typeof router.push>[0]);
     },
     [router]

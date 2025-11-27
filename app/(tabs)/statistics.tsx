@@ -16,7 +16,6 @@ import { mockRecordsData } from '../../constants/mock-data';
 import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
-const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const formatDateRange = (range: { start: Date; end: Date } | null) => {
   if (!range) {
@@ -28,13 +27,11 @@ const formatDateRange = (range: { start: Date; end: Date } | null) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 7) {
-    // Assume it's a week, show day names
     const startDay = start.toLocaleDateString('en-US', { weekday: 'short' });
     const endDay = end.toLocaleDateString('en-US', { weekday: 'short' });
     return `${startDay} - ${endDay}`;
   }
 
-  // Check if it's a full month
   const startOfMonth = new Date(start.getFullYear(), start.getMonth(), 1);
   const endOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0);
   if (start.getTime() === startOfMonth.getTime() && end.getTime() === endOfMonth.getTime()) {
@@ -82,9 +79,7 @@ export default function Statistics() {
   const loadTransactions = useCallback(async () => {
     try {
       const data = await StorageService.getTransactions();
-      // Use mock data if no real data exists
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      // Transform data to match UI expectations
       const transformedData = transactionsToUse.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
@@ -94,11 +89,10 @@ export default function Statistics() {
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      // Fallback to mock data on error
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        date: new Date(transaction.date), 
+        dateLabel: new Date(transaction.date).toLocaleDateString(), 
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);

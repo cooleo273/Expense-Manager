@@ -57,16 +57,10 @@ const isAnyMonth = (range: DateRange) => {
   const start = new Date(range.start);
   const end = new Date(range.end);
   
-  // Check if start is the 1st of its month
   const isStartFirstOfMonth = start.getDate() === 1;
-  
-  // Check if end is the last day of its month
   const lastDayOfEndMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
   const isEndLastOfMonth = end.getDate() === lastDayOfEndMonth;
-  
-  // Check if start and end are in the same month
   const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
-  
   return isStartFirstOfMonth && isEndLastOfMonth && sameMonth;
 };
 
@@ -84,7 +78,6 @@ const getBreakdownType = (dateRange: DateRange | null): BreakdownType => {
   if (isThisWeek(dateRange)) return 'week';
   if (isAnyMonth(dateRange)) return 'month';
   if (isThisYear(dateRange)) return 'year';
-  // Default to week for custom ranges
   return 'week';
 };
 
@@ -126,7 +119,6 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
       });
     } else if (breakdownType === 'month') {
       if (!dateRange) {
-        // Fallback to current month if somehow dateRange is null
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
@@ -247,9 +239,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     ];
   } else if (breakdownType === 'month') {
     subtitle = 'Monthly Breakdown';
-    // For month, perhaps weekday vs weekend
     const weekdayTotal = amounts.slice(0, 5).reduce((sum, value) => sum + value, 0) + amounts.slice(5, 7).reduce((sum, value) => sum + value, 0); // Mon-Fri + Sat-Sun but wait, better calculate properly
-    // Actually, for simplicity, just total, peak day, daily avg, and maybe highest week or something. But to keep similar, perhaps remove weekend.
     summaryBlocks = [
       { label: 'Total', value: `$${total.toLocaleString()}` },
       { label: 'Peak week', value: labels[peakIndex] },

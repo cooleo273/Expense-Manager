@@ -160,9 +160,6 @@ export default function LogExpensesListScreen() {
     const categorySet = !!record.category;
     const labelsSet = Array.isArray(record.labels) && record.labels.length > 0;
     const occurredAtSet = !!record.occurredAt;
-
-    // Avoid treating only default category as an edit. Category by itself is not an edit
-    // unless any other field is set or a subcategory is chosen.
     const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
     return anyOther || (categorySet && subcategorySet);
   }, []);
@@ -385,7 +382,6 @@ export default function LogExpensesListScreen() {
       headerLeft: () => (
         <TouchableOpacity
           onPress={() => {
-            // if any record is edited, confirm before navigating back
             const anyEdited = records.some((r) => isRecordEdited(r));
             if (anyEdited) {
               Alert.alert(
@@ -415,15 +411,12 @@ export default function LogExpensesListScreen() {
   }, [navigation, palette.icon, palette.tint, handleNext, records, isRecordEdited]);
 
   useEffect(() => {
-    // Block navigation if any record in the list is edited (unsaved)
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       const anyEdited = records.some((r) => isRecordEdited(r));
       if (!anyEdited) {
-        // Allow navigation
         return;
       }
 
-      // Prevent default behavior of leaving the screen
       e.preventDefault();
 
       Alert.alert(
@@ -435,7 +428,6 @@ export default function LogExpensesListScreen() {
             text: 'Discard',
             style: 'destructive',
             onPress: () => {
-              // Remove listener and continue navigation
               navigation.dispatch(e.data.action);
             },
           },
@@ -543,8 +535,6 @@ export default function LogExpensesListScreen() {
                           returnTo: 'log-expenses-list',
                           recordIndex: index.toString(),
                           type: transactionType,
-                          // do not auto open subcategories when switching to income
-                          // autoOpenSubcategories: transactionType === 'income' ? '1' : undefined,
                         },
                       })
                       }
@@ -595,7 +585,6 @@ export default function LogExpensesListScreen() {
                       </ThemedText>
                     ) : null}
                   </View>
-                  {/* delete action moved to top-right action group; no bottom delete button */}
                 </View>
                 {recordPayeeErrors[index] ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12 }}>
