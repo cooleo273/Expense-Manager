@@ -1,6 +1,6 @@
-import React from 'react';
-import { Linking, StyleSheet, TouchableOpacity, View, Image, ScrollView, Button } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
+import { Button, Image, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
