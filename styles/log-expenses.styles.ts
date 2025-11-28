@@ -87,6 +87,15 @@ export const logExpensesStyles = StyleSheet.create({
     gap: Spacing.sm,
     flexWrap: 'wrap',
   },
+  topActionsInline: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: Spacing.md,
+    marginLeft: 'auto',
+  },
+  topActionsSpacer: {
+    height: Spacing.sm,
+  },
   addListButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,8 +115,6 @@ export const logExpensesStyles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   templatesBadge: {
-    fontSize: FontSizes.xs,
-    lineHeight: FontSizes.xs,
     marginLeft: Spacing.xs,
     alignSelf: 'flex-start',
     paddingTop: 2,
@@ -130,7 +137,7 @@ export const logExpensesStyles = StyleSheet.create({
     position: 'relative',
   },
   fieldGroup: {
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     marginBottom: Spacing.md,
   },
   fieldLabel: {
@@ -212,8 +219,9 @@ export const logExpensesStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 0,
-    minHeight: 64,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+    minHeight: 56,
     justifyContent: 'center',
   },
   inputWrapperNoBorder: {
@@ -221,24 +229,20 @@ export const logExpensesStyles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 0,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     minHeight: 48,
     justifyContent: 'center',
   },
   // A variant of inputWrapper that allows its height to expand when contents wrap
   inputWrapperTall: {
-    // keep same minHeight but allow more vertical padding and flex-start so chips
-    // and other multi-line content can stack without overlapping the notched label
+    paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-    paddingBottom: Spacing.sm,
-    minHeight: 84,
-    // zIndex should not force overlay; set to default stacking
+    paddingBottom: Spacing.md,
+    minHeight: 76,
     zIndex: 0,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xl,
     justifyContent: 'flex-start',
-    // Prevent the input from growing indefinitely when a user adds many labels
-    // Allow more room for many labels; content should push layout instead
     maxHeight: 200,
   },
   notchedLabel: {
@@ -250,10 +254,15 @@ export const logExpensesStyles = StyleSheet.create({
     fontWeight: FontWeights.medium as any,
   },
   notchedInput: {
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
     fontSize: FontSizes.lg,
-    height: 48,
+    height: 40,
     textAlignVertical: 'center',
+  },
+  dateInputWrapper: {
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+    minHeight: 48,
   },
   batchSummary: {
     flexDirection: 'row',
@@ -276,10 +285,10 @@ export const logExpensesStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: BorderRadius.xl,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
-    height: 48,
+    minHeight: 56,
   },
   categoryIconBadge: {
     width: 32,
@@ -341,35 +350,39 @@ export const logExpensesStyles = StyleSheet.create({
   dateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
   datePartWrapper: {
     flex: 1,
-    // Keep the border and add consistent padding so icons are not tight to the edge
     borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 0,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
   },
   dateTimeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     width: '100%',
-    height: 48,
+    height: 40,
+    paddingRight: Spacing.tiny,
     paddingLeft: Spacing.sm,
+    justifyContent: 'flex-start',
   },
   dateTimeButtonOutlined: {
     borderWidth: 1,
     borderRadius: BorderRadius.lg,
     paddingVertical: 0,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
   dateTimeButtonInput: {
     borderWidth: 0,
     paddingVertical: 0,
     paddingHorizontal: 0,
+    marginHorizontal: -Spacing.md,
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.xs,
   },
   dateTimeText: {
     fontSize: FontSizes.md,
@@ -476,10 +489,13 @@ export const logExpensesStyles = StyleSheet.create({
   labelsSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexWrap: 'nowrap',
+    justifyContent: 'flex-start',
     gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    marginTop: 0,
+  },
+  labelsSummaryRowPressed: {
+    opacity: 0.96,
   },
   labelSummaryPill: {
     flexDirection: 'row',
@@ -491,13 +507,13 @@ export const logExpensesStyles = StyleSheet.create({
     
   },
   labelActionPill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    width: 40,
+    height: 40,
+    alignSelf: 'center',
   },
   labelChip: {
     flexDirection: 'row',
@@ -507,6 +523,9 @@ export const logExpensesStyles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.md,
      borderWidth: 1,
+  },
+  labelChipPressed: {
+    opacity: 0.9,
   },
   labelText: {
     fontSize: FontSizes.sm,
@@ -540,7 +559,7 @@ export const logExpensesStyles = StyleSheet.create({
     borderBottomRightRadius: 0,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
-    paddingRight: 50, // Space for the icon
+    paddingRight: 96, // Space for the stacked action buttons
     fontSize: FontSizes.md,
   },
   sharedLabelIconButton: {
@@ -555,6 +574,25 @@ export const logExpensesStyles = StyleSheet.create({
     borderBottomRightRadius: BorderRadius.md,
     backgroundColor: 'transparent', // Or tint if needed
   },
+  sharedLabelActions: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    borderTopRightRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  sharedLabelActionButton: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharedLabelCloseButton: {
+    borderRightWidth: 1,
+  },
+  sharedLabelCheckButton: {},
   labelsContainerInline: {
     flexDirection: 'row',
     alignItems: 'center',

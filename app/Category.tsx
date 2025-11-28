@@ -1,8 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { categoryList, getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
 import { mockRecordsData } from '@/constants/mock-data';
@@ -11,6 +6,11 @@ import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function CategoriesScreen() {
@@ -86,7 +86,7 @@ export default function CategoriesScreen() {
     return unique;
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -205,7 +205,7 @@ export default function CategoriesScreen() {
   };
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isFilterMode && autoOpenSubcategories && typeParam) {
       try {
         if (typeParam === 'income') {
@@ -223,7 +223,7 @@ export default function CategoriesScreen() {
   };
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isFilterMode) {
       return;
     }
@@ -232,6 +232,21 @@ export default function CategoriesScreen() {
       (router as any)?.setOptions?.({ headerRight: undefined });
     };
   }, [isFilterMode, router]);
+
+  const latestSelectedIds = useRef(selectedIds);
+
+  useEffect(() => {
+    latestSelectedIds.current = selectedIds;
+  }, [selectedIds]);
+
+  useEffect(() => {
+    if (!isFilterMode) {
+      return;
+    }
+    return () => {
+      setTempSelectedCategories(latestSelectedIds.current);
+    };
+  }, [isFilterMode, setTempSelectedCategories]);
 
 
   return (

@@ -59,6 +59,8 @@ function RootLayoutContent() {
             <Stack.Screen name="scan" options={{ headerShown: false, headerLeft: () => null, headerTitle: '' }} />
             <Stack.Screen name="legacy" options={{ headerShown: false, headerLeft: () => null, headerTitle: '' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name="Category" options={{ animation: 'none' }} />
+            <Stack.Screen name="subcategories" options={{ animation: 'none' }} />
           </Stack>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </PaperProvider>

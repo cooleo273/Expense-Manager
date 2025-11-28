@@ -1,5 +1,5 @@
 import { BorderRadius, Colors, FontSizes, FontWeights, IconSizes, Shadows, Spacing } from '@/constants/theme';
-import { DateRange, useFilterContext } from '@/contexts/FilterContext';
+import { DatePreset, DateRange, useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -54,12 +54,13 @@ const weekDayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const CalendarButton: React.FC = () => {
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [backdropPointerEvents, setBackdropPointerEvents] = useState<'none' | 'auto'>('none');
   const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme];
-  const { setDateRange, filters } = useFilterContext();
+  const { applyDateFilter, filters } = useFilterContext();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -72,7 +73,10 @@ export const CalendarButton: React.FC = () => {
         setDraftRange(null);
         setMonthCursor(startOfDay(new Date()));
       }
+      const timer = setTimeout(() => setBackdropPointerEvents('auto'), 75);
+      return () => clearTimeout(timer);
     }
+    setBackdropPointerEvents('none');
   }, [calendarVisible, filters.dateRange]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
@@ -106,14 +110,23 @@ export const CalendarButton: React.FC = () => {
     });
   };
 
-  const applyRange = (range: DateRange | null) => {
-    setDateRange(range);
+  const applyRange = (range: DateRange | null, preset: DatePreset | null) => {
+    applyDateFilter(range, preset);
+    if (range) {
+      const normalizedStart = startOfDay(range.start);
+      const normalizedEnd = startOfDay(range.end);
+      setDraftRange({ start: normalizedStart, end: normalizedEnd });
+      setMonthCursor(normalizedStart);
+    } else {
+      setDraftRange(null);
+      setMonthCursor(startOfDay(new Date()));
+    }
     setCalendarVisible(false);
   };
 
   const handleConfirm = () => {
     if (!draftRange) {
-      applyRange(null);
+      applyRange(null, null);
       return;
     }
 
@@ -121,16 +134,16 @@ export const CalendarButton: React.FC = () => {
     if (start && end) {
       const orderedStart = start < end ? start : end;
       const orderedEnd = start < end ? end : start;
-      applyRange({ start: orderedStart, end: orderedEnd });
+      applyRange({ start: orderedStart, end: orderedEnd }, 'custom');
     } else if (start) {
-      applyRange({ start, end: start });
+      applyRange({ start, end: start }, 'custom');
     }
   };
 
   const quickSelect = (option: 'all' | 'week' | 'month' | 'year') => {
     const now = new Date();
     if (option === 'all') {
-      applyRange(null);
+      applyRange(null, 'all');
       return;
     }
 
@@ -140,20 +153,21 @@ export const CalendarButton: React.FC = () => {
       start.setDate(start.getDate() - weekday);
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
-      applyRange({ start, end });
+      applyRange({ start, end }, 'week');
       return;
     }
 
     if (option === 'month') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      applyRange({ start: startOfDay(start), end: startOfDay(end) });
+      applyRange({ start: startOfDay(start), end: startOfDay(end) }, 'month');
+      return;
     }
 
     if (option === 'year') {
       const start = new Date(now.getFullYear(), 0, 1);
       const end = new Date(now.getFullYear(), 11, 31);
-      applyRange({ start: startOfDay(start), end: startOfDay(end) });
+      applyRange({ start: startOfDay(start), end: startOfDay(end) }, 'year');
     }
   };
 
@@ -163,10 +177,10 @@ export const CalendarButton: React.FC = () => {
         onPress={() => setCalendarVisible(true)}
         style={{ marginHorizontal: Spacing.xs, marginRight: Spacing.lg }}
       >
-        <MaterialCommunityIcons 
-          name="calendar" 
-          size={IconSizes.xl} 
-          color={filters.dateRange ? palette.tint : palette.icon} 
+        <MaterialCommunityIcons
+          name="calendar"
+          size={IconSizes.xl}
+          color={filters.datePreset !== null ? palette.tint : palette.icon}
         />
       </TouchableOpacity>
       <Modal
@@ -176,9 +190,11 @@ export const CalendarButton: React.FC = () => {
         onRequestClose={() => setCalendarVisible(false)}
       >
         <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setCalendarVisible(false)}>
-            <View style={styles.backdrop} />
-          </Pressable>
+          <View style={StyleSheet.absoluteFill} pointerEvents={backdropPointerEvents}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setCalendarVisible(false)}>
+              <View style={styles.backdrop} />
+            </Pressable>
+          </View>
           <View
             style={[
               styles.calendarSheet,
@@ -299,7 +315,7 @@ export const CalendarButton: React.FC = () => {
                 {filters.dateRange && (
                   <TouchableOpacity
                     style={[styles.clearButton, { borderColor: palette.error }]}
-                    onPress={() => applyRange(null)}
+                    onPress={() => applyRange(null, null)}
                   >
                     <Text style={{ color: palette.error, fontWeight: FontWeights.semibold as any }}>Clear Filter</Text>
                   </TouchableOpacity>
