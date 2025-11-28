@@ -523,22 +523,31 @@ export default function RecordDetailScreen() {
             )}
 
             <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
-              <ThemedText style={[styles.fieldLabel, { color: palette.icon }]}>Date &amp; Time</ThemedText>
               <View style={styles.dateTimeRow}>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => setPickerMode('date')}
+                <View
+                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
-                  <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.dateTimeButton, styles.dateTimeButtonOutlined, { borderColor: palette.border, backgroundColor: palette.card }]}
-                  onPress={() => setPickerMode('time')}
+                  <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Date</ThemedText>
+                  <TouchableOpacity
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    onPress={() => setPickerMode('date')}
+                  >
+                    <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                  </TouchableOpacity>
+                </View>
+                <View
+                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
-                  <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
-                  <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
-                </TouchableOpacity>
+                  <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Time</ThemedText>
+                  <TouchableOpacity
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
+                    onPress={() => setPickerMode('time')}
+                  >
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </ThemedView>

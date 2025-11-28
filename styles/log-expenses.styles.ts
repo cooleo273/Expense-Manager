@@ -8,6 +8,12 @@ export const logExpensesStyles = StyleSheet.create({
   keyboardWrapper: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+  },
+  scrollArea: {
+    flex: 1,
+  },
   scrollContent: {
     // reduce top space between header and content by lowering top padding
     paddingTop: Spacing.sm,
@@ -52,28 +58,22 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
   },
-  headerBar: {
-    flexDirection: 'row',
+  bottomActionBar: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
   },
-  accountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+  primaryActionButton: {
     borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-  },
-  accountText: {
-    fontWeight: FontWeights.semibold as any,
-  },
-  headerActions: {
-    flexDirection: 'row',
+    paddingVertical: Spacing.md,
     alignItems: 'center',
-    gap: Spacing.sm,
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+  },
+  primaryActionLabel: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
   },
   iconButton: {
     padding: Spacing.sm,

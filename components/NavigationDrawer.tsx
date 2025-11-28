@@ -1,10 +1,11 @@
 import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { generateRealisticMockData } from '@/utils/mock-data-generator';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type NavigationDrawerProps = {
@@ -20,6 +21,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const router = useRouter();
   const { showToast } = useToast();
   const [isMounted, setIsMounted] = useState(visible);
+  const [developerToggle, setDeveloperToggle] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
@@ -43,6 +46,29 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
 
     if (route) {
       router.push(route as any);
+    }
+  };
+
+  const handleMockDataToggle = async (nextValue: boolean) => {
+    if (isGenerating) {
+      return;
+    }
+    if (!nextValue) {
+      setDeveloperToggle(false);
+      return;
+    }
+
+    setDeveloperToggle(true);
+    setIsGenerating(true);
+    try {
+      const { count } = await generateRealisticMockData();
+      showToast(`Generated ${count} mock records`, { tone: 'success' });
+    } catch (error) {
+      console.error('Failed to generate mock data', error);
+      showToast('Failed to generate mock data', { tone: 'error' });
+    } finally {
+      setIsGenerating(false);
+      setTimeout(() => setDeveloperToggle(false), 400);
     }
   };
 
@@ -133,6 +159,25 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
                 <Text style={{ color: palette.text, fontSize: FontSizes.lg }}>{item.label}</Text>
               </TouchableOpacity>
             ))}
+
+            <View style={[styles.sectionDivider, { borderBottomColor: palette.border }]} />
+            <Text style={[styles.sectionLabel, { color: palette.icon }]}>Developer</Text>
+            <View style={[styles.developerRow, { borderColor: palette.border }]}>
+              <View style={styles.developerCopy}>
+                <Text style={[styles.developerTitle, { color: palette.text }]}>Generate Mock Data</Text>
+                <Text style={[styles.developerSubtitle, { color: palette.icon }]}>
+                  Populate three years of realistic transactions across every category.
+                </Text>
+              </View>
+              <Switch
+                value={developerToggle}
+                onValueChange={handleMockDataToggle}
+                disabled={isGenerating}
+                trackColor={{ false: '#D1D5DB', true: `${palette.tint}66` }}
+                thumbColor={developerToggle ? palette.tint : '#f4f3f4'}
+              />
+            </View>
+            <Text style={[styles.developerHint, { color: palette.icon }]}>Toggle to immediately regenerate sample data.</Text>
           </ScrollView>
 
           <View style={styles.footerSection}>
@@ -220,5 +265,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
+  },
+  sectionDivider: {
+    borderBottomWidth: 1,
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.md,
+  },
+  sectionLabel: {
+    fontSize: FontSizes.sm,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: Spacing.sm,
+  },
+  developerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  developerCopy: {
+    flex: 1,
+  },
+  developerTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold as any,
+  },
+  developerSubtitle: {
+    fontSize: FontSizes.sm,
+    marginTop: Spacing.xs,
+  },
+  developerHint: {
+    fontSize: FontSizes.xs,
+    marginTop: Spacing.xs,
   },
 });

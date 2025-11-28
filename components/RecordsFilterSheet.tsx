@@ -131,6 +131,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
   const [localMaxAmount, setLocalMaxAmount] = useState<number>(maxTransactionAbs);
   const [payerInput, setPayerInput] = useState('');
   const [keyTermInput, setKeyTermInput] = useState('');
+  const [labelSearchQuery, setLabelSearchQuery] = useState('');
   const [showPayerNote, setShowPayerNote] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
@@ -171,6 +172,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     setLocalMaxAmount(filters.amountRange?.max ?? maxTransactionAbs);
     setPayerInput('');
     setKeyTermInput('');
+    setLabelSearchQuery('');
     setExpandedFilter('recordType');
     setShowPayerNote(false);
   }, [
@@ -334,6 +336,58 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     [],
   );
 
+  const executeResetFilters = useCallback(() => {
+    onRecordTypeChange(DEFAULT_RECORD_TYPE);
+    onResetSortOption();
+    resetFilters();
+    setSelectedCategories([]);
+    setTempSelectedCategories([]);
+    setSelectedAccount('all');
+    setAmountRange(null);
+    applyDateFilter(null, null);
+    setSelectedPayers([]);
+    setSelectedLabels([]);
+    setKeyTerms([]);
+    setLocalMinAmount(0);
+    setLocalMaxAmount(maxTransactionAbs);
+    setLocalFilters({
+      selectedPayers: [],
+      selectedLabels: [],
+      keyTerms: [],
+      amountRange: null,
+      dateRange: null,
+      selectedAccount: 'all',
+      selectedRecordType: DEFAULT_RECORD_TYPE,
+      datePreset: null,
+    });
+    setDraftRange(null);
+    setCalendarMode('presets');
+    setMonthCursor(startOfDay(new Date()));
+    setExpandedFilter('recordType');
+    setPayerInput('');
+    setKeyTermInput('');
+    setLabelSearchQuery('');
+    setShowPayerNote(false);
+    setShowCalendarModal(false);
+  }, [
+    applyDateFilter,
+    maxTransactionAbs,
+    onRecordTypeChange,
+    onResetSortOption,
+    resetFilters,
+    setAmountRange,
+    setCalendarMode,
+    setDraftRange,
+    setKeyTerms,
+    setMonthCursor,
+    setSelectedAccount,
+    setSelectedCategories,
+    setSelectedLabels,
+    setSelectedPayers,
+    setShowCalendarModal,
+    setTempSelectedCategories,
+  ]);
+
   const confirmResetFilters = useCallback(() => {
     Alert.alert(
       'Reset filters?',
@@ -343,61 +397,12 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: () => {
-            onRecordTypeChange(DEFAULT_RECORD_TYPE);
-            onResetSortOption();
-            resetFilters();
-            setSelectedCategories([]);
-            setTempSelectedCategories([]);
-            setSelectedAccount('all');
-            setAmountRange(null);
-            applyDateFilter(null, null);
-            setSelectedPayers([]);
-            setSelectedLabels([]);
-            setKeyTerms([]);
-            setLocalMinAmount(0);
-            setLocalMaxAmount(maxTransactionAbs);
-            setLocalFilters({
-              selectedPayers: [],
-              selectedLabels: [],
-              keyTerms: [],
-              amountRange: null,
-              dateRange: null,
-              selectedAccount: 'all',
-              selectedRecordType: DEFAULT_RECORD_TYPE,
-              datePreset: null,
-            });
-            setDraftRange(null);
-            setCalendarMode('presets');
-            setMonthCursor(startOfDay(new Date()));
-            setExpandedFilter('recordType');
-            setPayerInput('');
-            setKeyTermInput('');
-            setShowPayerNote(false);
-            setShowCalendarModal(false);
-          },
+          onPress: executeResetFilters,
         },
       ],
       { cancelable: true },
     );
-  }, [
-    maxTransactionAbs,
-    onRecordTypeChange,
-    onResetSortOption,
-    setAmountRange,
-    applyDateFilter,
-    setKeyTerms,
-    setMonthCursor,
-    setSelectedAccount,
-    setSelectedCategories,
-    setSelectedLabels,
-    setSelectedPayers,
-    resetFilters,
-    setCalendarMode,
-    setDraftRange,
-    setShowCalendarModal,
-    setTempSelectedCategories,
-  ]);
+  }, [executeResetFilters]);
 
   const selectedCategoryLabels = useMemo(
     () =>
@@ -441,7 +446,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
         detail:
           localFilters.selectedLabels && localFilters.selectedLabels.length > 0
             ? `${localFilters.selectedLabels.length} selected`
-            : 'Tap to choose',
+            : undefined,
       },
       {
         id: 'keyTerms',
@@ -491,6 +496,14 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     maxTransactionAbs,
     selectedCategoryLabels,
   ]);
+
+  const filteredLabelSuggestions = useMemo(() => {
+    const query = labelSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return uniqueLabels;
+    }
+    return uniqueLabels.filter((label) => label.toLowerCase().includes(query));
+  }, [labelSearchQuery, uniqueLabels]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 
@@ -864,6 +877,24 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                             )}
                             {section.id === 'labels' && isExpanded && (
                               <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
+                                <View
+                                  style={[
+                                    styles.tokenInputRow,
+                                    { borderColor: palette.border, backgroundColor: palette.surface },
+                                  ]}
+                                >
+                                  <TextInput
+                                    style={[styles.tokenInput, { color: palette.text }]}
+                                    value={labelSearchQuery}
+                                    onChangeText={setLabelSearchQuery}
+                                    placeholder="Search labels"
+                                    placeholderTextColor={palette.icon}
+                                    autoCapitalize="none"
+                                    keyboardType="default"
+                                    returnKeyType="search"
+                                  />
+                                  <MaterialCommunityIcons name="magnify" size={18} color={palette.icon} />
+                                </View>
                                 {localFilters.selectedLabels.length > 0 && (
                                   <ScrollView
                                     horizontal
@@ -897,13 +928,26 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                     ))}
                                   </ScrollView>
                                 )}
-                                {uniqueLabels.length > 0 ? (
+                                {(() => {
+                                  const availableLabels = filteredLabelSuggestions.filter(
+                                    (lab) => !localFilters.selectedLabels.includes(lab),
+                                  );
+                                  if (availableLabels.length === 0) {
+                                    return (
+                                      <ThemedText style={{ color: palette.icon }}>
+                                        {labelSearchQuery.trim().length > 0
+                                          ? 'No labels match your search'
+                                          : 'No labels found'}
+                                      </ThemedText>
+                                    );
+                                  }
+                                  return (
                                   <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
                                     contentContainerStyle={styles.tokenScrollInner}
                                   >
-                                    {uniqueLabels.map((lab) => {
+                                    {availableLabels.map((lab) => {
                                       const isActiveLabel = localFilters.selectedLabels.includes(lab);
                                       return (
                                         <TouchableOpacity
@@ -940,9 +984,8 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                       );
                                     })}
                                   </ScrollView>
-                                ) : (
-                                  <ThemedText style={{ color: palette.icon }}>No labels found</ThemedText>
-                                )}
+                                  );
+                                })()}
                               </View>
                             )}
                             {section.id === 'keyTerms' && isExpanded && (

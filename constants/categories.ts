@@ -170,7 +170,7 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
     { id: 'lifeEntertainment:life-events', parentId: 'lifeEntertainment', name: 'Life events', icon: 'party-popper' },
     { id: 'lifeEntertainment:lottery-gambling', parentId: 'lifeEntertainment', name: 'Lottery, gambling', icon: 'dice-5' },
     { id: 'lifeEntertainment:tv-streaming', parentId: 'lifeEntertainment', name: 'TV, Streaming', icon: 'television-play' },
-    { id: 'lifeEntertainment:wellness-beauty', parentId: 'lifeEntertainment', name: 'Wellness, beauty', icon: 'flower-lotus' },
+    { id: 'lifeEntertainment:wellness-beauty', parentId: 'lifeEntertainment', name: 'Wellness, beauty', icon: 'flower' },
   ],
   communicationPc: [
     { id: 'communicationPc:internet', parentId: 'communicationPc', name: 'Internet', icon: 'wifi' },
@@ -181,7 +181,7 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
   financialExpenses: [
     { id: 'financialExpenses:advisory', parentId: 'financialExpenses', name: 'Advisory', icon: 'account-tie-outline' },
     { id: 'financialExpenses:charges-fees', parentId: 'financialExpenses', name: 'Charges, Fees', icon: 'cash-multiple' },
-    { id: 'financialExpenses:child-support', parentId: 'financialExpenses', name: 'Child Support', icon: 'human-child' },
+    // { id: 'financialExpenses:child-support', parentId: 'financialExpenses', name: 'Child Support', icon: 'human-child' },
     { id: 'financialExpenses:fines', parentId: 'financialExpenses', name: 'Fines', icon: 'gavel' },
     { id: 'financialExpenses:insurances', parentId: 'financialExpenses', name: 'Insurances', icon: 'shield-outline' },
     { id: 'financialExpenses:loan-interest', parentId: 'financialExpenses', name: 'Loan, Interest', icon: 'cash-plus' },
@@ -195,11 +195,10 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
     { id: 'investments:vehicle-chattels', parentId: 'investments', name: 'Vehicle, chattels', icon: 'garage' },
   ],
   others: [
-    { id: 'others:missing', parentId: 'others', name: 'Missing', icon: 'dots-horizontal-circle-outline' },
+    { id: 'others:missing', parentId: 'others', name: 'Uncategorized', icon: 'dots-horizontal-circle-outline' },
   ],
   income: [
     { id: 'income:checks-coupons', parentId: 'income', name: 'Checks, coupons', icon: 'ticket-percent' },
-    { id: 'income:child-support', parentId: 'income', name: 'Child Support', icon: 'human-child' },
     { id: 'income:dues-grants', parentId: 'income', name: 'Dues & grants', icon: 'hand-coin-outline' },
     { id: 'income:gifts', parentId: 'income', name: 'Gifts', icon: 'gift-outline' },
     { id: 'income:interests-dividends', parentId: 'income', name: 'Interests, dividends', icon: 'chart-areaspline' },

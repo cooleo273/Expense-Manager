@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
 import { Dimensions, View } from 'react-native';
-import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
+import { VictoryAxis, VictoryBar, VictoryChart } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -153,6 +153,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   const chartWidth = Math.max(windowWidth - 64, 280);
 
   const breakdownType = getBreakdownType(dateRange, datePreset ?? undefined);
+  const [selectedBar, setSelectedBar] = React.useState<{ label: string; total: number } | null>(null);
 
   const breakdownData = React.useMemo(() => {
     const normalizedRange = dateRange ? normalizeRange(dateRange) : null;
@@ -399,6 +400,10 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
 
   const periodAverage = total === 0 || numPeriods === 0 ? 0 : Math.round(total / numPeriods);
 
+  React.useEffect(() => {
+    setSelectedBar(null);
+  }, [breakdownType, selectedType, dateRange, segments.length]);
+
   let subtitle = '';
   let summaryBlocks: { label: string; value: string }[] = [];
 
@@ -497,18 +502,43 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
             data={chartData}
             barWidth={computedBarWidth}
             cornerRadius={{ top: 8, bottom: 8 }}
-            labels={({ datum }: { datum: { y: number } }) =>
-              datum.y ? formatCurrency(datum.y) : ''
-            }
-            labelComponent={
-              <VictoryLabel
-                dy={-8}
-                style={{ fill: palette.icon, fontSize: 12, fontWeight: '600' }}
-              />
-            }
             style={{ data: { fill: palette.tint } }}
+            events={[
+              {
+                target: 'data',
+                eventHandlers: {
+                  onPressIn: (_, props) => {
+                    const datum = props.datum as { x: string | number; y: number };
+                    setSelectedBar({
+                      label: typeof datum.x === 'string' ? datum.x : `${datum.x}`,
+                      total: datum.y,
+                    });
+                    return undefined;
+                  },
+                },
+              },
+            ]}
           />
         </VictoryChart>
+      </View>
+      <View style={{ gap: Spacing.xs }}>
+        {selectedBar ? (
+          <View
+            style={[
+              statisticsStyles.selectedBarInfo,
+              { borderColor: palette.border, backgroundColor: palette.surface },
+            ]}
+          >
+            <ThemedText style={[statisticsStyles.selectedBarLabel, { color: palette.icon }]}>
+              {selectedBar.label}
+            </ThemedText>
+            <ThemedText style={[statisticsStyles.selectedBarValue, { color: palette.text }]}>
+              {formatFullCurrency(selectedBar.total)}
+            </ThemedText>
+          </View>
+        ) : (
+          <ThemedText style={[statisticsStyles.chartHint, { color: palette.icon }]}>Tap a bar to see that period's total</ThemedText>
+        )}
       </View>
       <View style={statisticsStyles.barSummaryRow}>
         {summaryBlocks.map((block, index) => (

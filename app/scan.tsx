@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,9 +32,11 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [statusStep, setStatusStep] = useState(0);
   const { showToast } = useToast();
   const cameraRef = useRef<CameraView>(null);
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+  const statusMessages = ['Processing receipt…', 'Analyzing category…', 'Hang on—just a moment…'];
 
   const toggleCameraFacing = () => {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
@@ -209,6 +211,21 @@ export default function ScanScreen() {
     }
   }, [isProcessing, processReceipt, showToast]);
 
+  useEffect(() => {
+    if (!(isProcessing || isAnalyzing)) {
+      setStatusStep(0);
+      return;
+    }
+
+    setStatusStep(0);
+    const intervalDelay = 2500;
+    const interval = setInterval(() => {
+      setStatusStep((prev) => (prev + 1) % statusMessages.length);
+    }, intervalDelay);
+
+    return () => clearInterval(interval);
+  }, [isAnalyzing, isProcessing, statusMessages.length]);
+
   if (!permission) {
     return <View style={[styles.container, { backgroundColor: palette.background }]} />;
   }
@@ -243,6 +260,18 @@ export default function ScanScreen() {
           },
         ]}
       >
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              onPress={() => navigation.goBack()}
+              style={[styles.backButton, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.backButtonLabel}>Back</ThemedText>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.frameContainer}>
             <View style={styles.receiptFrame}>
               <View style={[styles.frameCorner, styles.frameCornerTL]} />
@@ -287,7 +316,7 @@ export default function ScanScreen() {
         <View style={[styles.processingOverlay, { backgroundColor: '#FFFFFF' }]}>
           <ActivityIndicator size="large" color={palette.tint} />
           <Text style={[styles.processingText, { color: palette.text }]}>
-            {isProcessing ? 'Processing receipt…' : 'Analyzing category…'}
+            {statusMessages[statusStep]}
           </Text>
         </View>
       )}
@@ -299,6 +328,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  topBar: {
+    width: '100%',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.lg,
+  },
+  backButtonLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   permissionContainer: {
     flex: 1,

@@ -352,7 +352,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                         onPress={() => handleSelectHistory(item)}
                       >
                         <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
-                          <MaterialCommunityIcons name="magnify" size={16} color={palette.icon} />
+                          <MaterialCommunityIcons name="history" size={16} color={palette.icon} />
                         </View>
                         <Text style={{ color: palette.text, flex: 1 }}>{item}</Text>
                         <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
