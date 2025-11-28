@@ -3,12 +3,13 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
+import { InfoTooltip } from '@/components/InfoTooltip';
 import RecordList from '@/components/RecordList';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -21,6 +22,8 @@ import type { Transaction } from '@/services/storage';
 import { homeStyles } from '@/styles/home.styles';
 import { StorageService } from '../../services/storage';
 
+import { formatCompactCurrency } from '@/utils/currency';
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
@@ -30,6 +33,8 @@ export default function HomeScreen() {
   const [fabOpen, setFabOpen] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const isFocused = useIsFocused();
+  const windowDimensions = useWindowDimensions();
+  const shouldUseCompactValues = windowDimensions.width <= 360;
 
   const loadTransactions = useCallback(async () => {
     try {
@@ -118,6 +123,11 @@ export default function HomeScreen() {
 
   const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
 
+  const shouldCompactValue = useCallback(
+    (value: number) => shouldUseCompactValues && Math.abs(value) >= 1000,
+    [shouldUseCompactValues],
+  );
+
   const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
     if (!labels) {
       return false;
@@ -139,11 +149,11 @@ export default function HomeScreen() {
     return accountFilteredRecords.filter((record) => {
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
-        if (!record.title.toLowerCase().includes(search) && 
-            !record.subtitle.toLowerCase().includes(search) &&
-            !(record.payee && record.payee.toLowerCase().includes(search)) &&
-            !(record.note && record.note.toLowerCase().includes(search)) &&
-            !matchesLabelsSearch(record.labels, search)) {
+        if (!record.title.toLowerCase().includes(search) &&
+          !record.subtitle.toLowerCase().includes(search) &&
+          !(record.payee && record.payee.toLowerCase().includes(search)) &&
+          !(record.note && record.note.toLowerCase().includes(search)) &&
+          !matchesLabelsSearch(record.labels, search)) {
           return false;
         }
       }
@@ -155,7 +165,7 @@ export default function HomeScreen() {
       }
 
       return true;
-    });
+    }).sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [accountFilteredRecords, filters]);
 
   const overallIncome = accountFilteredRecords.reduce((sum, record) => {
@@ -173,6 +183,17 @@ export default function HomeScreen() {
   }, 0);
 
   const netBalance = overallIncome - overallExpenses;
+
+  const netBalanceDisplay = shouldCompactValue(netBalance) ? formatCompactCurrency(netBalance) : formatWithSign(netBalance);
+  const netBalanceFull = formatWithSign(netBalance);
+  const overallIncomeDisplay = shouldCompactValue(overallIncome)
+    ? formatCompactCurrency(overallIncome)
+    : formatCurrency(overallIncome);
+  const overallIncomeFull = formatCurrency(overallIncome);
+  const overallExpensesDisplay = shouldCompactValue(overallExpenses)
+    ? formatCompactCurrency(overallExpenses)
+    : formatCurrency(overallExpenses);
+  const overallExpensesFull = formatCurrency(overallExpenses);
 
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
@@ -202,6 +223,9 @@ export default function HomeScreen() {
     () => expenseSegments.reduce((sum, segment) => sum + segment.value, 0),
     [expenseSegments],
   );
+  const expenseStructureTotalLabel = shouldCompactValue(expenseStructureTotal)
+    ? formatCompactCurrency(expenseStructureTotal)
+    : formatCurrency(expenseStructureTotal);
 
   const displayedRecords = filteredRecords.slice(0, 10);
 
@@ -240,7 +264,7 @@ export default function HomeScreen() {
       if (currentTotal === 0) {
         return { periodComparisonLabel: '0% vs previous period' };
       }
-      return { periodComparisonLabel: 'New activity vs previous period' };
+      return { periodComparisonLabel: '' };
     }
 
     const changePercent = ((currentTotal - previousTotal) / previousTotal) * 100;
@@ -259,22 +283,52 @@ export default function HomeScreen() {
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
-              <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.balanceValue, { color: palette.text }]}>
-                {formatWithSign(netBalance)}
-              </ThemedText>
+              <View style={styles.balanceValueRow}>
+                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.balanceValue, { color: palette.text }]}>
+                  {netBalanceDisplay}
+                </ThemedText>
+                {netBalanceDisplay !== netBalanceFull ? (
+                  <InfoTooltip
+                    content={netBalanceFull}
+                    size={18}
+                    iconColor={palette.icon}
+                    testID="balance-value-tooltip"
+                  />
+                ) : null}
+              </View>
             </View>
             <View style={styles.leftSide}>
               <View style={styles.metaPill}>
                 <MaterialCommunityIcons name="chevron-up" size={IconSizes.lg} color={palette.success} />
-                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.success }]}>
-                  {formatCurrency(overallIncome)}
-                </ThemedText>
+                <View style={styles.metaValueRow}>
+                  <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.success }]}>
+                    {overallIncomeDisplay}
+                  </ThemedText>
+                  {overallIncomeDisplay !== overallIncomeFull ? (
+                    <InfoTooltip
+                      content={overallIncomeFull}
+                      size={16}
+                      iconColor={palette.icon}
+                      testID="income-value-tooltip"
+                    />
+                  ) : null}
+                </View>
               </View>
               <View style={styles.metaPill}>
                 <MaterialCommunityIcons name="chevron-down" size={IconSizes.lg} color={palette.error} />
-                <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.error }]}>
-                  {formatCurrency(overallExpenses)}
-                </ThemedText>
+                <View style={styles.metaValueRow}>
+                  <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.metaValue, { color: palette.error }]}>
+                    {overallExpensesDisplay}
+                  </ThemedText>
+                  {overallExpensesDisplay !== overallExpensesFull ? (
+                    <InfoTooltip
+                      content={overallExpensesFull}
+                      size={16}
+                      iconColor={palette.icon}
+                      testID="expenses-value-tooltip"
+                    />
+                  ) : null}
+                </View>
               </View>
             </View>
           </View>
@@ -283,11 +337,12 @@ export default function HomeScreen() {
         <ExpenseStructureCard
           title="Expense Structure"
           data={expenseSegments}
-          totalLabel={formatCurrency(expenseStructureTotal)}
+          totalLabel={expenseStructureTotalLabel}
           totalCaption="Total expenses"
           legendVariant="simple"
           maxLegendItems={5}
-          valueFormatter={formatCurrency}
+          valueFormatter={(value: number) => (shouldCompactValue(value) ? formatCompactCurrency(value) : formatCurrency(value))}
+          fullValueFormatter={(value: number) => formatCurrency(value)}
           footerSeparator
           footer={(
             <View style={styles.bottomSection}>

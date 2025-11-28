@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
+import { InfoTooltip } from '@/components/InfoTooltip';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -25,6 +26,7 @@ type ExpenseStructureCardProps = {
   totalCaption?: string;
   legendVariant?: 'simple' | 'detailed';
   valueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
+  fullValueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
   containerStyle?: StyleProp<ViewStyle>;
   chartSize?: number;
   maxLegendItems?: number;
@@ -35,6 +37,8 @@ type ExpenseStructureCardProps = {
 
 const defaultValueFormatter = (value: number) => value.toLocaleString();
 const fallbackValueFormatter: NonNullable<ExpenseStructureCardProps['valueFormatter']> = (value) =>
+  defaultValueFormatter(value);
+const fallbackFullValueFormatter: NonNullable<ExpenseStructureCardProps['fullValueFormatter']> = (value) =>
   defaultValueFormatter(value);
 
 const clampPercent = (value: number) => {
@@ -63,6 +67,7 @@ export function ExpenseStructureCard({
   totalCaption,
   legendVariant = 'simple',
   valueFormatter,
+  fullValueFormatter,
   containerStyle,
   chartSize = 180,
   maxLegendItems,
@@ -77,6 +82,10 @@ export function ExpenseStructureCard({
   const formatValue = useMemo(
     () => valueFormatter ?? fallbackValueFormatter,
     [valueFormatter]
+  );
+  const formatFullValue = useMemo(
+    () => fullValueFormatter ?? fallbackFullValueFormatter,
+    [fullValueFormatter]
   );
 
   const segments = useMemo(() => {
@@ -186,28 +195,41 @@ export function ExpenseStructureCard({
     }
     return formatValue(totalValue, fallbackSegmentForFormatter);
   }, [formatValue, fallbackSegmentForFormatter, totalLabel, totalValue]);
+  const totalFullValue = useMemo(
+    () => formatFullValue(totalValue, fallbackSegmentForFormatter),
+    [formatFullValue, fallbackSegmentForFormatter, totalValue]
+  );
 
-  const centerValueText = activeSegment
-    ? formatValue(activeSegment.value, activeSegment)
-    : formattedTotalValue;
+  const centerValue = useMemo(() => {
+    if (activeSegment) {
+      return {
+        display: formatValue(activeSegment.value, activeSegment),
+        full: formatFullValue(activeSegment.value, activeSegment),
+      };
+    }
+    return {
+      display: formattedTotalValue,
+      full: totalFullValue,
+    };
+  }, [activeSegment, formatFullValue, formatValue, formattedTotalValue, totalFullValue]);
   const centerCaptionText = activeSegment
     ? activeSegment.label
     : activeSegmentId === 'all'
-    ? 'Total Expenses'
-    : totalCaption ?? title;
+      ? 'Total Expenses'
+      : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
   const window = useWindowDimensions();
   const isNarrow = window.width <= 360;
-  const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
+  const effectiveChartSize = Math.min(chartSize, isNarrow ? 130 : chartSize);
   const outerRadius = Math.max(effectiveChartSize / 2 - 8, 24);
-  const innerRadius = Math.max(effectiveChartSize * 0.2, 16);
+  const innerRadius = isNarrow ? 20 : Math.max(effectiveChartSize * 0.2, 16);
   const labelRadius = (innerRadius + outerRadius) / 2;
   const centerDiameter = Math.min(Math.max(Math.round(effectiveChartSize * 0.44), 44), effectiveChartSize - 16);
   const chartCenterBorderColor = activeSegment
     ? `${activeSegment.color}55`
     : activeSegmentId === 'all'
-    ? palette.tint
-    : palette.border;
+      ? palette.tint
+      : palette.border;
 
   return (
     <ThemedView
@@ -228,7 +250,7 @@ export function ExpenseStructureCard({
       <View
         style={[
           styles.contentRow,
-          isNarrow && { flexDirection: 'column', alignItems: 'center', gap: Spacing.md },
+          isNarrow && { gap: Spacing.sm },
         ]}
       >
         <View style={[styles.chartWrapper, { width: effectiveChartSize, height: effectiveChartSize }]}>
@@ -278,7 +300,7 @@ export function ExpenseStructureCard({
               },
             ]}
           />
-          {(centerValueText || centerCaptionText || centerPercentText) && (
+          {(centerValue.display || centerCaptionText || centerPercentText) && (
             <View style={styles.chartOverlay}>
               <View
                 style={[
@@ -286,29 +308,43 @@ export function ExpenseStructureCard({
                   {
                     backgroundColor: palette.card,
                     borderColor: chartCenterBorderColor,
+                    width: isNarrow ? 60 : 88,
+                    height: isNarrow ? 60 : 88,
+                    borderRadius: isNarrow ? 30 : 44,
                   },
                 ]}
+                pointerEvents="auto"
               >
-                {centerValueText ? (
-                  <ThemedText
-                    adjustsFontSizeToFit
-                    numberOfLines={1}
-                    style={[styles.centerValue, { color: palette.text }]}
-                  >
-                    {centerValueText}
-                  </ThemedText>
+                {centerValue.display ? (
+                  <View style={styles.centerValueRow}>
+                    <ThemedText
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[styles.centerValue, { color: palette.text, fontSize: isNarrow ? FontSizes.md : FontSizes.lg }]}
+                    >
+                      {centerValue.display}
+                    </ThemedText>
+                    {/* {centerValue.display !== centerValue.full ? (
+                      <InfoTooltip
+                        content={centerValue.full}
+                        size={16}
+                        iconColor={palette.icon}
+                        testID="expense-structure-center-tooltip"
+                      />
+                    ) : null} */}
+                  </View>
                 ) : null}
                 {centerCaptionText ? (
                   <ThemedText
                     adjustsFontSizeToFit
                     numberOfLines={1}
-                    style={[styles.centerCaption, { color: palette.icon }]}
+                    style={[styles.centerCaption, { color: palette.icon, fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}
                   >
                     {centerCaptionText}
                   </ThemedText>
                 ) : null}
                 {centerPercentText ? (
-                  <ThemedText style={[styles.centerPercent, { color: palette.icon }]}>
+                  <ThemedText style={[styles.centerPercent, { color: palette.icon, fontSize: isNarrow ? 10 : FontSizes.xs }]}>
                     {centerPercentText}
                   </ThemedText>
                 ) : null}
@@ -317,7 +353,7 @@ export function ExpenseStructureCard({
           )}
         </View>
 
-        <View style={[styles.legendContainer, isNarrow && { width: '100%' }]}>
+        <View style={[styles.legendContainer]}>
           {[{
             id: 'all',
             label: 'ALL',
@@ -326,9 +362,9 @@ export function ExpenseStructureCard({
           } as ExpenseStructureSegment, ...displayedSegments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
-            const formattedValue = valueFormatter
-              ? valueFormatter(segment.value, segment)
-              : defaultValueFormatter(segment.value);
+            const formattedValue = formatValue(segment.value, segment);
+            const fullValue = formatFullValue(segment.value, segment);
+            const showTooltip = formattedValue !== fullValue;
 
             return (
               <TouchableOpacity
@@ -359,32 +395,46 @@ export function ExpenseStructureCard({
                       <View style={styles.legendHeaderRow}>
                         {segment.id === 'all' ? (
                           <View style={{ backgroundColor: palette.tint, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm }}>
-                            <ThemedText style={[styles.legendLabel, { color: '#000000' }]} numberOfLines={1}>
+                            <ThemedText style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]} numberOfLines={1}>
                               {segment.label}
                             </ThemedText>
                           </View>
                         ) : (
                           <ThemedText
-                            style={[styles.legendLabel, { color: '#000000' }]}
+                            style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]}
                             numberOfLines={1}
                           >
                             {segment.label}
                           </ThemedText>
                         )}
-                        <ThemedText style={[styles.legendPercent, { color: '#000000' }]}>{percentLabel}</ThemedText>
+                        <ThemedText style={[styles.legendPercent, { color: '#000000', fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}>{percentLabel}</ThemedText>
                       </View>
                       <View style={[styles.progressTrack, { backgroundColor: palette.muted }]}>
                         <View style={[styles.progressFill, { width: `${percentValue}%`, backgroundColor: segment.color }]} />
                       </View>
-                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: '#000000' }]}>
-                        {formattedValue}
-                      </ThemedText>
+                      <View style={styles.legendAmountRow}>
+                        <ThemedText
+                          adjustsFontSizeToFit
+                          numberOfLines={1}
+                          style={[styles.legendAmount, { color: '#000000', fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}
+                        >
+                          {formattedValue}
+                        </ThemedText>
+                        {showTooltip ? (
+                          <InfoTooltip
+                            content={fullValue}
+                            size={16}
+                            iconColor={palette.icon}
+                            testID={`expense-structure-${segment.id}-tooltip`}
+                          />
+                        ) : null}
+                      </View>
                     </>
                   ) : (
                     <>
                       <View style={styles.legendHeaderRow}>
                         <ThemedText
-                          style={[styles.legendLabel, { color: '#000000' }]}
+                          style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]}
                           numberOfLines={1}
                         >
                           {segment.label}
@@ -442,7 +492,7 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    pointerEvents: 'none',
+    pointerEvents: 'box-none',
   },
   chartCenter: {
     width: 88,
@@ -458,6 +508,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
     textAlign: 'center',
+  },
+  centerValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   centerCaption: {
     fontSize: FontSizes.sm,
@@ -502,6 +557,11 @@ const styles = StyleSheet.create({
   },
   legendAmount: {
     fontSize: FontSizes.sm,
+  },
+  legendAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.tiny,
   },
   legendPercent: {
     fontSize: FontSizes.sm,
