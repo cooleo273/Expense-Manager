@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
 import { Dimensions, View } from 'react-native';
-import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-native';
+import { VictoryAxis, VictoryBar, VictoryChart } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

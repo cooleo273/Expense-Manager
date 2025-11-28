@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { Portal } from 'react-native-paper';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
