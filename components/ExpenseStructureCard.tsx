@@ -36,10 +36,33 @@ type ExpenseStructureCardProps = {
 };
 
 const defaultValueFormatter = (value: number) => value.toLocaleString();
-const fallbackValueFormatter: NonNullable<ExpenseStructureCardProps['valueFormatter']> = (value) =>
+const fallbackValueFormatter: NonNullable<ExpenseStructureCardProps['valueFormatter']> = (value, _segment) =>
   defaultValueFormatter(value);
-const fallbackFullValueFormatter: NonNullable<ExpenseStructureCardProps['fullValueFormatter']> = (value) =>
+const fallbackFullValueFormatter: NonNullable<ExpenseStructureCardProps['fullValueFormatter']> = (value, _segment) =>
   defaultValueFormatter(value);
+
+const LARGE_SCREEN_WIDTH = 768;
+const COMPACT_VALUE_THRESHOLD = 1_000_000; // Switch to M/B format for 7+ digit totals on wide screens
+const COMPACT_UNITS = [
+  { divisor: 1_000_000_000_000, suffix: 'T' },
+  { divisor: 1_000_000_000, suffix: 'B' },
+  { divisor: 1_000_000, suffix: 'M' },
+] as const;
+
+const formatCompactNumber = (value: number) => {
+  const absValue = Math.abs(value);
+  for (const unit of COMPACT_UNITS) {
+    if (absValue >= unit.divisor) {
+      const scaled = value / unit.divisor;
+      const decimals = Math.abs(scaled) >= 10 ? 0 : 1;
+      return `${scaled.toFixed(decimals).replace(/\.0$/, '')}${unit.suffix}`;
+    }
+  }
+  return defaultValueFormatter(value);
+};
+
+const shouldUseCompactFormat = (value: number, isLargeScreen: boolean) =>
+  isLargeScreen && Math.abs(value) >= COMPACT_VALUE_THRESHOLD;
 
 const MARGIN_KEYS = [
   'margin',
@@ -89,6 +112,9 @@ export function ExpenseStructureCard({
 }: ExpenseStructureCardProps) {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const window = useWindowDimensions();
+  const isLargeScreen = window.width >= LARGE_SCREEN_WIDTH;
+  const isNarrow = window.width <= 360;
 
   const flattenedContainerStyle = useMemo<ViewStyle | undefined>(() => {
     if (!containerStyle) {
@@ -125,10 +151,17 @@ export function ExpenseStructureCard({
   }, [flattenedContainerStyle]);
 
   const totalValue = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
-  const formatValue = useMemo(
-    () => valueFormatter ?? fallbackValueFormatter,
-    [valueFormatter]
-  );
+  const formatValue = useMemo(() => {
+    if (valueFormatter) {
+      return valueFormatter;
+    }
+    return (value: number, segment: ExpenseStructureSegment) => {
+      if (shouldUseCompactFormat(value, isLargeScreen)) {
+        return formatCompactNumber(value);
+      }
+      return fallbackValueFormatter(value, segment);
+    };
+  }, [valueFormatter, isLargeScreen]);
   const formatFullValue = useMemo(
     () => fullValueFormatter ?? fallbackFullValueFormatter,
     [fullValueFormatter]
@@ -264,8 +297,6 @@ export function ExpenseStructureCard({
       ? totalCaption ?? 'Total Expenses'
       : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
-  const window = useWindowDimensions();
-  const isNarrow = window.width <= 360;
   const effectiveChartSize = Math.min(chartSize, isNarrow ? 130 : chartSize);
   const outerRadius = Math.max(effectiveChartSize / 2 - 8, 24);
   const innerRadius = isNarrow ? 20 : Math.max(effectiveChartSize * 0.2, 16);
@@ -389,14 +420,14 @@ export function ExpenseStructureCard({
                     >
                       {centerValue.display}
                     </ThemedText>
-                    {/* {centerValue.display !== centerValue.full ? (
+                    {centerValue.display !== centerValue.full ? (
                       <InfoTooltip
                         content={centerValue.full}
-                        size={16}
+                        size={12}
                         iconColor={palette.icon}
                         testID="expense-structure-center-tooltip"
                       />
-                    ) : null} */}
+                    ) : null}
                   </View>
                 ) : null}
                 {centerCaptionText ? (

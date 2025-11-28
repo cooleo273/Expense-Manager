@@ -170,7 +170,7 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
     { id: 'lifeEntertainment:life-events', parentId: 'lifeEntertainment', name: 'Life events', icon: 'party-popper' },
     { id: 'lifeEntertainment:lottery-gambling', parentId: 'lifeEntertainment', name: 'Lottery, gambling', icon: 'dice-5' },
     { id: 'lifeEntertainment:tv-streaming', parentId: 'lifeEntertainment', name: 'TV, Streaming', icon: 'television-play' },
-    { id: 'lifeEntertainment:wellness-beauty', parentId: 'lifeEntertainment', name: 'Wellness, beauty', icon: 'flower-lotus' },
+    { id: 'lifeEntertainment:wellness-beauty', parentId: 'lifeEntertainment', name: 'Wellness, beauty', icon: 'flower' },
   ],
   communicationPc: [
     { id: 'communicationPc:internet', parentId: 'communicationPc', name: 'Internet', icon: 'wifi' },
@@ -195,7 +195,7 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
     { id: 'investments:vehicle-chattels', parentId: 'investments', name: 'Vehicle, chattels', icon: 'garage' },
   ],
   others: [
-    { id: 'others:missing', parentId: 'others', name: 'Missing', icon: 'dots-horizontal-circle-outline' },
+    { id: 'others:missing', parentId: 'others', name: 'Uncategorized', icon: 'dots-horizontal-circle-outline' },
   ],
   income: [
     { id: 'income:checks-coupons', parentId: 'income', name: 'Checks, coupons', icon: 'ticket-percent' },

@@ -124,7 +124,13 @@ export default function HomeScreen() {
   const formatWithSign = (value: number) => (value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value));
 
   const shouldCompactValue = useCallback(
-    (value: number) => shouldUseCompactValues && Math.abs(value) >= 1000,
+    (value: number) => {
+      const absValue = Math.abs(value);
+      if (absValue >= 1_000_000) {
+        return true;
+      }
+      return shouldUseCompactValues && absValue >= 1000;
+    },
     [shouldUseCompactValues],
   );
 
@@ -361,7 +367,9 @@ export default function HomeScreen() {
         <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
             <ThemedText type="subtitle">Records</ThemedText>
-            <ThemedText style={{ color: palette.icon }}>{displayedRecords.length} of {filteredRecords.length} shown</ThemedText>
+            <ThemedText style={{ color: palette.icon }}>
+              {displayedRecords.length} of {filteredRecords.length.toLocaleString()} shown
+            </ThemedText>
           </View>
           <RecordList
             records={filteredRecords}

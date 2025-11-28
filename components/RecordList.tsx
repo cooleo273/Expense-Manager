@@ -31,6 +31,21 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
 
 
   const data = limit && records.length > limit ? records.slice(0, limit) : records;
+  const isEmpty = data.length === 0;
+
+  const EmptyComponent = React.useCallback(() => {
+    if (variant !== 'records') {
+      return null;
+    }
+
+    return (
+      <View style={[recordsStyles.emptyState, { borderColor: palette.border }]}> 
+        <MaterialCommunityIcons name="clipboard-text-outline" size={32} color={palette.icon} />
+        <ThemedText style={[recordsStyles.emptyTitle, { color: palette.text }]}>No transactions</ThemedText>
+        <ThemedText style={[recordsStyles.emptySubtitle, { color: palette.icon }]}>Try switching filters or log a new entry.</ThemedText>
+      </View>
+    );
+  }, [palette.border, palette.icon, palette.text, variant]);
 
 
   return (
@@ -72,7 +87,11 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                     }
                    
                     return combinedText ? (
-                      <ThemedText style={[recordsStyles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}>
+                      <ThemedText
+                        style={[recordsStyles.itemNote, { color: palette.icon, fontStyle: 'italic' }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         "{combinedText}"
                       </ThemedText>
                     ) : null;
@@ -116,7 +135,11 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                   }
                  
                   return combinedText ? (
-                    <ThemedText style={[homeStyles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}>
+                    <ThemedText
+                      style={[homeStyles.recordSubtitle, { color: palette.icon, fontStyle: 'italic' }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       "{combinedText}"
                     </ThemedText>
                   ) : null;
@@ -134,7 +157,11 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled
       scrollEnabled={variant === 'records'}
-      contentContainerStyle={{ paddingBottom: Spacing.lg + bottomInset }}
+      ListEmptyComponent={variant === 'records' ? EmptyComponent : undefined}
+      contentContainerStyle={[
+        { paddingBottom: Spacing.lg + bottomInset },
+        variant === 'records' && isEmpty && { flexGrow: 1, justifyContent: 'center' },
+      ]}
     />
   );
 }

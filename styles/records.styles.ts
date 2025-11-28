@@ -210,6 +210,24 @@ export const recordsStyles = StyleSheet.create({
     fontWeight: FontWeights.semibold as any,
     letterSpacing: 0.6,
   },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+  },
+  emptySubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+  },
   applyButton: {
     marginTop: Spacing.lg,
     borderRadius: BorderRadius.xl,

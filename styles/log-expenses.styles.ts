@@ -59,16 +59,17 @@ export const logExpensesStyles = StyleSheet.create({
     fontWeight: FontWeights.bold as any,
   },
   bottomActionBar: {
-    paddingHorizontal: 0,
-    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderTopWidth: 1,
+    alignItems: 'center',
   },
   primaryActionButton: {
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    alignSelf: 'stretch',
   },
   primaryActionLabel: {
     fontSize: FontSizes.lg,

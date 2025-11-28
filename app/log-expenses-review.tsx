@@ -19,11 +19,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { Menu } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = logExpensesStyles;
@@ -109,10 +111,12 @@ export default function LogExpensesReviewScreen() {
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
+  const [payeeValue, setPayeeValue] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const headerClearedRef = useRef(false);
 
   const handlePersist = useCallback(
-    async () => {
+    async (stayOnScreen = false) => {
       if (!payload || reviewRecords.length === 0) {
         showToast('Nothing to save', { tone: 'error' });
         return;
@@ -168,7 +172,10 @@ export default function LogExpensesReviewScreen() {
             };
           })
         );
-        const successMessage = `${savedCount} record${savedCount === 1 ? '' : 's'} saved successfully`;
+        const pluralSuffix = savedCount === 1 ? '' : 's';
+        const successMessage = stayOnScreen
+          ? `${savedCount} record${pluralSuffix} saved.`
+          : `${savedCount} record${pluralSuffix} saved. Taking you to Records.`;
         showToast(successMessage, { tone: 'success' });
         try {
           await Promise.all(
@@ -180,8 +187,10 @@ export default function LogExpensesReviewScreen() {
           console.error('Failed to increment category usage for batch', err);
         }
 
-        setSelectedAccount('all');
-        router.replace('/(tabs)/records');
+        if (!stayOnScreen) {
+          setSelectedAccount('all');
+          router.replace('/(tabs)/records');
+        }
       } catch (error) {
         console.error('Failed to save batch records', error);
         Alert.alert('Error', 'Failed to save these records. Please try again.');
@@ -216,9 +225,47 @@ export default function LogExpensesReviewScreen() {
           />
         </View>
       ),
-      headerRight: () => null,
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => {
+              handlePersist();
+            }}
+            style={{ padding: 8, marginRight: 8 }}
+          >
+            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+          </TouchableOpacity>
+          <Menu
+            visible={showMenu}
+            onDismiss={() => setShowMenu(false)}
+            anchor={
+              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="dots-vertical" size={20} color={palette.icon} />
+              </TouchableOpacity>
+            }
+            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
+          >
+            <Menu.Item
+              onPress={() => {
+                handlePersist(true);
+                setShowMenu(false);
+              }}
+              title="Save and stay here"
+              titleStyle={{ color: palette.text }}
+            />
+            <Menu.Item
+              onPress={() => {
+                Alert.alert('Template saved', 'Batch saved as template for future use.');
+                setShowMenu(false);
+              }}
+              title="Save template"
+              titleStyle={{ color: palette.text }}
+            />
+          </Menu>
+        </View>
+      ),
     });
-  }, [localAccountId, navigation, palette.icon, payload]);
+  }, [handlePersist, localAccountId, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, payload, showMenu]);
 
   useEffect(() => {
     if (!payload || !payload.records || payload.records.length === 0) {
@@ -327,6 +374,23 @@ export default function LogExpensesReviewScreen() {
     const withNames = reviewRecords.map((record) => record.payee?.trim()).filter(Boolean);
     return withNames[0] ?? '—';
   }, [reviewRecords]);
+
+  useEffect(() => {
+    setPayeeValue(primaryPayee === '—' ? '' : primaryPayee);
+  }, [primaryPayee]);
+
+  const handlePayeeInputChange = useCallback(
+    (value: string) => {
+      setPayeeValue(value);
+      setReviewRecords((prev) =>
+        prev.map((record) => ({
+          ...record,
+          payee: value,
+        }))
+      );
+    },
+    [setReviewRecords]
+  );
 
   const totalAmount = useMemo(() => {
     return reviewRecords.reduce((sum, record) => {
@@ -469,54 +533,80 @@ export default function LogExpensesReviewScreen() {
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
                   {transactionType === 'income' ? 'Payer' : 'Payee'}
                 </ThemedText>
-                <ThemedText style={[styles.notchedInput, { color: palette.text }]} numberOfLines={1} ellipsizeMode="tail">
-                  {primaryPayee}
-                </ThemedText>
+                <TextInput
+                  style={[styles.notchedInput, { color: palette.text }]}
+                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                  placeholderTextColor={palette.icon}
+                  value={payeeValue}
+                  onChangeText={handlePayeeInputChange}
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                />
               </View>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
-                <View style={styles.labelsSummaryRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.labelsSummaryRow, pressed && styles.labelsSummaryRowPressed]}
+                  onPress={() => {
+                    setShowLabelInput(true);
+                    setCurrentLabelInput('');
+                  }}
+                >
                   <ScrollView
                     horizontal
                     style={[styles.labelsScrollArea, { flex: 1 }]}
                     contentContainerStyle={styles.labelsScrollInner}
                     showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                   >
-                    <View
-                      style={[styles.labelSummaryPill, { borderColor: palette.border, backgroundColor: palette.highlight }]}
-                    >
-                      <ThemedText style={[styles.labelText, { color: palette.text }]}>
-                        {individualLabelCount > 0
-                          ? `${individualLabelCount} Individual Label${individualLabelCount > 1 ? 's' : ''}`
-                          : 'No Individual Labels'}
-                      </ThemedText>
-                    </View>
-                    {sharedLabels.map((label) => (
+                    {individualLabelCount > 0 && (
                       <View
+                        style={[styles.labelSummaryPill, { borderColor: palette.border, backgroundColor: palette.highlight }]}
+                      >
+                        <ThemedText style={[styles.labelText, { color: palette.text }]}>
+                          {`${individualLabelCount} Individual Label${individualLabelCount > 1 ? 's' : ''}`}
+                        </ThemedText>
+                      </View>
+                    )}
+                    {sharedLabels.map((label) => (
+                      <Pressable
                         key={label}
-                        style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                        style={({ pressed }) => [
+                          styles.labelChip,
+                          { backgroundColor: palette.highlight, borderColor: palette.border },
+                          pressed && styles.labelChipPressed,
+                        ]}
                       >
                         <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
-                        <TouchableOpacity onPress={() => removeSharedLabel(label)} style={styles.removeLabelButton}>
+                        <TouchableOpacity
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            removeSharedLabel(label);
+                          }}
+                          style={styles.removeLabelButton}
+                          accessibilityLabel={`Remove ${label}`}
+                        >
                           <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
                         </TouchableOpacity>
-                      </View>
+                      </Pressable>
                     ))}
                   </ScrollView>
                   <TouchableOpacity
                     style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
-                    onPress={() => {
+                    onPress={(event) => {
+                      event.stopPropagation();
                       setShowLabelInput(true);
                       setCurrentLabelInput('');
                     }}
+                    accessibilityLabel="Add label"
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
-                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
                   </TouchableOpacity>
-                </View>
+                </Pressable>
               </View>
             </View>
 
@@ -603,7 +693,9 @@ export default function LogExpensesReviewScreen() {
             style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
           >
             <TouchableOpacity
-              onPress={handlePersist}
+              onPress={() => {
+                handlePersist();
+              }}
               style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
               activeOpacity={0.85}
               accessibilityRole="button"
