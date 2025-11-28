@@ -1,13 +1,13 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getFullCategoryLabel } from '@/constants/categories';
+import { getCategoryDefinition, getFullCategoryLabel } from '@/constants/categories';
 import { Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -126,6 +126,22 @@ export default function RecordDetailScreen() {
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const labelInputRef = useRef<TextInput>(null);
+
+  const focusLabelInput = useCallback(() => {
+    setTimeout(() => labelInputRef.current?.focus(), 60);
+  }, []);
+
+  const openLabelInput = useCallback(() => {
+    setShowLabelInput(true);
+    focusLabelInput();
+  }, [focusLabelInput]);
+
+  const closeLabelInput = useCallback(() => {
+    setShowLabelInput(false);
+    setCurrentLabelInput('');
+    labelInputRef.current?.blur();
+  }, []);
 
   useEffect(() => {
     const resolvedDate = (() => {
@@ -169,27 +185,22 @@ export default function RecordDetailScreen() {
   const addLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
-      setShowLabelInput(false);
-      setCurrentLabelInput('');
+      closeLabelInput();
       return;
     }
 
     setDraft((prev) => {
       const labels = Array.isArray(prev.labels) ? prev.labels : [];
       if (labels.includes(trimmed)) {
-        setShowLabelInput(false);
-        setCurrentLabelInput('');
         return prev;
       }
-      const next = {
+      return {
         ...prev,
         labels: [...labels, trimmed],
       };
-      setShowLabelInput(false);
-      setCurrentLabelInput('');
-      return next;
     });
-  }, [currentLabelInput]);
+    closeLabelInput();
+  }, [closeLabelInput, currentLabelInput]);
 
   const removeLabel = useCallback((labelToRemove: string) => {
     setDraft((prev) => ({
@@ -354,10 +365,10 @@ export default function RecordDetailScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                 <TouchableOpacity
-                  style={[styles.categoryInput, { borderWidth: 0, backgroundColor: 'transparent' }]}
+                  style={[styles.categoryPill, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={() =>
                     router.push({
                       pathname: '/Category',
@@ -370,9 +381,23 @@ export default function RecordDetailScreen() {
                     })
                   }
                 >
-                  <ThemedText style={[styles.categoryText, { color: palette.text }]} numberOfLines={1}>
-                    {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
-                  </ThemedText>
+                  <View
+                    style={[
+                      styles.categoryIconBadge,
+                      { backgroundColor: `${getCategoryDefinition(draft.category)?.color ?? palette.tint}22` },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={(getCategoryDefinition(draft.category)?.icon as any) ?? 'shape-outline'}
+                      size={16}
+                      color={getCategoryDefinition(draft.category)?.color ?? palette.tint}
+                    />
+                  </View>
+                  <View style={styles.categoryTextWrapper}>
+                    <ThemedText style={[styles.categoryLabel, { color: palette.text }]} numberOfLines={1}>
+                      {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
+                    </ThemedText>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -411,36 +436,51 @@ export default function RecordDetailScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Labels</ThemedText>
-                <View style={styles.labelsSummaryRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.labelsSummaryRow, pressed && styles.labelsSummaryRowPressed]}
+                  onPress={openLabelInput}
+                >
                   <ScrollView
                     horizontal
                     style={[styles.labelsScrollArea, { flex: 1 }]}
                     contentContainerStyle={styles.labelsScrollInner}
                     showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                   >
-                    {draft.labels?.map((label) => (
-                      <View
+                    {(draft.labels ?? []).map((label) => (
+                      <Pressable
                         key={label}
-                        style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                        style={({ pressed }) => [
+                          styles.labelChip,
+                          { backgroundColor: palette.highlight, borderColor: palette.border },
+                          pressed && styles.labelChipPressed,
+                        ]}
                       >
                         <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
-                        <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                        <TouchableOpacity
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            removeLabel(label);
+                          }}
+                          style={styles.removeLabelButton}
+                        >
                           <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
                         </TouchableOpacity>
-                      </View>
+                      </Pressable>
                     ))}
                   </ScrollView>
                   <TouchableOpacity
                     style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
-                    onPress={() => {
-                      setShowLabelInput(true);
-                      setCurrentLabelInput('');
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      openLabelInput();
                     }}
+                    accessibilityLabel="Add label"
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
-                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
                   </TouchableOpacity>
-                </View>
+                </Pressable>
               </View>
             </View>
 
@@ -448,10 +488,8 @@ export default function RecordDetailScreen() {
               <View style={styles.sharedLabelInputRow}>
                 <View style={styles.sharedLabelInputContainer}>
                   <TextInput
-                    style={[
-                      styles.sharedLabelInput,
-                      { backgroundColor: palette.card, color: palette.text },
-                    ]}
+                    ref={labelInputRef}
+                    style={[styles.sharedLabelInput, { backgroundColor: palette.card, color: palette.text }]}
                     placeholder="Add Label"
                     placeholderTextColor={palette.icon}
                     value={currentLabelInput}
@@ -459,12 +497,27 @@ export default function RecordDetailScreen() {
                     onSubmitEditing={addLabel}
                     autoFocus
                   />
-                  <TouchableOpacity
-                    onPress={addLabel}
-                    style={styles.sharedLabelIconButton}
+                  <View
+                    style={[
+                      styles.sharedLabelActions,
+                      { backgroundColor: palette.card, borderColor: palette.border, borderLeftWidth: 1 },
+                    ]}
                   >
-                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={closeLabelInput}
+                      style={[styles.sharedLabelActionButton, styles.sharedLabelCloseButton]}
+                      accessibilityLabel="Cancel label entry"
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color={palette.icon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={addLabel}
+                      style={[styles.sharedLabelActionButton, styles.sharedLabelCheckButton]}
+                      accessibilityLabel="Save label"
+                    >
+                      <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}

@@ -13,6 +13,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { formatCompactCurrency } from '@/utils/currency';
+import { getRelativePeriodLabel, startOfDay } from '@/utils/date';
 import { mockRecordsData } from '../../constants/mock-data';
 import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
@@ -35,12 +36,17 @@ const incomeColorForKey = (key: string) => {
 
 
 const formatDateRange = (range: { start: Date; end: Date } | null) => {
+  const presetLabel = getRelativePeriodLabel(range);
+  if (presetLabel) {
+    return presetLabel;
+  }
+
   if (!range) {
     return 'All Time';
   }
 
   const { start, end } = range;
-  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffTime = Math.abs(startOfDay(end).getTime() - startOfDay(start).getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 7) {
@@ -49,9 +55,9 @@ const formatDateRange = (range: { start: Date; end: Date } | null) => {
     return `${startDay} - ${endDay}`;
   }
 
-  const startOfMonth = new Date(start.getFullYear(), start.getMonth(), 1);
-  const endOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-  if (start.getTime() === startOfMonth.getTime() && end.getTime() === endOfMonth.getTime()) {
+  const startOfMonth = startOfDay(new Date(start.getFullYear(), start.getMonth(), 1));
+  const endOfMonth = startOfDay(new Date(start.getFullYear(), start.getMonth() + 1, 0));
+  if (startOfDay(start).getTime() === startOfMonth.getTime() && startOfDay(end).getTime() === endOfMonth.getTime()) {
     return start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
   }
 
@@ -66,9 +72,9 @@ const formatDateRange = (range: { start: Date; end: Date } | null) => {
 
   if (startMonth !== endMonth) {
     return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${endYear}`;
-  } else {
-    return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${endYear}`;
   }
+
+  return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${endYear}`;
 };
 
 const matchesLabelsSearch = (labels: string[] | string | undefined, search: string) => {
@@ -247,6 +253,7 @@ export default function Statistics() {
           transactions={filteredTransactions}
           selectedType={selectedType}
           dateRange={filters.dateRange}
+          datePreset={filters.datePreset}
         />
 
         <ExpenseStructureCard

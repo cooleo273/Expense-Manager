@@ -1,18 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -25,7 +10,22 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft } from '@/types/transactions';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = logExpensesStyles;
 
@@ -141,6 +141,7 @@ export default function LogExpensesReviewScreen() {
 
       try {
         const timestamp = recordDate.getTime();
+        const savedCount = reviewRecords.length;
       await StorageService.addBatchTransactions(
         reviewRecords.map((record, idx) => {
           const amount = Number(record.amount);
@@ -168,7 +169,8 @@ export default function LogExpensesReviewScreen() {
             userId: 'default-user',
           };
         })
-      );        showToast(`Added ${reviewRecords.length} record${reviewRecords.length > 1 ? 's' : ''}`);
+      );
+        showToast(`Added ${savedCount} record${savedCount > 1 ? 's' : ''}`, { tone: 'success' });
         try {
           await Promise.all(
             reviewRecords.map((record) =>
@@ -571,7 +573,7 @@ export default function LogExpensesReviewScreen() {
                     Date
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                     onPress={() => setPickerMode('date')}
                   >
                     <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
@@ -587,7 +589,7 @@ export default function LogExpensesReviewScreen() {
                     Time
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                     onPress={() => setPickerMode('time')}
                   >
                     <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />

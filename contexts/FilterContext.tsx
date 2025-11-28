@@ -1,17 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+import { normalizeRange } from '@/utils/date';
+
 
 export type DateRange = {
   start: Date;
   end: Date;
 };
 
+export type DatePreset = 'all' | 'week' | 'month' | 'year' | 'custom';
+
 
 export type FilterState = {
   selectedAccount: string; // 'all' or account id
   searchTerm: string;
   dateRange: DateRange | null; // null means all time
+  datePreset: DatePreset | null;
   searchHistory: string[];
   searchCategory: 'all' | 'income' | 'expense';
   selectedCategories: string[];
@@ -28,6 +33,7 @@ const defaultFilterState: FilterState = {
   selectedAccount: 'all',
   searchTerm: '',
   dateRange: null,
+  datePreset: null,
   searchHistory: [],
   searchCategory: 'all',
   selectedCategories: [],
@@ -45,6 +51,8 @@ type FilterContextType = {
   setSelectedAccount: (account: string) => void;
   setSearchTerm: (term: string) => void;
   setDateRange: (range: DateRange | null) => void;
+  setDatePreset: (preset: DatePreset | null) => void;
+  applyDateFilter: (range: DateRange | null, preset: DatePreset | null) => void;
   addToSearchHistory: (term: string) => void;
   setSearchCategory: (category: 'all' | 'income' | 'expense') => void;
   setSelectedCategories: (categories: string[]) => void;
@@ -102,7 +110,6 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     saveSearchHistory();
   }, [filters.searchHistory]);
 
-
   const setSelectedAccount = (account: string) => {
     setFilters(prev => ({ ...prev, selectedAccount: account }));
   };
@@ -114,7 +121,21 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 
   const setDateRange = (range: DateRange | null) => {
-    setFilters(prev => ({ ...prev, dateRange: range }));
+    setFilters(prev => ({ ...prev, dateRange: range ? normalizeRange(range) : null }));
+  };
+
+
+  const setDatePreset = (preset: DatePreset | null) => {
+    setFilters(prev => ({ ...prev, datePreset: preset }));
+  };
+
+
+  const applyDateFilter = (range: DateRange | null, preset: DatePreset | null) => {
+    setFilters(prev => ({
+      ...prev,
+      dateRange: range ? normalizeRange(range) : null,
+      datePreset: preset,
+    }));
   };
 
 
@@ -169,7 +190,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 
   const resetFilters = () => {
-    setFilters({ ...defaultFilterState, amountRange: null });
+    setFilters({ ...defaultFilterState, amountRange: null, datePreset: null });
   };
 
 
@@ -180,6 +201,8 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSelectedAccount,
         setSearchTerm,
         setDateRange,
+        setDatePreset,
+        applyDateFilter,
         setSearchCategory,
         setSelectedCategories,
         addToSearchHistory,

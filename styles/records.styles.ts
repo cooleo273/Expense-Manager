@@ -202,7 +202,7 @@ export const recordsStyles = StyleSheet.create({
   modalChip: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: 0,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   modalChipLabel: {
@@ -327,5 +327,91 @@ export const recordsStyles = StyleSheet.create({
   fabMain: {
     borderRadius: BorderRadius.round,
     ...Shadows.heavy,
+  },
+  tokenInputSection: {
+    gap: Spacing.sm,
+  },
+  tokenInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  tokenInput: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    fontSize: FontSizes.md,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  infoText: {
+    fontSize: FontSizes.xs,
+  },
+  tokenScrollRow: {
+    marginTop: Spacing.xs,
+  },
+  tokenScrollInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  tokenChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
+  tokenChipText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+  },
+  tokenRemoveButton: {
+    padding: Spacing.tiny,
+  },
+  suggestionHeader: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.semibold as any,
+    letterSpacing: 0.4,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginRight: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  categoryBadgeRow: {
+    marginTop: Spacing.sm,
+  },
+  categoryBadgeInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  categoryBadge: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  titleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  titleInfoIcon: {
+    padding: 2,
   },
 });

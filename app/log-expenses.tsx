@@ -6,6 +6,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -66,6 +67,21 @@ export default function LogExpensesScreen() {
   const [isAddingLabel, setIsAddingLabel] = useState(false);
   const labelInputRef = useRef<TextInput>(null);
 
+  const focusLabelInput = useCallback(() => {
+    setTimeout(() => labelInputRef.current?.focus(), 60);
+  }, []);
+
+  const openLabelInput = useCallback(() => {
+    setIsAddingLabel(true);
+    focusLabelInput();
+  }, [focusLabelInput]);
+
+  const closeLabelInput = useCallback(() => {
+    setIsAddingLabel(false);
+    setCurrentLabelInput('');
+    labelInputRef.current?.blur();
+  }, []);
+
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -125,8 +141,7 @@ export default function LogExpensesScreen() {
   const addLabel = useCallback(() => {
     const trimmed = currentLabelInput.trim();
     if (!trimmed) {
-      setIsAddingLabel(false);
-      setCurrentLabelInput('');
+      closeLabelInput();
       return;
     }
 
@@ -144,7 +159,8 @@ export default function LogExpensesScreen() {
     });
     setCurrentLabelInput('');
     setIsAddingLabel(false);
-  }, [currentLabelInput]);
+    labelInputRef.current?.blur();
+  }, [closeLabelInput, currentLabelInput]);
 
   const removeLabel = useCallback((labelToRemove: string) => {
     setSingleDraft((prev) => {
@@ -546,29 +562,36 @@ export default function LogExpensesScreen() {
               value={transactionType}
               onChange={handleTransactionTypeChange}
             />
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: '/log-expenses-list',
-                  params: {
-                    type: transactionType,
-                    defaultCategory: transactionType === 'income' ? 'income' : lastSelectedCategory,
-                  },
-                })
-              }
-              style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
-            >
-              <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
-              <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => showToast && showToast('Feature not available')}
-              style={[styles.templatesButton, { borderColor: palette.border, backgroundColor: palette.card }]}
-            >
-              <MaterialCommunityIcons name="file-document-multiple" size={18} color={palette.tint} />
-              <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Templates</ThemedText>
-              <ThemedText style={[styles.templatesBadge, { color: palette.tint }]}>{'¹'}</ThemedText>
-            </TouchableOpacity>
+            <View style={styles.topActionsInline}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/log-expenses-list',
+                    params: {
+                      type: transactionType,
+                      defaultCategory: transactionType === 'income' ? 'income' : lastSelectedCategory,
+                    },
+                  })
+                }
+                style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+              >
+                <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
+                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => showToast && showToast('Feature not available')}
+                style={[styles.templatesButton, { borderColor: palette.border, backgroundColor: palette.card }]}
+              >
+                <MaterialCommunityIcons name="file-document-multiple" size={18} color={palette.tint} />
+                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Templates</ThemedText>
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={14}
+                  color={palette.tint}
+                  style={styles.templatesBadge}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ThemedView
@@ -656,34 +679,55 @@ export default function LogExpensesScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
-                <View style={styles.labelsSummaryRow}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.labelsSummaryRow,
+                    pressed && styles.labelsSummaryRowPressed,
+                  ]}
+                  onPress={openLabelInput}
+                >
                   <ScrollView
                     horizontal
                     style={[styles.labelsScrollArea, { flex: 1 }]}
                     contentContainerStyle={styles.labelsScrollInner}
                     showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                   >
-                    {singleDraft.labels.map((label) => (
-                      <View key={label} style={[styles.labelChip, { backgroundColor: palette.highlight, borderColor: palette.border }]}> 
+                    {(singleDraft.labels ?? []).map((label) => (
+                      <Pressable
+                        key={label}
+                        onPress={(event) => event.stopPropagation()}
+                        style={({ pressed }) => [
+                          styles.labelChip,
+                          { backgroundColor: palette.highlight, borderColor: palette.border },
+                          pressed && styles.labelChipPressed,
+                        ]}
+                      >
                         <ThemedText style={[styles.labelText, { color: palette.text }]}>{label}</ThemedText>
-                        <TouchableOpacity onPress={() => removeLabel(label)} style={styles.removeLabelButton}>
+                        <TouchableOpacity
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            removeLabel(label);
+                          }}
+                          style={styles.removeLabelButton}
+                        >
                           <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
                         </TouchableOpacity>
-                      </View>
+                      </Pressable>
                     ))}
                   </ScrollView>
                   <TouchableOpacity
-                    onPress={() => {
-                      setIsAddingLabel(true);
-                      setTimeout(() => labelInputRef.current?.focus(), 60);
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      openLabelInput();
                     }}
                     style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
                     accessibilityLabel="Add label"
+                    accessibilityRole="button"
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
-                    <ThemedText style={[styles.labelText, { color: palette.tint }]}>Add Label</ThemedText>
                   </TouchableOpacity>
-                </View>
+                </Pressable>
               </View>
             </View>
 
@@ -700,12 +744,27 @@ export default function LogExpensesScreen() {
                     onSubmitEditing={addLabel}
                     autoFocus
                   />
-                  <TouchableOpacity
-                    onPress={addLabel}
-                    style={styles.sharedLabelIconButton}
+                  <View
+                    style={[
+                      styles.sharedLabelActions,
+                      { backgroundColor: palette.card, borderColor: palette.border, borderLeftWidth: 1 },
+                    ]}
                   >
-                    <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={closeLabelInput}
+                      style={[styles.sharedLabelActionButton, styles.sharedLabelCloseButton]}
+                      accessibilityLabel="Cancel label entry"
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color={palette.icon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={addLabel}
+                      style={[styles.sharedLabelActionButton, styles.sharedLabelCheckButton]}
+                      accessibilityLabel="Save label"
+                    >
+                      <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}
@@ -717,7 +776,7 @@ export default function LogExpensesScreen() {
             <View style={[styles.fieldGroup, isAddingLabel && { marginTop: Spacing.md }]}>
               <View style={styles.dateTimeRow}>
                 <View
-                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
+                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
@@ -725,7 +784,7 @@ export default function LogExpensesScreen() {
                     Date
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                     onPress={() => {
                       setPickerMode('date');
                       scrollToEnd();
@@ -736,7 +795,7 @@ export default function LogExpensesScreen() {
                   </TouchableOpacity>
                 </View>
                 <View
-                  style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
+                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                 >
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
@@ -744,7 +803,7 @@ export default function LogExpensesScreen() {
                     Time
                   </ThemedText>
                   <TouchableOpacity
-                    style={[styles.dateTimeButton, styles.dateTimeButtonInput, styles.inputBase]}
+                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                     onPress={() => {
                       setPickerMode('time');
                       scrollToEnd();

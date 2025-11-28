@@ -6,13 +6,33 @@ import { VictoryAxis, VictoryBar, VictoryChart, VictoryLabel } from 'victory-nat
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
+import type { DatePreset } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
 import { formatCompactCurrency } from '@/utils/currency';
+import { endOfDay, getCurrentMonthRange, getCurrentWeekRange, getCurrentYearRange, normalizeRange, startOfDay } from '@/utils/date';
 
-const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MONTH_LABELS = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 const YEAR_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const formatRangeLabel = (start: Date, end: Date) => {
+  const sameDay = startOfDay(start).getTime() === startOfDay(end).getTime();
+  const startLabel = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (sameDay) {
+    return startLabel;
+  }
+  const sameMonthAndYear = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+  const endLabel = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (sameMonthAndYear) {
+    return `${startLabel}-${end.getDate()}`;
+  }
+  const includeStartYear = start.getFullYear() !== end.getFullYear();
+  const formattedStart = includeStartYear
+    ? start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : startLabel;
+  const formattedEnd = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${formattedStart} - ${formattedEnd}`;
+};
 
 type DateRange = {
   start: Date;
@@ -25,177 +45,313 @@ type Transaction = {
   amount: number;
 };
 
-type BreakdownType = 'week' | 'month' | 'year' | 'all';
+type BreakdownType = 'week' | 'month' | 'year' | 'custom' | 'all';
 
 interface BreakdownChartProps {
   transactions: Transaction[];
   selectedType: 'expense' | 'income';
   dateRange: DateRange | null;
+  datePreset?: DatePreset | null;
 }
 
 const isThisWeek = (range: DateRange) => {
-  const now = new Date();
-  const start = new Date(now);
-  const weekday = (start.getDay() + 6) % 7; // Monday start
-  start.setDate(start.getDate() - weekday);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(0, 0, 0, 0);
-  return range.start.getTime() === start.getTime() && range.end.getTime() === end.getTime();
+  const normalized = normalizeRange(range);
+  const current = getCurrentWeekRange();
+  return (
+    normalized.start.getTime() === current.start.getTime() &&
+    startOfDay(normalized.end).getTime() === startOfDay(current.end).getTime()
+  );
 };
 
 const isThisMonth = (range: DateRange) => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  end.setHours(0, 0, 0, 0);
-  return range.start.getTime() === start.getTime() && range.end.getTime() === end.getTime();
+  const normalized = normalizeRange(range);
+  const current = getCurrentMonthRange();
+  const normalizedEnd = startOfDay(normalized.end);
+  const currentEnd = startOfDay(current.end);
+  return (
+    normalized.start.getFullYear() === current.start.getFullYear() &&
+    normalized.start.getMonth() === current.start.getMonth() &&
+    normalizedEnd.getFullYear() === currentEnd.getFullYear() &&
+    normalizedEnd.getMonth() === currentEnd.getMonth()
+  );
 };
 
 const isAnyMonth = (range: DateRange) => {
-  const start = new Date(range.start);
-  const end = new Date(range.end);
-  
-  const isStartFirstOfMonth = start.getDate() === 1;
-  const lastDayOfEndMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
-  const isEndLastOfMonth = end.getDate() === lastDayOfEndMonth;
-  const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
-  return isStartFirstOfMonth && isEndLastOfMonth && sameMonth;
+  const normalized = normalizeRange(range);
+  const monthStart = normalized.start;
+  const monthEndStart = startOfDay(normalized.end);
+  const sameMonth =
+    monthStart.getFullYear() === monthEndStart.getFullYear() &&
+    monthStart.getMonth() === monthEndStart.getMonth();
+  if (!sameMonth) {
+    return false;
+  }
+  const isStartFirstOfMonth = monthStart.getDate() === 1;
+  const lastDay = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const isEndLastOfMonth = monthEndStart.getDate() === lastDay;
+  return isStartFirstOfMonth && isEndLastOfMonth;
 };
 
 const isThisYear = (range: DateRange) => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), 11, 31);
-  end.setHours(0, 0, 0, 0);
-  return range.start.getTime() === start.getTime() && range.end.getTime() === end.getTime();
+  const normalized = normalizeRange(range);
+  const current = getCurrentYearRange();
+  const normalizedEnd = startOfDay(normalized.end);
+  const currentEnd = startOfDay(current.end);
+  return (
+    normalized.start.getFullYear() === current.start.getFullYear() &&
+    normalizedEnd.getFullYear() === currentEnd.getFullYear()
+  );
 };
 
-const getBreakdownType = (dateRange: DateRange | null): BreakdownType => {
-  if (!dateRange) return 'all';
-  if (isThisWeek(dateRange)) return 'week';
-  if (isAnyMonth(dateRange)) return 'month';
-  if (isThisYear(dateRange)) return 'year';
-  return 'week';
+const inferBreakdownFromRange = (dateRange: DateRange | null): BreakdownType => {
+  if (!dateRange) {
+    return 'all';
+  }
+  if (isThisWeek(dateRange)) {
+    return 'week';
+  }
+  if (isAnyMonth(dateRange)) {
+    return 'month';
+  }
+  if (isThisYear(dateRange)) {
+    return 'year';
+  }
+  return 'custom';
+};
+
+const getBreakdownType = (dateRange: DateRange | null, preset?: DatePreset | null): BreakdownType => {
+  const inferred = inferBreakdownFromRange(dateRange);
+
+  if (!preset) {
+    return inferred;
+  }
+
+  if (preset === 'custom') {
+    return 'custom';
+  }
+
+  if (!dateRange && preset === 'all') {
+    return 'all';
+  }
+
+  if (preset === inferred) {
+    return inferred;
+  }
+
+  return inferred;
 };
 
 export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   transactions,
   selectedType,
   dateRange,
+  datePreset,
 }) => {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(windowWidth - 64, 280);
 
-  const breakdownType = getBreakdownType(dateRange);
+  const breakdownType = getBreakdownType(dateRange, datePreset ?? undefined);
 
   const breakdownData = React.useMemo(() => {
-    let amounts: number[] = [];
-    let labels: string[] = [];
-    let numPeriods = 0;
+    const normalizedRange = dateRange ? normalizeRange(dateRange) : null;
+    const relevantTransactions = transactions.filter((transaction) => transaction.type === selectedType);
+    const segments: { label: string; start: Date; end: Date; total: number }[] = [];
 
     if (breakdownType === 'week') {
-      numPeriods = 7;
-      labels = WEEK_LABELS;
-      const now = new Date();
-      const weekStart = new Date(now);
-      const weekday = (weekStart.getDay() + 6) % 7;
-      weekStart.setDate(now.getDate() - weekday);
-      weekStart.setHours(0, 0, 0, 0);
+      const range = normalizedRange ?? getCurrentWeekRange();
+      const rangeStart = startOfDay(range.start);
+      const rangeEnd = startOfDay(range.end);
+      const totalDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / DAY_IN_MS) + 1);
+      const totals = new Array(totalDays).fill(0);
 
-      amounts = new Array(7).fill(0);
-      transactions.forEach((transaction) => {
-        const transactionDate = new Date(transaction.date);
-        const dayDiff = Math.floor((transactionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
-        if (dayDiff >= 0 && dayDiff < 7) {
-          if (transaction.type === selectedType) {
-            amounts[dayDiff] += Math.abs(transaction.amount);
-          }
+      relevantTransactions.forEach((transaction) => {
+        const transactionDate = startOfDay(transaction.date);
+        if (transactionDate < rangeStart || transactionDate > rangeEnd) {
+          return;
+        }
+        const dayIndex = Math.floor((transactionDate.getTime() - rangeStart.getTime()) / DAY_IN_MS);
+        if (dayIndex >= 0 && dayIndex < totals.length) {
+          totals[dayIndex] += Math.abs(transaction.amount);
         }
       });
-    } else if (breakdownType === 'month') {
-      if (!dateRange) {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const weeksInMonth = Math.ceil(daysInMonth / 7);
-        numPeriods = weeksInMonth;
-        labels = Array.from({ length: weeksInMonth }, (_, i) => `Week ${i + 1}`);
-        amounts = new Array(weeksInMonth).fill(0);
 
-        transactions.forEach((transaction) => {
-          const transactionDate = new Date(transaction.date);
-          if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
-            const day = transactionDate.getDate() - 1;
-            const weekIndex = Math.floor(day / 7);
-            if (transaction.type === selectedType) {
-              amounts[weekIndex] += Math.abs(transaction.amount);
-            }
-          }
-        });
-      } else {
-        const year = dateRange.start.getFullYear();
-        const month = dateRange.start.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const weeksInMonth = Math.ceil(daysInMonth / 7);
-        numPeriods = weeksInMonth;
-        labels = Array.from({ length: weeksInMonth }, (_, i) => `Week ${i + 1}`);
-        amounts = new Array(weeksInMonth).fill(0);
-
-        transactions.forEach((transaction) => {
-          const transactionDate = new Date(transaction.date);
-          if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
-            const day = transactionDate.getDate() - 1;
-            const weekIndex = Math.floor(day / 7);
-            if (transaction.type === selectedType) {
-              amounts[weekIndex] += Math.abs(transaction.amount);
-            }
-          }
+      for (let index = 0; index < totalDays; index += 1) {
+        const dayStart = new Date(rangeStart);
+        dayStart.setDate(dayStart.getDate() + index);
+        const dayEnd = endOfDay(dayStart);
+        segments.push({
+          label: formatRangeLabel(dayStart, dayStart),
+          start: dayStart,
+          end: dayEnd,
+          total: totals[index],
         });
       }
-    } else if (breakdownType === 'year') {
-      numPeriods = 12;
-      labels = YEAR_LABELS;
-      amounts = new Array(12).fill(0);
-      const year = new Date().getFullYear();
 
-      transactions.forEach((transaction) => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate.getFullYear() === year) {
-          const month = transactionDate.getMonth();
-          if (transaction.type === selectedType) {
-            amounts[month] += Math.abs(transaction.amount);
-          }
-        }
-      });
-    } else if (breakdownType === 'all') {
-      const years = new Set<number>();
-      transactions.forEach(t => years.add(new Date(t.date).getFullYear()));
-      const sortedYears = Array.from(years).sort();
-      numPeriods = sortedYears.length;
-      labels = sortedYears.map(y => y.toString());
-      amounts = new Array(sortedYears.length).fill(0);
-      const yearIndex = sortedYears.reduce((map, y, i) => map.set(y, i), new Map<number, number>());
-
-      transactions.forEach((transaction) => {
-        const year = new Date(transaction.date).getFullYear();
-        const idx = yearIndex.get(year)!;
-        if (transaction.type === selectedType) {
-          amounts[idx] += Math.abs(transaction.amount);
-        }
-      });
+      return { segments };
     }
 
-    return { amounts, labels, numPeriods };
+    if (breakdownType === 'month') {
+      const range = normalizedRange ?? getCurrentMonthRange();
+      const rangeStart = startOfDay(range.start);
+      const rangeEnd = startOfDay(range.end);
+      const totalDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / DAY_IN_MS) + 1);
+      const weeksInRange = Math.ceil(totalDays / 7);
+      const totals = new Array(weeksInRange).fill(0);
+
+      relevantTransactions.forEach((transaction) => {
+        const transactionDate = startOfDay(transaction.date);
+        if (transactionDate < rangeStart || transactionDate > rangeEnd) {
+          return;
+        }
+        const diffDays = Math.floor((transactionDate.getTime() - rangeStart.getTime()) / DAY_IN_MS);
+        const weekIndex = Math.min(Math.floor(diffDays / 7), weeksInRange - 1);
+        if (weekIndex >= 0 && weekIndex < totals.length) {
+          totals[weekIndex] += Math.abs(transaction.amount);
+        }
+      });
+
+      for (let index = 0; index < weeksInRange; index += 1) {
+        const segmentStart = new Date(rangeStart);
+        segmentStart.setDate(segmentStart.getDate() + index * 7);
+        const segmentEndDate = new Date(segmentStart);
+        segmentEndDate.setDate(segmentEndDate.getDate() + 6);
+        if (segmentEndDate > rangeEnd) {
+          segmentEndDate.setTime(rangeEnd.getTime());
+        }
+        segments.push({
+          label: formatRangeLabel(segmentStart, segmentEndDate),
+          start: startOfDay(segmentStart),
+          end: endOfDay(segmentEndDate),
+          total: totals[index],
+        });
+      }
+
+      return { segments };
+    }
+
+    if (breakdownType === 'year') {
+      const range = normalizedRange ?? getCurrentYearRange();
+      const yearStart = startOfDay(range.start);
+      const yearEnd = startOfDay(range.end);
+      const totals = new Array(12).fill(0);
+
+      relevantTransactions.forEach((transaction) => {
+        const transactionDate = startOfDay(transaction.date);
+        if (transactionDate < yearStart || transactionDate > yearEnd) {
+          return;
+        }
+        const monthIndex = transactionDate.getMonth();
+        if (monthIndex >= 0 && monthIndex < 12) {
+          totals[monthIndex] += Math.abs(transaction.amount);
+        }
+      });
+
+      const baseYear = yearStart.getFullYear();
+      for (let month = 0; month < 12; month += 1) {
+        const monthStart = startOfDay(new Date(baseYear, month, 1));
+        const monthEndDate = startOfDay(new Date(baseYear, month + 1, 0));
+        if (monthEndDate < yearStart || monthStart > yearEnd) {
+          continue;
+        }
+        const clippedStart = monthStart < yearStart ? yearStart : monthStart;
+        const clippedEnd = monthEndDate > yearEnd ? yearEnd : monthEndDate;
+        segments.push({
+          label: YEAR_LABELS[month],
+          start: clippedStart,
+          end: endOfDay(clippedEnd),
+          total: totals[month],
+        });
+      }
+
+      return { segments };
+    }
+
+    if (breakdownType === 'custom') {
+      if (!normalizedRange) {
+        return { segments: [] };
+      }
+      const rangeStart = startOfDay(normalizedRange.start);
+      const rangeEnd = startOfDay(normalizedRange.end);
+      const totalDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / DAY_IN_MS) + 1);
+      const segmentCount = Math.min(5, totalDays);
+      const segmentLength = Math.max(1, Math.ceil(totalDays / segmentCount));
+      const totals = new Array(segmentCount).fill(0);
+
+      relevantTransactions.forEach((transaction) => {
+        const transactionDate = startOfDay(transaction.date);
+        if (transactionDate < rangeStart || transactionDate > rangeEnd) {
+          return;
+        }
+        const diffDays = Math.floor((transactionDate.getTime() - rangeStart.getTime()) / DAY_IN_MS);
+        const index = Math.min(Math.floor(diffDays / segmentLength), segmentCount - 1);
+        if (index >= 0 && index < totals.length) {
+          totals[index] += Math.abs(transaction.amount);
+        }
+      });
+
+      for (let index = 0; index < segmentCount; index += 1) {
+        const segmentStart = new Date(rangeStart);
+        segmentStart.setDate(segmentStart.getDate() + index * segmentLength);
+        const segmentEndDate = new Date(segmentStart);
+        segmentEndDate.setDate(segmentEndDate.getDate() + segmentLength - 1);
+        if (segmentEndDate > rangeEnd) {
+          segmentEndDate.setTime(rangeEnd.getTime());
+        }
+        segments.push({
+          label: formatRangeLabel(segmentStart, segmentEndDate),
+          start: startOfDay(segmentStart),
+          end: endOfDay(segmentEndDate),
+          total: totals[index],
+        });
+      }
+
+      return { segments };
+    }
+
+    const totalsByYear = new Map<number, number>();
+    relevantTransactions.forEach((transaction) => {
+      const transactionDate = startOfDay(transaction.date);
+      if (normalizedRange) {
+        const rangeStart = startOfDay(normalizedRange.start);
+        const rangeEnd = startOfDay(normalizedRange.end);
+        if (transactionDate < rangeStart || transactionDate > rangeEnd) {
+          return;
+        }
+      }
+      const year = transactionDate.getFullYear();
+      totalsByYear.set(year, (totalsByYear.get(year) ?? 0) + Math.abs(transaction.amount));
+    });
+
+    const sortedYears = Array.from(totalsByYear.keys()).sort((a, b) => a - b);
+    if (sortedYears.length === 0 && normalizedRange) {
+      const startYear = startOfDay(normalizedRange.start).getFullYear();
+      const endYear = startOfDay(normalizedRange.end).getFullYear();
+      for (let year = startYear; year <= endYear; year += 1) {
+        sortedYears.push(year);
+        totalsByYear.set(year, 0);
+      }
+    }
+
+    sortedYears.forEach((year) => {
+      const segmentStart = startOfDay(new Date(year, 0, 1));
+      const segmentEnd = endOfDay(new Date(year, 11, 31));
+      segments.push({
+        label: year.toString(),
+        start: segmentStart,
+        end: segmentEnd,
+        total: totalsByYear.get(year) ?? 0,
+      });
+    });
+
+    return { segments };
   }, [transactions, selectedType, dateRange, breakdownType]);
 
-  const { amounts, labels, numPeriods } = breakdownData;
+  const segments = breakdownData.segments;
+  const amounts = segments.map((segment) => segment.total);
+  const labels = segments.map((segment) => segment.label);
+  const numPeriods = segments.length;
 
   const formatCurrency = (value: number) => formatCompactCurrency(value);
   const formatAxisValue = (value: number) => formatCompactCurrency(value).replace(/\$/g, '');
@@ -210,11 +366,21 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     return `${sign}$${absValue.toLocaleString(undefined, formatter)}`;
   };
 
+  const computedBarWidth = segments.length === 0 ? 20 : segments.length > 10 ? 10 : segments.length > 6 ? 16 : 24;
+  const tickAngle = breakdownType === 'month'
+    ? 45
+    : breakdownType === 'year' || breakdownType === 'custom' || segments.length > 6
+      ? 30
+      : 0;
+  const tickPadding = breakdownType === 'month' ? 24 : tickAngle ? 20 : 12;
+  const domainPaddingX = segments.length > 10 ? 12 : breakdownType === 'year' ? 8 : 24;
+  const bottomPadding = breakdownType === 'month' ? 72 : 56;
+
   const maxDataValue = amounts.reduce((max, value) => Math.max(max, value), 0);
 
-  const chartData = labels.map((label, index) => ({
-    x: label,
-    y: amounts[index],
+  const chartData = segments.map((segment) => ({
+    x: segment.label,
+    y: segment.total,
   }));
 
   const yAxisTickValues = React.useMemo(() => {
@@ -227,54 +393,66 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   }, [maxDataValue]);
 
   const total = amounts.reduce((sum, value) => sum + value, 0);
-  let peakIndex = 0;
-  amounts.forEach((value, index) => {
-    if (value > amounts[peakIndex]) {
-      peakIndex = index;
-    }
-  });
+  const peakIndex = amounts.length > 0
+    ? amounts.reduce((bestIndex, value, index) => (value > amounts[bestIndex] ? index : bestIndex), 0)
+    : -1;
 
-  const dailyAverage = total === 0 || numPeriods === 0 ? 0 : Math.round(total / numPeriods);
+  const periodAverage = total === 0 || numPeriods === 0 ? 0 : Math.round(total / numPeriods);
 
   let subtitle = '';
   let summaryBlocks: { label: string; value: string }[] = [];
 
   if (breakdownType === 'week') {
     subtitle = 'Weekly Breakdown';
-    const weekendTotal = amounts.slice(5).reduce((sum, value) => sum + value, 0);
+    const weekendTotal = segments.reduce((sum, segment) => {
+      const day = segment.start.getDay();
+      return day === 0 || day === 6 ? sum + segment.total : sum;
+    }, 0);
     const weekendShare = total === 0 ? 0 : Math.round((weekendTotal / total) * 100);
     summaryBlocks = [
       { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak day', value: labels[peakIndex] },
-      { label: 'Daily avg', value: formatFullCurrency(dailyAverage) },
+      { label: 'Peak day', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: 'Daily avg', value: formatFullCurrency(periodAverage) },
       { label: 'Weekend', value: `${weekendShare}%` },
     ];
   } else if (breakdownType === 'month') {
     subtitle = 'Monthly Breakdown';
-    const weekdayTotal = amounts.slice(0, 5).reduce((sum, value) => sum + value, 0) + amounts.slice(5, 7).reduce((sum, value) => sum + value, 0); // Mon-Fri + Sat-Sun but wait, better calculate properly
     summaryBlocks = [
       { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak week', value: labels[peakIndex] },
-      { label: 'Weekly avg', value: formatFullCurrency(dailyAverage) },
-      { label: 'Weeks active', value: amounts.filter(a => a > 0).length.toString() },
+      { label: 'Peak span', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: 'Weekly avg', value: formatFullCurrency(periodAverage) },
+      { label: 'Weeks active', value: amounts.filter((value) => value > 0).length.toString() },
     ];
   } else if (breakdownType === 'year') {
     subtitle = 'Yearly Breakdown';
-    const quarterlyTotal = [amounts.slice(0, 3).reduce((s, v) => s + v, 0), amounts.slice(3, 6).reduce((s, v) => s + v, 0), amounts.slice(6, 9).reduce((s, v) => s + v, 0), amounts.slice(9, 12).reduce((s, v) => s + v, 0)];
-    const peakQuarter = quarterlyTotal.indexOf(Math.max(...quarterlyTotal)) + 1;
+    const quarterlyTotals = [
+      amounts.slice(0, 3).reduce((sum, value) => sum + value, 0),
+      amounts.slice(3, 6).reduce((sum, value) => sum + value, 0),
+      amounts.slice(6, 9).reduce((sum, value) => sum + value, 0),
+      amounts.slice(9, 12).reduce((sum, value) => sum + value, 0),
+    ];
+    const peakQuarter = quarterlyTotals.indexOf(Math.max(...quarterlyTotals)) + 1;
     summaryBlocks = [
       { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak month', value: labels[peakIndex] },
-      { label: 'Monthly avg', value: formatFullCurrency(dailyAverage) },
+      { label: 'Peak month', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: 'Monthly avg', value: formatFullCurrency(periodAverage) },
       { label: 'Peak quarter', value: `Q${peakQuarter}` },
+    ];
+  } else if (breakdownType === 'custom') {
+    subtitle = 'Custom Breakdown';
+    summaryBlocks = [
+      { label: 'Total', value: formatFullCurrency(total) },
+      { label: 'Peak span', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: 'Segment avg', value: formatFullCurrency(periodAverage) },
+      { label: 'Segments', value: numPeriods.toString() },
     ];
   } else if (breakdownType === 'all') {
     subtitle = 'All Time Breakdown';
     summaryBlocks = [
       { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak year', value: labels[peakIndex] },
-      { label: 'Yearly avg', value: formatFullCurrency(dailyAverage) },
-      { label: 'Years active', value: amounts.filter(a => a > 0).length.toString() },
+      { label: 'Peak year', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: 'Yearly avg', value: formatFullCurrency(periodAverage) },
+      { label: 'Years active', value: amounts.filter((value) => value > 0).length.toString() },
     ];
   }
 
@@ -293,14 +471,14 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
         <VictoryChart
           animate={{ duration: 600 }}
           height={240}
-          padding={{ top: 32, bottom: 56, left: 44, right: 24 }}
-          domainPadding={{ x: breakdownType === 'year' ? 4 : 24, y: [0, 12] }}
+          padding={{ top: 32, bottom: bottomPadding, left: 44, right: 24 }}
+          domainPadding={{ x: domainPaddingX, y: [0, 12] }}
           width={chartWidth}
         >
           <VictoryAxis
             style={{
               axis: { stroke: palette.border },
-              tickLabels: { fill: palette.icon, fontSize: 12, padding: breakdownType === 'year' ? 20 : 12, angle: breakdownType === 'year' ? 30 : 0 },
+              tickLabels: { fill: palette.icon, fontSize: 12, padding: tickPadding, angle: tickAngle },
               ticks: { stroke: palette.border },
             }}
           />
@@ -317,7 +495,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
           />
           <VictoryBar
             data={chartData}
-            barWidth={breakdownType === 'month' ? 20 : breakdownType === 'year' ? 12 : 24}
+            barWidth={computedBarWidth}
             cornerRadius={{ top: 8, bottom: 8 }}
             labels={({ datum }: { datum: { y: number } }) =>
               datum.y ? formatCurrency(datum.y) : ''

@@ -146,8 +146,7 @@ export default function LogExpensesListScreen() {
     setRecordErrors(prev => [...prev, '']);
     setRecordCategoryErrors(prev => [...prev, '']);
     setRecordNoteErrors(prev => [...prev, '']);
-    showToast('Record added successfully');
-  }, [params.defaultCategory, showToast]);
+  }, [params.defaultCategory]);
 
   const isRecordEdited = useCallback((record: SingleDraft) => {
     const amountSet = (record.amount ?? '').trim() !== '';
