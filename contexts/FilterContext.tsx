@@ -21,6 +21,7 @@ export type FilterState = {
   keyTerms?: string[]; // free-text tokens user may add for filtering
   tempSelectedCategories: string[]; // temp for filter modal
 };
+  // recentResults: { id: string; record: any }[];
 
 
 const defaultFilterState: FilterState = {
@@ -35,6 +36,7 @@ const defaultFilterState: FilterState = {
   selectedLabels: [],
   keyTerms: [],
   tempSelectedCategories: [],
+  // recentResults: [],
 };
 
 
@@ -142,12 +144,17 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 
   const addToSearchHistory = (term: string) => {
-    if (term.trim() && !filters.searchHistory.includes(term.trim())) {
-      setFilters(prev => ({
-        ...prev,
-        searchHistory: [term.trim(), ...prev.searchHistory.slice(0, 4)] // Keep last 5
-      }));
+    const normalized = term.trim();
+    if (!normalized) {
+      return;
     }
+    setFilters(prev => {
+      const existing = prev.searchHistory.filter(entry => entry.toLowerCase() !== normalized.toLowerCase());
+      return {
+        ...prev,
+        searchHistory: [normalized, ...existing].slice(0, 5),
+      };
+    });
   };
 
 

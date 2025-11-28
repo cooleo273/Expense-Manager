@@ -1,13 +1,12 @@
 import { TransactionTypeFilter } from '@/components/TransactionTypeFilter';
 import { getNodeDisplayName } from '@/constants/categories';
-import { getAccountMeta } from '@/constants/mock-data';
 import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -23,6 +22,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import RecordList from './RecordList';
+
 type SearchOverlayProps = {
   visible: boolean;
   onClose: () => void;
@@ -33,16 +34,18 @@ const DRAWER_MAX_HEIGHT = Math.min(Dimensions.get('window').height * 0.85, 640);
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme];
-  const { filters, setSearchTerm, addToSearchHistory, setSearchCategory } = useFilterContext();
+  const { filters, addToSearchHistory, setSearchCategory } = useFilterContext();
   const [tempSearch, setTempSearch] = useState(filters.searchTerm);
   const [results, setResults] = useState<any[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
   const router = useRouter();
-  const displayResults = results.slice(0, 5);
+  const displayResults = useMemo(() => results.slice(0, 5), [results]);
   const insets = useSafeAreaInsets();
   const drawerTranslate = useRef(new Animated.Value(-DRAWER_MAX_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const isClosingRef = useRef(false);
+  const lastRecordedQueryRef = useRef('');
+  const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -99,18 +102,27 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   };
 
   useEffect(() => {
+    const trimmed = tempSearch.trim();
+    if (!trimmed) {
+      setResults([]);
+      setLoadingResults(false);
+      lastRecordedQueryRef.current = '';
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+        historyTimerRef.current = null;
+      }
+      return;
+    }
+
     let canceled = false;
     const doSearch = async () => {
       setLoadingResults(true);
       try {
         const txns = await StorageService.getTransactions();
-        const query = tempSearch.trim().toLowerCase();
-        const queryTokens = query.split(/\s+/).filter(Boolean);
+        const normalizedQuery = trimmed.toLowerCase();
+        const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
         const filtered = txns.filter((t: any) => {
           if (filters.searchCategory && filters.searchCategory !== 'all' && t.type !== filters.searchCategory) {
-            return false;
-          }
-          if (!query) {
             return false;
           }
           const categoryName = getNodeDisplayName(t.subcategoryId) ?? getNodeDisplayName(t.categoryId) ?? '';
@@ -129,27 +141,83 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
               labels.includes(token)
             );
           };
-          return queryTokens.every(matchesToken);
+          return queryTokens.length === 0 ? false : queryTokens.every(matchesToken);
         });
-        if (!canceled) setResults(filtered);
+        if (!canceled) {
+          setResults(filtered);
+        }
       } catch (err) {
         console.error('Search failed', err);
-        if (!canceled) setResults([]);
+        if (!canceled) {
+          setResults([]);
+        }
       } finally {
-        if (!canceled) setLoadingResults(false);
+        if (!canceled) {
+          setLoadingResults(false);
+        }
       }
     };
 
-    const timer = setTimeout(doSearch, 200);
+    const timer = setTimeout(doSearch, 350);
     return () => {
       canceled = true;
       clearTimeout(timer);
     };
   }, [tempSearch, filters.searchCategory]);
 
+  useEffect(() => {
+    const trimmed = tempSearch.trim();
+
+    if (!trimmed) {
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+        historyTimerRef.current = null;
+      }
+      lastRecordedQueryRef.current = '';
+      return;
+    }
+
+    const normalized = trimmed.toLowerCase();
+
+    if (normalized === lastRecordedQueryRef.current) {
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+        historyTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+    }
+
+    const timer = setTimeout(() => {
+      addToSearchHistory(trimmed);
+      lastRecordedQueryRef.current = normalized;
+      historyTimerRef.current = null;
+    }, 1500);
+
+    historyTimerRef.current = timer;
+
+    return () => {
+      clearTimeout(timer);
+      if (historyTimerRef.current === timer) {
+        historyTimerRef.current = null;
+      }
+    };
+  }, [tempSearch, addToSearchHistory]);
+
   const handleSelectHistory = (term: string) => {
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = null;
+    }
+    const trimmed = term.trim();
     setTempSearch(term);
-    setSearchTerm(term);
+    if (trimmed) {
+      addToSearchHistory(trimmed);
+      lastRecordedQueryRef.current = trimmed.toLowerCase();
+    }
   };
 
   const handleSelectCategory = (category: 'all' | 'income' | 'expense') => {
@@ -157,14 +225,48 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
   };
 
   const handleClearSearch = () => {
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = null;
+    }
+    lastRecordedQueryRef.current = '';
     setTempSearch('');
-    setSearchTerm('');
   };
 
   const openRecordDetail = (record: any) => {
-    const payload = encodeURIComponent(JSON.stringify(record));
+    const trimmedQuery = tempSearch.trim();
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = null;
+    }
+    const payload = encodeURIComponent(
+      JSON.stringify({
+        ...record,
+        occurredAt:
+          record.date instanceof Date ? record.date.toISOString() : new Date(record.date).toISOString(),
+      })
+    );
+    if (trimmedQuery) {
+      addToSearchHistory(trimmedQuery);
+      lastRecordedQueryRef.current = trimmedQuery.toLowerCase();
+    }
+    if (record.title) {
+      addToSearchHistory(record.title);
+    }
     router.push({ pathname: '/record-detail', params: { payload } });
     animateClose();
+  };
+
+  const handleSearchCommit = (term: string) => {
+    const trimmed = term.trim();
+    if (trimmed) {
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+        historyTimerRef.current = null;
+      }
+      addToSearchHistory(trimmed);
+      lastRecordedQueryRef.current = trimmed.toLowerCase();
+    }
   };
 
   return (
@@ -197,7 +299,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
           <Text style={[styles.subtitle, { color: palette.icon }]}>Filter transactions, categories, and more</Text>
 
           <View style={styles.headerRow}>
-            <View style={[styles.searchFieldWrapper, { borderColor: palette.border, backgroundColor: palette.surface }]}>
+            <View style={[styles.searchFieldWrapper, { borderColor: palette.border, backgroundColor: '#FFFFFF' }]}>
               <MaterialCommunityIcons name="magnify" size={20} color={palette.icon} style={{ marginRight: 6 }} />
               <TextInput
                 style={[styles.input, { color: palette.text }]}
@@ -205,11 +307,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                 placeholderTextColor={palette.icon}
                 value={tempSearch}
                 onChangeText={setTempSearch}
-                // Do not set the shared searchTerm on enter — keep the overlay results local.
-                // Still add it to recent history so users can find it later.
-                onSubmitEditing={() => {
-                  if (tempSearch.trim()) addToSearchHistory(tempSearch);
-                }}
+                onSubmitEditing={() => handleSearchCommit(tempSearch)}
                 autoFocus
                 returnKeyType="search"
               />
@@ -268,41 +366,24 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
               <Text style={{ color: palette.icon }}>No results available for "{tempSearch}"</Text>
             ) : (
               <>
-                <FlatList
-                  data={displayResults}
-                keyExtractor={(item) => item.id}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
+                <View style={styles.resultsListWrapper}>
+                  <RecordList
+                    records={displayResults}
+                    variant="records"
+                    onPressItem={(item) => openRecordDetail(item)}
+                  />
+                </View>
+                {results.length > displayResults.length && (
                   <TouchableOpacity
-                    style={[styles.historyItem, { borderColor: palette.border, backgroundColor: palette.surface }]}
-                    onPress={() => openRecordDetail(item)}
+                    onPress={() => {
+                      handleSearchCommit(tempSearch);
+                      router.push('/(tabs)/records');
+                    }}
+                    style={{ marginTop: Spacing.sm }}
                   >
-                    <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
-                      <MaterialCommunityIcons name="file-document" size={16} color={palette.icon} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: palette.text, fontWeight: '600' }}>
-                        {getNodeDisplayName(item.subcategoryId) ?? getNodeDisplayName(item.categoryId) ?? item.title}
-                      </Text>
-                      <Text style={{ color: palette.icon, fontSize: 12 }}>{getAccountMeta(item.accountId)?.name ?? item.account}</Text>
-                    </View>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                    <Text style={{ color: palette.tint, fontWeight: '600' }}>Show more</Text>
                   </TouchableOpacity>
                 )}
-                />
-                {results.length > 5 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchTerm(tempSearch);
-                  if (tempSearch.trim()) addToSearchHistory(tempSearch);
-                  router.push('/(tabs)/records');
-                }}
-                style={{ marginTop: Spacing.sm }}
-              >
-                <Text style={{ color: palette.tint, fontWeight: '600' }}>Show more</Text>
-              </TouchableOpacity>
-                  )}
               </>
             )}
           </View>
@@ -334,6 +415,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     paddingVertical: Spacing.md,
     paddingHorizontal: 0,
+    textAlignVertical: 'center',
   },
   historyContainer: {
     marginTop: Spacing.xl,
@@ -396,6 +478,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
+  },
+  resultsListWrapper: {
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    paddingVertical: Spacing.sm,
   },
   primaryButton: {
     marginTop: Spacing.xl,
