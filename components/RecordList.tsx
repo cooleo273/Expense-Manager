@@ -43,6 +43,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
         const amountColor = item.type === 'income' ? palette.success : palette.error;
         const categoryColor = getCategoryColor(item.categoryId, palette.tint);
         const iconName = getCategoryIcon(item.categoryId, item.type === 'income' ? 'wallet-plus' : 'shape-outline');
+        const itemDate: Date = item.date instanceof Date ? item.date : new Date(item.date);
         // Choose styles based on the requested variant
         if (variant === 'records') {
           return (
@@ -79,7 +80,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                 </View>
                 <View style={recordsStyles.itemMeta}>
                   <ThemedText style={[recordsStyles.itemAmount, { color: amountColor }]}>{formatCurrency ? formatCurrency(item.amount, item.type) : (item.type === 'income' ? '+' : '-') + `$${Math.abs(item.amount).toFixed(2)}`}</ThemedText>
-                  <ThemedText style={[recordsStyles.itemDate, { color: palette.icon }]}>{formatFriendlyDate(item.date)}</ThemedText>
+                  <ThemedText style={[recordsStyles.itemDate, { color: palette.icon }]}>{formatFriendlyDate(itemDate)}</ThemedText>
                 </View>
               </View>
               {!isLast && <View style={[recordsStyles.listSeparator, { backgroundColor: palette.border }]} />}
@@ -123,7 +124,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
               </View>
               <View style={homeStyles.recordMeta}>
                 <ThemedText style={[homeStyles.recordAmount, { color: amountColor }]}>{formatCurrency ? formatCurrency(item.amount, item.type) : (item.type === 'income' ? '+' : '-') + `$${Math.abs(item.amount).toFixed(2)}`}</ThemedText>
-                <ThemedText style={{ color: palette.icon }}>{formatFriendlyDate(item.date)}</ThemedText>
+                <ThemedText style={{ color: palette.icon }}>{formatFriendlyDate(itemDate)}</ThemedText>
               </View>
             </View>
             {!isLast && <View style={[homeStyles.recordDivider, { backgroundColor: palette.border }]} />}

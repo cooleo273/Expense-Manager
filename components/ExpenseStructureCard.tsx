@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
 import { InfoTooltip } from '@/components/InfoTooltip';
@@ -41,6 +41,18 @@ const fallbackValueFormatter: NonNullable<ExpenseStructureCardProps['valueFormat
 const fallbackFullValueFormatter: NonNullable<ExpenseStructureCardProps['fullValueFormatter']> = (value) =>
   defaultValueFormatter(value);
 
+const MARGIN_KEYS = [
+  'margin',
+  'marginTop',
+  'marginBottom',
+  'marginLeft',
+  'marginRight',
+  'marginHorizontal',
+  'marginVertical',
+  'marginStart',
+  'marginEnd',
+] as const;
+
 const clampPercent = (value: number) => {
   if (!Number.isFinite(value)) {
     return 0;
@@ -77,6 +89,40 @@ export function ExpenseStructureCard({
 }: ExpenseStructureCardProps) {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+
+  const flattenedContainerStyle = useMemo<ViewStyle | undefined>(() => {
+    if (!containerStyle) {
+      return undefined;
+    }
+    return StyleSheet.flatten(containerStyle) as ViewStyle | undefined;
+  }, [containerStyle]);
+
+  const outerContainerStyle = useMemo<ViewStyle | undefined>(() => {
+    if (!flattenedContainerStyle) {
+      return undefined;
+    }
+    const style: ViewStyle = {};
+    MARGIN_KEYS.forEach((key) => {
+      const value = (flattenedContainerStyle as Record<string, any>)[key];
+      if (value !== undefined) {
+        (style as Record<string, any>)[key] = value;
+      }
+    });
+    return style;
+  }, [flattenedContainerStyle]);
+
+  const innerContainerOverrides = useMemo<ViewStyle | undefined>(() => {
+    if (!flattenedContainerStyle) {
+      return undefined;
+    }
+    const style = { ...flattenedContainerStyle } as Record<string, any>;
+    MARGIN_KEYS.forEach((key) => {
+      if (key in style) {
+        delete style[key];
+      }
+    });
+    return style as ViewStyle;
+  }, [flattenedContainerStyle]);
 
   const totalValue = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
   const formatValue = useMemo(
@@ -215,7 +261,7 @@ export function ExpenseStructureCard({
   const centerCaptionText = activeSegment
     ? activeSegment.label
     : activeSegmentId === 'all'
-      ? 'Total Expenses'
+      ? totalCaption ?? 'Total Expenses'
       : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
   const window = useWindowDimensions();
@@ -231,15 +277,34 @@ export function ExpenseStructureCard({
       ? palette.tint
       : palette.border;
 
+  const innerContainerStyle = (innerContainerOverrides ?? containerStyle) as StyleProp<ViewStyle> | undefined;
+  const rippleColor = `${palette.tint}1A`;
+
   return (
-    <ThemedView
-      style={[
-        styles.container,
-        { backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 },
-        containerStyle,
+    <Pressable
+      onPress={() => {}}
+      android_ripple={{ color: rippleColor, borderless: false }}
+      style={({ pressed }) => [
+        styles.cardPressable,
+        outerContainerStyle ?? null,
+        pressed ? styles.cardPressablePressed : null,
       ]}
     >
-      <View style={styles.header}>
+      {({ pressed }) => (
+        <ThemedView
+          style={[
+            styles.container,
+            {
+              backgroundColor: palette.card,
+              borderColor: palette.border,
+              borderWidth: 1,
+            },
+            pressed ? styles.containerPressed : null,
+            pressed ? { borderColor: palette.tint } : null,
+            innerContainerStyle,
+          ]}
+        >
+          <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
           {icon && <MaterialCommunityIcons name={icon as any} size={20} color={palette.tint} />}
           <ThemedText type="subtitle">{title}</ThemedText>
@@ -370,7 +435,10 @@ export function ExpenseStructureCard({
               <TouchableOpacity
                 key={segment.id}
                 activeOpacity={0.8}
-                onPress={() => setActiveSegmentId(segment.id)}
+                onPress={(event) => {
+                  event.stopPropagation?.();
+                  setActiveSegmentId(segment.id);
+                }}
                 style={[
                   styles.legendItem,
                   activeSegmentId === segment.id && {
@@ -457,11 +525,27 @@ export function ExpenseStructureCard({
           {footer}
         </>
       ) : null}
-    </ThemedView>
+        </ThemedView>
+      )}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  cardPressable: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+  },
+  cardPressablePressed: {
+    transform: [{ scale: 0.995 }],
+  },
+  containerPressed: {
+    shadowColor: 'rgba(15,23,42,0.25)',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
   container: {
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
@@ -477,7 +561,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
   chartWrapper: {
     alignItems: 'center',

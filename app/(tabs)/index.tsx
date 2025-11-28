@@ -368,7 +368,20 @@ export default function HomeScreen() {
             limit={10}
             variant="home"
             formatCurrency={(value: number) => formatCurrency(value)}
-            onPressItem={(item: any) => router.push({ pathname: '/record-detail', params: { id: item.id, payload: encodeURIComponent(JSON.stringify(item)), type: item.type } })}
+            onPressItem={(item: any) => {
+              const occurredAt = item.date instanceof Date
+                ? item.date.toISOString()
+                : new Date(item.date).toISOString();
+              const payload = { ...item, occurredAt };
+              router.push({
+                pathname: '/record-detail',
+                params: {
+                  id: item.id,
+                  payload: encodeURIComponent(JSON.stringify(payload)),
+                  type: item.type,
+                },
+              });
+            }}
           />
 
           <Pressable

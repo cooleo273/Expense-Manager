@@ -643,7 +643,27 @@ export default function RecordsScreen() {
 
 
         <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <RecordList records={filteredAndSortedData} variant="records" style={{ flex: 1 }} formatCurrency={(value, type = 'expense') => formatCurrency(value, type)} onPressItem={(item) => router.push({ pathname: '/record-detail', params: { id: item.id, payload: encodeURIComponent(JSON.stringify(item)), type: item.type } })} bottomInset={tabBarHeight} />
+          <RecordList
+            records={filteredAndSortedData}
+            variant="records"
+            style={{ flex: 1 }}
+            formatCurrency={(value, type = 'expense') => formatCurrency(value, type)}
+            onPressItem={(item) => {
+              const occurredAt = item.date instanceof Date
+                ? item.date.toISOString()
+                : new Date(item.date).toISOString();
+              const payload = { ...item, occurredAt };
+              router.push({
+                pathname: '/record-detail',
+                params: {
+                  id: item.id,
+                  payload: encodeURIComponent(JSON.stringify(payload)),
+                  type: item.type,
+                },
+              });
+            }}
+            bottomInset={tabBarHeight}
+          />
         </View>
       </View>
 

@@ -80,12 +80,11 @@ export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID }:
                 styles.tooltip,
                 tooltipPosition,
                 {
-                  backgroundColor: palette.card,
-                  borderColor: palette.border,
+                  borderColor: '#E5E7EB',
                 },
               ]}
             >
-              <ThemedText style={[styles.tooltipText, { color: palette.text }]}>{content}</ThemedText>
+              <ThemedText style={styles.tooltipText}>{content}</ThemedText>
             </View>
           </Pressable>
         </Portal>
@@ -94,8 +93,8 @@ export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID }:
   );
 }
 
-const TOOLTIP_WIDTH = 180;
-const TOOLTIP_HEIGHT = 48;
+const TOOLTIP_WIDTH = 148;
+const TOOLTIP_HEIGHT = 40;
 
 const styles = StyleSheet.create({
   iconButton: {
@@ -108,15 +107,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: TOOLTIP_WIDTH,
     minHeight: TOOLTIP_HEIGHT,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(15,23,42,0.16)',
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   tooltipText: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
     fontWeight: '500',
+    color: '#111827',
   },
 });

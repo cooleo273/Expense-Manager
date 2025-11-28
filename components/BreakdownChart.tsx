@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
+import { formatCompactCurrency } from '@/utils/currency';
 
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_LABELS = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
@@ -196,7 +197,18 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
 
   const { amounts, labels, numPeriods } = breakdownData;
 
-  const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
+  const formatCurrency = (value: number) => formatCompactCurrency(value);
+  const formatAxisValue = (value: number) => formatCompactCurrency(value).replace(/\$/g, '');
+
+  const formatFullCurrency = (value: number) => {
+    const sign = value < 0 ? '-' : '';
+    const absValue = Math.abs(value);
+    const hasFraction = Math.abs(absValue - Math.floor(absValue)) > Number.EPSILON;
+    const formatter = absValue < 1 || hasFraction
+      ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+      : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+    return `${sign}$${absValue.toLocaleString(undefined, formatter)}`;
+  };
 
   const maxDataValue = amounts.reduce((max, value) => Math.max(max, value), 0);
 
@@ -222,7 +234,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     }
   });
 
-  const dailyAverage = total === 0 ? 0 : Math.round(total / numPeriods);
+  const dailyAverage = total === 0 || numPeriods === 0 ? 0 : Math.round(total / numPeriods);
 
   let subtitle = '';
   let summaryBlocks: { label: string; value: string }[] = [];
@@ -232,18 +244,18 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     const weekendTotal = amounts.slice(5).reduce((sum, value) => sum + value, 0);
     const weekendShare = total === 0 ? 0 : Math.round((weekendTotal / total) * 100);
     summaryBlocks = [
-      { label: 'Total', value: `$${total.toLocaleString()}` },
+      { label: 'Total', value: formatFullCurrency(total) },
       { label: 'Peak day', value: labels[peakIndex] },
-      { label: 'Daily avg', value: `$${dailyAverage.toLocaleString()}` },
+      { label: 'Daily avg', value: formatFullCurrency(dailyAverage) },
       { label: 'Weekend', value: `${weekendShare}%` },
     ];
   } else if (breakdownType === 'month') {
     subtitle = 'Monthly Breakdown';
     const weekdayTotal = amounts.slice(0, 5).reduce((sum, value) => sum + value, 0) + amounts.slice(5, 7).reduce((sum, value) => sum + value, 0); // Mon-Fri + Sat-Sun but wait, better calculate properly
     summaryBlocks = [
-      { label: 'Total', value: `$${total.toLocaleString()}` },
+      { label: 'Total', value: formatFullCurrency(total) },
       { label: 'Peak week', value: labels[peakIndex] },
-      { label: 'Weekly avg', value: `$${dailyAverage.toLocaleString()}` },
+      { label: 'Weekly avg', value: formatFullCurrency(dailyAverage) },
       { label: 'Weeks active', value: amounts.filter(a => a > 0).length.toString() },
     ];
   } else if (breakdownType === 'year') {
@@ -251,17 +263,17 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     const quarterlyTotal = [amounts.slice(0, 3).reduce((s, v) => s + v, 0), amounts.slice(3, 6).reduce((s, v) => s + v, 0), amounts.slice(6, 9).reduce((s, v) => s + v, 0), amounts.slice(9, 12).reduce((s, v) => s + v, 0)];
     const peakQuarter = quarterlyTotal.indexOf(Math.max(...quarterlyTotal)) + 1;
     summaryBlocks = [
-      { label: 'Total', value: `$${total.toLocaleString()}` },
+      { label: 'Total', value: formatFullCurrency(total) },
       { label: 'Peak month', value: labels[peakIndex] },
-      { label: 'Monthly avg', value: `$${dailyAverage.toLocaleString()}` },
+      { label: 'Monthly avg', value: formatFullCurrency(dailyAverage) },
       { label: 'Peak quarter', value: `Q${peakQuarter}` },
     ];
   } else if (breakdownType === 'all') {
     subtitle = 'All Time Breakdown';
     summaryBlocks = [
-      { label: 'Total', value: `$${total.toLocaleString()}` },
+      { label: 'Total', value: formatFullCurrency(total) },
       { label: 'Peak year', value: labels[peakIndex] },
-      { label: 'Yearly avg', value: `$${dailyAverage.toLocaleString()}` },
+      { label: 'Yearly avg', value: formatFullCurrency(dailyAverage) },
       { label: 'Years active', value: amounts.filter(a => a > 0).length.toString() },
     ];
   }
@@ -281,7 +293,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
         <VictoryChart
           animate={{ duration: 600 }}
           height={240}
-          padding={{ top: 32, bottom: 56, left: 56, right: 24 }}
+          padding={{ top: 32, bottom: 56, left: 44, right: 24 }}
           domainPadding={{ x: breakdownType === 'year' ? 4 : 24, y: [0, 12] }}
           width={chartWidth}
         >
@@ -295,7 +307,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
           <VictoryAxis
             dependentAxis
             tickValues={yAxisTickValues}
-            tickFormat={(value: number) => formatCurrency(value)}
+            tickFormat={(value: number) => formatAxisValue(value)}
             style={{
               axis: { stroke: palette.border },
               grid: { stroke: palette.border, strokeDasharray: '4,4' },

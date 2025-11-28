@@ -61,7 +61,12 @@ export default function RecordDetailScreen() {
           payee: parsed.payee ?? '',
           note: parsed.note ?? '',
           labels: Array.isArray(parsed.labels) ? parsed.labels : [],
-          occurredAt: typeof parsed.occurredAt === 'string' ? parsed.occurredAt : undefined,
+          occurredAt:
+            typeof parsed.occurredAt === 'string'
+              ? parsed.occurredAt
+              : parsed.date
+                ? new Date(parsed.date).toISOString()
+                : undefined,
         };
       } catch (error) {
         console.warn('Failed to hydrate record detail payload', error);
@@ -74,7 +79,10 @@ export default function RecordDetailScreen() {
       payee: typeof params.payee === 'string' ? params.payee : '',
       note: typeof params.note === 'string' ? params.note : '',
       labels: [],
-      occurredAt: undefined,
+      occurredAt:
+        typeof params.date === 'string'
+          ? new Date(params.date).toISOString()
+          : undefined,
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
 
