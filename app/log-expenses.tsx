@@ -442,28 +442,6 @@ export default function LogExpensesScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
             onPress={() => {
-              const draftEdited = isSingleDraftEdited(singleDraft);
-              const anyStored = storedRecords.length > 0;
-              if (draftEdited || anyStored) {
-                Alert.alert(
-                  'Discard changes?',
-                  'You have unsaved changes. Do you want to discard and go back?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Discard',
-                      style: 'destructive',
-                      onPress: () => {
-                        // reset drafts and go back without saving
-                        transactionDraftState.resetSingleDraft(lastSelectedCategory);
-                        navigation.goBack();
-                      },
-                    },
-                  ],
-                  { cancelable: true }
-                );
-                return;
-              }
               navigation.goBack();
             }}
             style={{ padding: 8, marginRight: 8 }}
@@ -510,7 +488,7 @@ export default function LogExpensesScreen() {
       headerStyle: { backgroundColor: 'transparent', shadowColor: 'transparent', elevation: 0, borderBottomWidth: 0 },
       headerShadowVisible: false,
     });
-  }, [handleSave, confirmDiscardSingle, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
+  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {

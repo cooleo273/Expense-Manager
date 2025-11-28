@@ -94,7 +94,7 @@ export default function Statistics() {
   const chartWidth = Math.max(windowWidth - 64, 280);
   const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
   const tabBarHeight = useBottomTabBarHeight();
-  const { filters } = useFilterContext();
+  const { filters, applyDateFilter } = useFilterContext();
   const navigation = useNavigation();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
@@ -129,6 +129,15 @@ export default function Statistics() {
       headerTitle: '',
     } as any);
   }, [loadTransactions, navigation]);
+
+  useEffect(() => {
+    if (!filters.dateRange && (filters.datePreset === null || filters.datePreset === undefined)) {
+      const now = new Date();
+      const start = startOfDay(new Date(now.getFullYear(), 0, 1));
+      const end = startOfDay(new Date(now.getFullYear(), 11, 31));
+      applyDateFilter({ start, end }, 'year');
+    }
+  }, [filters.dateRange, filters.datePreset, applyDateFilter]);
 
   useFocusEffect(
     useCallback(() => {

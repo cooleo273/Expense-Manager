@@ -49,6 +49,29 @@ export const statisticsStyles = StyleSheet.create({
     alignSelf: 'center',
     overflow: 'hidden',
   },
+  selectedBarInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+  selectedBarLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium as any,
+    letterSpacing: 0.4,
+  },
+  selectedBarValue: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold as any,
+  },
+  chartHint: {
+    fontSize: FontSizes.xs,
+    letterSpacing: 0.4,
+  },
   barSummaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

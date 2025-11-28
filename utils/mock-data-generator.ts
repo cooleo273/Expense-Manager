@@ -32,6 +32,61 @@ const PAYEE_SOURCES: Record<CategoryKey, string[]> = {
 
 const LABEL_POOL = ['recurring', 'family', 'personal', 'business', 'travel', 'subscription'];
 
+const CATEGORY_LABEL_OVERRIDES: Partial<Record<CategoryKey, string[]>> = {
+  foodAndDrinks: ['dining-out', 'grocery-run', 'coffee'],
+  shopping: ['essentials', 'wishlist'],
+  housing: ['utilities', 'rent'],
+  transportation: ['commute', 'rideshare'],
+  vehicle: ['fuel', 'maintenance'],
+  lifeEntertainment: ['wellness', 'social'],
+  communicationPc: ['internet', 'phone'],
+  financialExpenses: ['fees', 'insurance'],
+  investments: ['portfolio', 'retirement'],
+  income: ['salary', 'bonus'],
+};
+
+const NOTE_TEMPLATES: Partial<Record<CategoryKey, string[]>> = {
+  foodAndDrinks: [
+    'Meal at {payee}',
+    'Groceries restock at {payee}',
+    'Coffee run - {payee}',
+  ],
+  shopping: [
+    'Picked up {subcategory} items',
+    'Online order via {payee}',
+  ],
+  housing: [
+    'Monthly {subcategory} payment',
+    '{payee} invoice settled',
+  ],
+  transportation: [
+    '{payee} ride across town',
+    'Transit top-up',
+  ],
+  vehicle: [
+    'Car expense at {payee}',
+    'Fuel stop - {payee}',
+  ],
+  lifeEntertainment: [
+    '{subcategory} outing',
+    'Streaming/activities with {payee}',
+  ],
+  communicationPc: [
+    '{payee} monthly bill',
+    'Tech upgrade for {subcategory}',
+  ],
+  financialExpenses: ['Finance charge: {payee}', 'Policy update via {payee}'],
+  investments: ['Investment move with {payee}', '{subcategory} contribution'],
+  others: ['Misc expense noted', '{subcategory} catch-all item'],
+  income: ['Deposit from {payee}', 'Recorded {subcategory} income'],
+};
+
+const FALLBACK_NOTE_TEMPLATES = [
+  '{subcategory} entry with {payee}',
+  '{subcategory} update',
+  'Tracked {subcategory} (${amount})',
+];
+
 const subcategoryNameSummary = (label: string) => {
   if (label.length <= 32) {
     return label;
@@ -53,13 +108,35 @@ const formatTitle = (subcategoryName: string, type: Transaction['type']) => {
   return subcategoryName;
 };
 
-const maybeLabels = (): string[] | undefined => {
-  if (Math.random() > 0.35) {
+const maybeLabels = (categoryId: CategoryKey): string[] | undefined => {
+  const pool = [...LABEL_POOL, ...(CATEGORY_LABEL_OVERRIDES[categoryId] ?? [])];
+  if (pool.length === 0) {
     return undefined;
   }
-  const labelCount = randomInt(1, 2);
-  const shuffled = [...LABEL_POOL].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, labelCount);
+  const shouldAssign = Math.random() < 0.65;
+  if (!shouldAssign) {
+    return undefined;
+  }
+  const labelCount = Math.min(pool.length, randomInt(1, 3));
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const selected = new Set<string>();
+  for (const label of shuffled) {
+    selected.add(label);
+    if (selected.size >= labelCount) {
+      break;
+    }
+  }
+  return Array.from(selected);
+};
+
+const buildNote = (categoryId: CategoryKey, subcategoryName: string, payee: string, amount: number) => {
+  const templates = NOTE_TEMPLATES[categoryId] ?? FALLBACK_NOTE_TEMPLATES;
+  const template = pickFrom(templates);
+  const summary = subcategoryNameSummary(subcategoryName);
+  return template
+    .replace(/\{subcategory\}/gi, summary)
+    .replace(/\{payee\}/gi, payee)
+    .replace(/\{amount\}/gi, Math.abs(amount).toFixed(2));
 };
 
 const pickAccount = (type: Transaction['type']) => {
@@ -98,14 +175,15 @@ export const generateRealisticMockData = async () => {
       const account = pickAccount(type);
       const amount = amountForCategory(subcat.parentId, type);
       const payee = pickFrom(PAYEE_SOURCES[subcat.parentId] ?? PAYEE_SOURCES.others);
-      const labels = maybeLabels();
+      const labels = maybeLabels(subcat.parentId);
+      const note = buildNote(subcat.parentId, subcat.name, payee, amount);
 
       transactions.push({
         id: `mock-${subcat.id}-${date.getTime()}-${i}-${idx}`,
         title: formatTitle(subcat.name, type),
         account: account.name,
         accountId: account.id,
-        note: `${payee} · ${subcategoryNameSummary(subcat.name)}`,
+        note,
         amount,
         date: date.toISOString(),
         type,
@@ -147,7 +225,7 @@ export const generateRealisticMockData = async () => {
       title: 'Supplemental Income',
       account: account.name,
       accountId: account.id,
-      note: 'Auto-generated to balance cash flow',
+      note: buildNote('income', 'Supplemental Income', 'Company X', amount),
       amount,
       date: salaryDate.toISOString(),
       type: 'income',

@@ -131,6 +131,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
   const [localMaxAmount, setLocalMaxAmount] = useState<number>(maxTransactionAbs);
   const [payerInput, setPayerInput] = useState('');
   const [keyTermInput, setKeyTermInput] = useState('');
+  const [labelSearchQuery, setLabelSearchQuery] = useState('');
   const [showPayerNote, setShowPayerNote] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
@@ -171,6 +172,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     setLocalMaxAmount(filters.amountRange?.max ?? maxTransactionAbs);
     setPayerInput('');
     setKeyTermInput('');
+    setLabelSearchQuery('');
     setExpandedFilter('recordType');
     setShowPayerNote(false);
   }, [
@@ -364,6 +366,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     setExpandedFilter('recordType');
     setPayerInput('');
     setKeyTermInput('');
+    setLabelSearchQuery('');
     setShowPayerNote(false);
     setShowCalendarModal(false);
   }, [
@@ -386,11 +389,6 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
   ]);
 
   const confirmResetFilters = useCallback(() => {
-    if (Platform.OS === 'web') {
-      executeResetFilters();
-      return;
-    }
-
     Alert.alert(
       'Reset filters?',
       'Are you sure you want to clear all filter selections?',
@@ -448,7 +446,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
         detail:
           localFilters.selectedLabels && localFilters.selectedLabels.length > 0
             ? `${localFilters.selectedLabels.length} selected`
-            : 'Tap to choose',
+            : undefined,
       },
       {
         id: 'keyTerms',
@@ -498,6 +496,14 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     maxTransactionAbs,
     selectedCategoryLabels,
   ]);
+
+  const filteredLabelSuggestions = useMemo(() => {
+    const query = labelSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return uniqueLabels;
+    }
+    return uniqueLabels.filter((label) => label.toLowerCase().includes(query));
+  }, [labelSearchQuery, uniqueLabels]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
 
@@ -871,6 +877,24 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                             )}
                             {section.id === 'labels' && isExpanded && (
                               <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
+                                <View
+                                  style={[
+                                    styles.tokenInputRow,
+                                    { borderColor: palette.border, backgroundColor: palette.surface },
+                                  ]}
+                                >
+                                  <TextInput
+                                    style={[styles.tokenInput, { color: palette.text }]}
+                                    value={labelSearchQuery}
+                                    onChangeText={setLabelSearchQuery}
+                                    placeholder="Search labels"
+                                    placeholderTextColor={palette.icon}
+                                    autoCapitalize="none"
+                                    keyboardType="default"
+                                    returnKeyType="search"
+                                  />
+                                  <MaterialCommunityIcons name="magnify" size={18} color={palette.icon} />
+                                </View>
                                 {localFilters.selectedLabels.length > 0 && (
                                   <ScrollView
                                     horizontal
@@ -904,13 +928,26 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                     ))}
                                   </ScrollView>
                                 )}
-                                {uniqueLabels.length > 0 ? (
+                                {(() => {
+                                  const availableLabels = filteredLabelSuggestions.filter(
+                                    (lab) => !localFilters.selectedLabels.includes(lab),
+                                  );
+                                  if (availableLabels.length === 0) {
+                                    return (
+                                      <ThemedText style={{ color: palette.icon }}>
+                                        {labelSearchQuery.trim().length > 0
+                                          ? 'No labels match your search'
+                                          : 'No labels found'}
+                                      </ThemedText>
+                                    );
+                                  }
+                                  return (
                                   <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
                                     contentContainerStyle={styles.tokenScrollInner}
                                   >
-                                    {uniqueLabels.map((lab) => {
+                                    {availableLabels.map((lab) => {
                                       const isActiveLabel = localFilters.selectedLabels.includes(lab);
                                       return (
                                         <TouchableOpacity
@@ -947,9 +984,8 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                       );
                                     })}
                                   </ScrollView>
-                                ) : (
-                                  <ThemedText style={{ color: palette.icon }}>No labels found</ThemedText>
-                                )}
+                                  );
+                                })()}
                               </View>
                             )}
                             {section.id === 'keyTerms' && isExpanded && (
