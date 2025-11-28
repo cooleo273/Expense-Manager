@@ -8,9 +8,11 @@ import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+
+import DualSlider from '@/components/DualSlider';
+import KeyTermsEditor from '@/components/KeyTermsEditor';
 import RecordList from '@/components/RecordList';
 import { ThemedText } from '@/components/themed-text';
-// imports consolidated below
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { getNodeDisplayName, isSubcategoryId } from '@/constants/categories';
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
@@ -20,25 +22,11 @@ import { recordsStyles } from '@/styles/records.styles';
 import { isSameDay, startOfDay } from '@/utils/date';
 import { getAccountMeta, mockAccounts, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
-// @ts-ignore
-import KeyTermsEditor from '@/components/KeyTermsEditor';
-import Slider from '@react-native-community/slider';
 import { StorageService } from '../../services/storage';
-// @ts-ignore - optional dependency, install with `npm install @react-native-community/slider`
-// prefer a dual-handle slider; if the dependency isn't installed fallback to two single sliders
-// dynamic require so app stays resilient if the package isn't installed
-// @ts-ignore
-let MultiSlider: any;
-try {
-  // @ts-ignore
-  MultiSlider = require('@ptomasroos/react-native-multi-slider');
-  // the package sometimes exports default
-  if (MultiSlider && MultiSlider.default) MultiSlider = MultiSlider.default;
-} catch (err) {
-  MultiSlider = undefined;
-}
+
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
+
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'date-desc', label: 'Date (desc)' },
@@ -101,7 +89,8 @@ export default function RecordsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const accent = palette.tint;
   const router = useRouter();
-  const { filters, setSelectedCategories, setDateRange, setAmountRange, setSelectedPayers, setSelectedLabels, setKeyTerms, setSelectedAccount, resetFilters } = useFilterContext();
+  const { filters, setSelectedCategories, setDateRange, setAmountRange, setSelectedPayers, setSelectedLabels, setKeyTerms, setSelectedAccount, resetFilters, setTempSelectedCategories } = useFilterContext();
+
 
   const [selectedRecordType, setSelectedRecordType] = useState<TransactionTypeValue>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
@@ -196,13 +185,12 @@ export default function RecordsScreen() {
     }
   }, [isFocused]);
 
-  // Amount slider support — default to 0..maxTransactionAbs
+
   const maxTransactionAbs = useMemo(() => {
     if (transactions.length === 0) return 100;
     return Math.max(100, ...transactions.map((t) => Math.abs(t.amount || 0)));
   }, [transactions]);
 
-  // Local amount slider state used by the filter drawer
   const [localMinAmount, setLocalMinAmount] = useState<number>(0);
   const [localMaxAmount, setLocalMaxAmount] = useState<number>(maxTransactionAbs);
 
@@ -212,9 +200,10 @@ export default function RecordsScreen() {
     keyTerms: [] as string[],
     amountRange: null as { min: number; max: number } | null,
     dateRange: null as DateRange | null,
-    selectedCategories: [] as string[],
     selectedAccount: 'all' as string,
+    selectedRecordType: 'all' as TransactionTypeValue,
   });
+
 
   useEffect(() => {
     if (showFilters) {
@@ -229,13 +218,15 @@ export default function RecordsScreen() {
             }
           : null,
         dateRange: filters.dateRange,
-        selectedCategories: filters.selectedCategories,
         selectedAccount: filters.selectedAccount || 'all',
+        selectedRecordType: selectedRecordType,
       });
+      setTempSelectedCategories(filters.selectedCategories);
       setLocalMinAmount(filters.amountRange?.min ?? 0);
       setLocalMaxAmount(filters.amountRange?.max ?? maxTransactionAbs);
     }
-  }, [showFilters, filters, maxTransactionAbs]);
+  }, [showFilters, maxTransactionAbs, setTempSelectedCategories]);
+
 
   const filteredAndSortedData = useMemo(() => {
     const filtered = transactions.filter((item) => {
@@ -245,6 +236,7 @@ export default function RecordsScreen() {
         }
       }
 
+
       if (selectedRecordType !== 'all' && selectedRecordType !== item.type) {
         return false;
       }
@@ -252,6 +244,7 @@ export default function RecordsScreen() {
       if (filters.searchCategory && filters.searchCategory !== 'all' && filters.searchCategory !== item.type) {
         return false;
       }
+
 
       if (filters.selectedCategories.length > 0) {
         const matchesCategory = filters.selectedCategories.some(selectedId => {
@@ -265,6 +258,7 @@ export default function RecordsScreen() {
         }
       }
 
+
       if (filters.dateRange) {
         const itemDate = item.date;
         if (itemDate < filters.dateRange.start || itemDate > filters.dateRange.end) {
@@ -272,9 +266,10 @@ export default function RecordsScreen() {
         }
       }
 
+
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
-        if (!item.title.toLowerCase().includes(search) && 
+        if (!item.title.toLowerCase().includes(search) &&
             !item.subtitle.toLowerCase().includes(search) &&
             !(item.payee && item.payee.toLowerCase().includes(search)) &&
             !(item.note && item.note.toLowerCase().includes(search)) &&
@@ -283,12 +278,14 @@ export default function RecordsScreen() {
         }
       }
 
+
       if (filters.selectedPayers && filters.selectedPayers.length > 0) {
         const payee = (item.payee || '').trim();
         if (!filters.selectedPayers.includes(payee)) {
           return false;
         }
       }
+
 
       if (filters.selectedLabels && filters.selectedLabels.length > 0) {
         const labels = (item.labels || []).map((l: string) => l.trim());
@@ -298,6 +295,7 @@ export default function RecordsScreen() {
         }
       }
 
+
       if (filters.keyTerms && filters.keyTerms.length > 0) {
         const text = `${item.title} ${item.note || ''} ${item.payee || ''} ${(item.labels || []).join(' ')}`.toLowerCase();
         const allTermsPresent = filters.keyTerms.every((t) => text.includes(t.toLowerCase()));
@@ -306,7 +304,6 @@ export default function RecordsScreen() {
         }
       }
 
-      // apply amount filter (absolute amount)
       if (filters.amountRange) {
         const abs = Math.abs(item.amount);
         const min = filters.amountRange.min ?? 0;
@@ -316,16 +313,16 @@ export default function RecordsScreen() {
         }
       }
 
+
       return true;
     });
+
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortOption) {
         case 'date-desc':
-          // Sort by date descending
           return b.date.getTime() - a.date.getTime();
         case 'date-asc':
-          // Sort by date ascending
           return a.date.getTime() - b.date.getTime();
         case 'amount-desc':
           return b.amount - a.amount;
@@ -336,8 +333,10 @@ export default function RecordsScreen() {
       }
     });
 
+
     return sorted;
   }, [selectedRecordType, sortOption, filters.selectedAccount, filters.selectedCategories, filters.dateRange, filters.searchTerm, filters.amountRange, transactions]);
+
 
   const appliedFiltersCount = useMemo(() => {
     let count = 0;
@@ -374,17 +373,21 @@ export default function RecordsScreen() {
     return count;
   }, [filters.dateRange, filters.searchCategory, filters.searchTerm, filters.selectedCategories, selectedRecordType, filters.amountRange]);
 
+
   const filterIconColor = appliedFiltersCount > 0 ? palette.tint : palette.icon;
   const sortIconColor = sortOption === 'date-desc' ? palette.icon : palette.tint;
   const filterLabel = appliedFiltersCount > 0 ? `${appliedFiltersCount} filter${appliedFiltersCount > 1 ? 's' : ''} applied` : 'All filters';
   const sortLabel = SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Date (desc)';
 
+
   const monthMatrix = useMemo(() => getMonthMatrix(monthCursor), [monthCursor]);
+
 
   const isWithinDraftRange = (date: Date) => {
     if (!draftRange) {
       return false;
     }
+
 
     if (draftRange.start && draftRange.end) {
       const start = draftRange.start < draftRange.end ? draftRange.start : draftRange.end;
@@ -392,8 +395,10 @@ export default function RecordsScreen() {
       return date >= start && date <= end;
     }
 
+
     return draftRange.start && isSameDay(draftRange.start, date);
   };
+
 
   const handleDayPress = (date: Date) => {
     const normalized = startOfDay(date);
@@ -402,24 +407,29 @@ export default function RecordsScreen() {
         return { start: normalized };
       }
 
+
       if (prev.start && !prev.end) {
         return { start: prev.start, end: normalized };
       }
+
 
       return { start: normalized };
     });
   };
 
+
   const applyRange = (range: DateRange | null) => {
-    setDateRange(range);
+    setLocalFilters(prev => ({ ...prev, dateRange: range }));
     setShowCalendarModal(false);
   };
+
 
   const handleConfirm = () => {
     if (!draftRange) {
       applyRange(null);
       return;
     }
+
 
     const { start, end } = draftRange;
     if (start && end) {
@@ -431,12 +441,14 @@ export default function RecordsScreen() {
     }
   };
 
+
   const quickSelect = (option: 'all' | 'week' | 'month') => {
     const now = new Date();
     if (option === 'all') {
       applyRange(null);
       return;
     }
+
 
     if (option === 'week') {
       const start = startOfDay(now);
@@ -448,12 +460,14 @@ export default function RecordsScreen() {
       return;
     }
 
+
     if (option === 'month') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       applyRange({ start: startOfDay(start), end: startOfDay(end) });
     }
   };
+
 
   useEffect(() => {
     if (showCalendarModal) {
@@ -468,6 +482,7 @@ export default function RecordsScreen() {
     }
   }, [showCalendarModal, filters.dateRange]);
 
+
   const formatCurrency = (value: number, type: 'income' | 'expense') => {
     const abs = Math.abs(value).toLocaleString(undefined, {
       minimumFractionDigits: 2,
@@ -475,6 +490,7 @@ export default function RecordsScreen() {
     });
     return `${type === 'income' ? '+' : '-'}$${abs}`;
   };
+
 
   const formatTimePeriod = (range: DateRange | null) => {
     if (!range) return 'All Time';
@@ -494,12 +510,14 @@ export default function RecordsScreen() {
     }
   };
 
-  const selectedCategoryLabels = useMemo(() => 
-    localFilters.selectedCategories
+
+  const selectedCategoryLabels = useMemo(() =>
+    filters.tempSelectedCategories
       .map(id => getNodeDisplayName(id))
       .filter((name): name is string => Boolean(name)),
-    [localFilters.selectedCategories]
+    [filters.tempSelectedCategories]
   );
+
 
   const uniquePayers = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -513,6 +531,7 @@ export default function RecordsScreen() {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([payee]) => payee);
   }, [transactions]);
 
+
   const uniqueLabels = useMemo(() => {
     const counts: Record<string, number> = {};
     transactions.forEach((t) => {
@@ -524,7 +543,8 @@ export default function RecordsScreen() {
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([label]) => label);
   }, [transactions]);
-  
+ 
+
 
   const filterSections = [
     {
@@ -535,8 +555,8 @@ export default function RecordsScreen() {
     },
     {
       id: 'categories',
-      title: `Categories (${localFilters.selectedCategories.length || 'All'})`,
-      detail: selectedCategoryLabels.length > 0 
+      title: `Categories (${filters.tempSelectedCategories.length || 'All'})`,
+      detail: selectedCategoryLabels.length > 0
         ? `${selectedCategoryLabels.slice(0, 3).join(', ')}${selectedCategoryLabels.length > 3 ? '...' : ''}`
         : 'Fuel, Groceries, Household…',
     },
@@ -548,12 +568,12 @@ export default function RecordsScreen() {
     {
       id: 'labels',
       title: 'Labels (2)',
-      detail: filters.selectedLabels && filters.selectedLabels.length > 0 ? `${filters.selectedLabels.length} selected` : 'Sale, Bargain',
+      detail: localFilters.selectedLabels && localFilters.selectedLabels.length > 0 ? `${localFilters.selectedLabels.length} selected` : 'Sale, Bargain',
     },
     {
       id: 'keyTerms',
       title: 'Key Terms (3)',
-      detail: filters.keyTerms && filters.keyTerms.length > 0 ? filters.keyTerms.join(', ') : 'Black, Gift, Mom',
+      detail: localFilters.keyTerms && localFilters.keyTerms.length > 0 ? localFilters.keyTerms.join(', ') : 'Black, Gift, Mom',
     },
     {
       id: 'amount',
@@ -564,20 +584,21 @@ export default function RecordsScreen() {
       id: 'accounts',
       title: filters.selectedAccount === 'all'
         ? 'Accounts (All)'
-        : `Accounts (${getAccountMeta(filters.selectedAccount)?.name ?? 'Custom'})`,
-      detail: filters.selectedAccount === 'all'
+        : `Accounts (${getAccountMeta(localFilters.selectedAccount)?.name ?? 'Custom'})`,
+      detail: localFilters.selectedAccount === 'all'
         ? undefined
-        : getAccountMeta(filters.selectedAccount)?.subtitle,
+        : getAccountMeta(localFilters.selectedAccount)?.subtitle,
     },
     {
       id: 'timePeriod',
       title: 'Time Period',
-      detail: formatTimePeriod(filters.dateRange),
+      detail: formatTimePeriod(localFilters.dateRange),
     },
   ];
 
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={{ flex: 1, overflow: 'visible' }}>
         <View style={styles.header}>
           <View style={styles.filterRow}>
@@ -620,10 +641,32 @@ export default function RecordsScreen() {
           </View>
         </View>
 
-        <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}> 
-          <RecordList records={filteredAndSortedData} variant="records" style={{ flex: 1 }} formatCurrency={(value, type = 'expense') => formatCurrency(value, type)} onPressItem={(item) => router.push({ pathname: '/record-detail', params: { id: item.id, payload: encodeURIComponent(JSON.stringify(item)), type: item.type } })} />
+
+        <View style={[styles.recordsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <RecordList
+            records={filteredAndSortedData}
+            variant="records"
+            style={{ flex: 1 }}
+            formatCurrency={(value, type = 'expense') => formatCurrency(value, type)}
+            onPressItem={(item) => {
+              const occurredAt = item.date instanceof Date
+                ? item.date.toISOString()
+                : new Date(item.date).toISOString();
+              const payload = { ...item, occurredAt };
+              router.push({
+                pathname: '/record-detail',
+                params: {
+                  id: item.id,
+                  payload: encodeURIComponent(JSON.stringify(payload)),
+                  type: item.type,
+                },
+              });
+            }}
+            bottomInset={tabBarHeight}
+          />
         </View>
       </View>
+
 
       <Modal transparent visible={showSortDropdown} animationType="none" onRequestClose={() => setShowSortDropdown(false)}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSortDropdown(false)} />
@@ -662,10 +705,11 @@ export default function RecordsScreen() {
         </View>
       </Modal>
 
+
       <Modal transparent visible={showFilters} animationType="fade" onRequestClose={() => setShowFilters(false)}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowFilters(false)} />
-          <View style={[styles.filterSheet, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+          <View style={[styles.filterSheet, { backgroundColor: palette.card, borderColor: palette.border }]}>
             <View style={styles.filterHeader}>
               <TouchableOpacity onPress={() => setShowFilters(false)}>
                 <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
@@ -675,9 +719,7 @@ export default function RecordsScreen() {
                 onPress={() => {
                   setSelectedRecordType('all');
                   setSortOption('date-desc');
-                  // Reset global filters saved in context
                   resetFilters();
-                  // reset local UI state as well
                   setLocalMinAmount(0);
                   setLocalMaxAmount(maxTransactionAbs);
                   setLocalFilters({
@@ -686,12 +728,10 @@ export default function RecordsScreen() {
                     keyTerms: [],
                     amountRange: null,
                     dateRange: null,
-                    selectedCategories: [],
                     selectedAccount: 'all',
+                    selectedRecordType: 'all',
                   });
                   setExpandedFilter(null);
-                  // close drawer
-                  setShowFilters(false);
                 }}
               >
                 <ThemedText style={{ color: accent, fontWeight: '600' }}>RESET</ThemedText>
@@ -703,9 +743,9 @@ export default function RecordsScreen() {
                 const isActive = (() => {
                   switch (section.id) {
                     case 'recordType':
-                      return selectedRecordType !== 'all';
+                      return localFilters.selectedRecordType !== 'all';
                     case 'categories':
-                      return (filters.selectedCategories || []).length > 0;
+                      return (filters.tempSelectedCategories || []).length > 0;
                     case 'payers':
                       return (filters.selectedPayers || []).length > 0;
                     case 'labels':
@@ -726,7 +766,7 @@ export default function RecordsScreen() {
                 <View key={section.id}>
                   {section.id === 'categories' ? (
                     <TouchableOpacity onPress={() => router.push({ pathname: '/Category', params: { from: 'filter', type: selectedRecordType !== 'all' ? selectedRecordType : undefined }})}>
-                      <View style={[styles.filterRowItem, (isExpanded || isActive) && { backgroundColor: `${palette.tint}0F`, borderColor: palette.tint, borderWidth: 1 }]}> 
+                      <View style={[styles.filterRowItem, (isExpanded || isActive) && { backgroundColor: `${palette.tint}0F`, borderColor: palette.tint, borderWidth: 1 }]}>
                         <View style={styles.filterRowText}>
                           <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
                           {section.detail && (
@@ -738,7 +778,7 @@ export default function RecordsScreen() {
                     </TouchableOpacity>
                   ) : section.id === 'timePeriod' ? (
                     <TouchableOpacity onPress={() => setShowCalendarModal(true)}>
-                      <View style={[styles.filterRowItem]}> 
+                      <View style={[styles.filterRowItem]}>
                         <View style={styles.filterRowText}>
                           <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
                           {section.detail && (
@@ -749,12 +789,11 @@ export default function RecordsScreen() {
                       </View>
                     </TouchableOpacity>
                   ) : (
-                    <View style={[styles.filterRowItem]}> 
-                      <TouchableOpacity
-                        onPress={() => setExpandedFilter(prev => (prev === section.id ? null : section.id))}
-                        activeOpacity={0.85}
-                        style={{ flex: 1 }}
-                      >
+                    <TouchableOpacity
+                      onPress={() => setExpandedFilter(prev => (prev === section.id ? null : section.id))}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.filterRowItem]}>
                         <View style={styles.filterRowText}>
                         <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>{section.title}</ThemedText>
                         {section.detail && (
@@ -762,8 +801,8 @@ export default function RecordsScreen() {
                         )}
                         {section.chips && section.id === 'recordType' && isExpanded && (
                           <TransactionTypeFilter
-                            value={selectedRecordType}
-                            onChange={setSelectedRecordType}
+                            value={localFilters.selectedRecordType}
+                            onChange={(value) => setLocalFilters(prev => ({ ...prev, selectedRecordType: value }))}
                             options={['expense', 'income', 'all']}
                             variant="compact"
                             labelSize="small"
@@ -773,7 +812,7 @@ export default function RecordsScreen() {
                         {section.chips && section.id !== 'recordType' && (
                           <View style={styles.filterChipRow}>
                             {section.chips.map((chip) => {
-                              const isActive = selectedRecordType === chip.toLowerCase();
+                              const isActive = localFilters.selectedRecordType === chip.toLowerCase();
                               return (
                                 <TouchableOpacity
                                   key={chip}
@@ -783,7 +822,7 @@ export default function RecordsScreen() {
                                       ? { backgroundColor: `${accent}15`, borderColor: accent }
                                       : { borderColor: palette.border },
                                   ]}
-                                  onPress={() => setSelectedRecordType(chip.toLowerCase() as 'all' | 'income' | 'expense')}
+                                  onPress={() => setLocalFilters(prev => ({ ...prev, selectedRecordType: chip.toLowerCase() as 'all' | 'income' | 'expense' }))}
                                 >
                                   <ThemedText
                                     style={[
@@ -808,11 +847,11 @@ export default function RecordsScreen() {
                                     key={payee}
                                     style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
                                     onPress={() => {
-                                      const cur = filters.selectedPayers ?? [];
+                                      const cur = localFilters.selectedPayers ?? [];
                                       if (cur.includes(payee)) {
-                                        setSelectedPayers(cur.filter(p => p !== payee));
+                                        setLocalFilters(prev => ({ ...prev, selectedPayers: cur.filter(p => p !== payee) }));
                                       } else {
-                                        setSelectedPayers([...cur, payee]);
+                                        setLocalFilters(prev => ({ ...prev, selectedPayers: [...cur, payee] }));
                                       }
                                     }}
                                   >
@@ -830,17 +869,17 @@ export default function RecordsScreen() {
                           <View style={{ marginTop: Spacing.md }}>
                             <View style={styles.filterChipRow}>
                               {uniqueLabels.slice(0, 8).map((lab) => {
-                                const isActive = (filters.selectedLabels || []).includes(lab);
+                                const isActive = localFilters.selectedLabels.includes(lab);
                                 return (
                                   <TouchableOpacity
                                     key={lab}
                                     style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
                                     onPress={() => {
-                                      const cur = filters.selectedLabels ?? [];
+                                      const cur = localFilters.selectedLabels ?? [];
                                       if (cur.includes(lab)) {
-                                        setSelectedLabels(cur.filter(l => l !== lab));
+                                        setLocalFilters(prev => ({ ...prev, selectedLabels: cur.filter(l => l !== lab) }));
                                       } else {
-                                        setSelectedLabels([...cur, lab]);
+                                        setLocalFilters(prev => ({ ...prev, selectedLabels: [...cur, lab] }));
                                       }
                                     }}
                                   >
@@ -858,12 +897,12 @@ export default function RecordsScreen() {
                           <View style={{ marginTop: Spacing.md }}>
                             <View style={styles.filterChipRow}>
                               {mockAccounts.map((acc) => {
-                                const isActive = filters.selectedAccount === acc.id;
+                                const isActive = localFilters.selectedAccount === acc.id;
                                 return (
                                   <TouchableOpacity
                                     key={acc.id}
                                     style={[styles.modalChip, isActive ? { backgroundColor: `${accent}15`, borderColor: accent } : { borderColor: palette.border }]}
-                                    onPress={() => setSelectedAccount(acc.id)}
+                                    onPress={() => setLocalFilters(prev => ({ ...prev, selectedAccount: acc.id }))}
                                   >
                                     <ThemedText style={[styles.modalChipLabel, { color: isActive ? accent : palette.icon }]}>{acc.name}</ThemedText>
                                   </TouchableOpacity>
@@ -875,8 +914,8 @@ export default function RecordsScreen() {
                         {section.id === 'keyTerms' && isExpanded && (
                           <View style={{ marginTop: Spacing.md }}>
                             <KeyTermsEditor
-                              terms={filters.keyTerms ?? []}
-                              onChange={(terms) => setKeyTerms(terms)}
+                              terms={localFilters.keyTerms ?? []}
+                              onChange={(terms) => setLocalFilters(prev => ({ ...prev, keyTerms: terms }))}
                             />
                           </View>
                         )}
@@ -886,69 +925,30 @@ export default function RecordsScreen() {
                               <ThemedText style={{ color: palette.icon }}>${localMinAmount.toFixed(2)}</ThemedText>
                               <ThemedText style={{ color: palette.icon }}>${localMaxAmount.toFixed(2)}</ThemedText>
                             </View>
-                            {/* Use MultiSlider if available; fall back to two single sliders */}
-                            {typeof MultiSlider !== 'undefined' ? (
-                              <MultiSlider
-                                values={[localMinAmount, localMaxAmount]}
-                                onValuesChange={(vals: number[]) => {
-                                  setLocalMinAmount(Math.round(vals[0]));
-                                  setLocalMaxAmount(Math.round(vals[1]));
-                                }}
-                                onValuesChangeFinish={(vals: number[] = [localMinAmount, localMaxAmount]) => {
-                                  setAmountRange({ min: Math.round(vals[0]), max: Math.round(vals[1]) });
-                                }}
-                                min={0}
-                                max={maxTransactionAbs}
-                                step={1}
-                                selectedStyle={{ backgroundColor: palette.tint }}
-                                unselectedStyle={{ backgroundColor: palette.border }}
-                              />
-                            ) : (
-                              <>
-                                <Slider
-                                  minimumValue={0}
-                                  maximumValue={maxTransactionAbs}
-                                  step={1}
-                                  value={localMaxAmount}
-                                  onValueChange={(val) => setLocalMaxAmount(Math.round(val))}
-                                  onSlidingComplete={(val: number) => {
-                                    const newMax = Math.round(val);
-                                    // make sure min/max ordering is valid
-                                    if (newMax < localMinAmount) {
-                                      setLocalMinAmount(newMax);
-                                    }
-                                    setLocalMaxAmount(newMax);
-                                    setAmountRange({ min: Math.round(localMinAmount), max: newMax });
-                                  }}
-                                  minimumTrackTintColor={palette.tint}
-                                  maximumTrackTintColor={palette.border}
-                                />
-                                <Slider
-                                  minimumValue={0}
-                                  maximumValue={maxTransactionAbs}
-                                  step={1}
-                                  value={localMinAmount}
-                                  onValueChange={(val) => setLocalMinAmount(Math.round(val))}
-                                  onSlidingComplete={(val: number) => {
-                                    const newMin = Math.round(val);
-                                    if (newMin > localMaxAmount) {
-                                      setLocalMaxAmount(newMin);
-                                    }
-                                    setLocalMinAmount(newMin);
-                                    setAmountRange({ min: newMin, max: Math.round(localMaxAmount) });
-                                  }}
-                                  minimumTrackTintColor={palette.tint}
-                                  maximumTrackTintColor={palette.border}
-                                />
-                              </>
-                            )}
+                            <DualSlider
+                              min={0}
+                              max={maxTransactionAbs}
+                              step={1}
+                              values={[localMinAmount, localMaxAmount]}
+                              onValuesChange={(vals) => {
+                                setLocalMinAmount(vals[0]);
+                                setLocalMaxAmount(vals[1]);
+                              }}
+                              onValuesChangeFinish={(vals) => {
+                                setLocalFilters(prev => ({ ...prev, amountRange: { min: Math.round(vals[0]), max: Math.round(vals[1]) } }));
+                              }}
+                              containerStyle={{ marginTop: Spacing.sm }}
+                              trackStyle={{ backgroundColor: palette.border }}
+                              selectedTrackStyle={{ backgroundColor: palette.tint }}
+                              markerStyle={{ backgroundColor: palette.tint, width: 24, height: 24, borderRadius: 12 }}
+                              pressedMarkerStyle={{ backgroundColor: palette.tint, width: 28, height: 28, borderRadius: 14 }}
+                            />
                           </View>
                         )}
                         </View>
-                      </TouchableOpacity>
-
-                      <MaterialCommunityIcons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.icon} />
-                    </View>
+                        <MaterialCommunityIcons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.icon} />
+                      </View>
+                    </TouchableOpacity>
                   )}
                   <View style={[styles.separator, { backgroundColor: palette.border }]} />
                 </View>
@@ -957,13 +957,24 @@ export default function RecordsScreen() {
             </ScrollView>
             <TouchableOpacity
               style={[styles.applyButton, { backgroundColor: accent }]}
-              onPress={() => setShowFilters(false)}
+              onPress={() => {
+                setSelectedPayers(localFilters.selectedPayers);
+                setSelectedLabels(localFilters.selectedLabels);
+                setKeyTerms(localFilters.keyTerms);
+                setSelectedCategories(filters.tempSelectedCategories);
+                setSelectedAccount(localFilters.selectedAccount);
+                setAmountRange(localFilters.amountRange);
+                setDateRange(localFilters.dateRange);
+                setSelectedRecordType(localFilters.selectedRecordType);
+                setShowFilters(false);
+              }}
             >
               <ThemedText style={{ color: 'white', fontWeight: '700' }}>APPLY</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
 
       <Modal transparent visible={showCalendarModal} animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
         <View style={styles.modalOverlay}>
@@ -1078,6 +1089,7 @@ export default function RecordsScreen() {
         </View>
       </Modal>
 
+
       {isFocused && (
         <Portal>
           {fabOpen && <Pressable style={styles.fabBackdrop} onPress={() => setFabOpen(false)} />}
@@ -1097,5 +1109,6 @@ export default function RecordsScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = recordsStyles;

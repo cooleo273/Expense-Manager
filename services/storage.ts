@@ -48,7 +48,6 @@ const TRANSACTIONS_KEY = '@transactions';
 const CATEGORY_USAGE_KEY = '@category_usage';
 
 export class StorageService {
-  // Get all transactions
   static async getTransactions(): Promise<Transaction[]> {
     try {
       const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
@@ -64,7 +63,6 @@ export class StorageService {
     }
   }
 
-  // Save all transactions
   static async saveTransactions(transactions: Transaction[]): Promise<void> {
     try {
       const normalized = transactions.map((transaction) => ({
@@ -77,7 +75,6 @@ export class StorageService {
     }
   }
 
-  // Add a single transaction
   static async addTransaction(transaction: Transaction): Promise<void> {
     try {
       const transactions = await this.getTransactions();
@@ -92,7 +89,6 @@ export class StorageService {
     }
   }
 
-  // Update a transaction
   static async updateTransaction(id: string, updates: Partial<Transaction>): Promise<void> {
     try {
       const transactions = await this.getTransactions();
@@ -115,7 +111,6 @@ export class StorageService {
     }
   }
 
-  // Delete a transaction
   static async deleteTransaction(id: string): Promise<void> {
     try {
       const transactions = await this.getTransactions();
@@ -126,7 +121,6 @@ export class StorageService {
     }
   }
 
-  // Add multiple transactions (for batch)
   static async addBatchTransactions(newTransactions: Transaction[]): Promise<void> {
     try {
       const transactions = await this.getTransactions();
@@ -143,7 +137,6 @@ export class StorageService {
     }
   }
 
-  // Clear all data (for testing)
   static async clearAll(): Promise<void> {
     try {
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);

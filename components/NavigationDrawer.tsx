@@ -36,13 +36,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const handleNavigate = (route: string, label: string) => {
     onClose();
 
-    // Show toast for features that are not available
     if (['Debts', 'Budgets', 'Accounts', 'Category', 'Templates'].includes(label)) {
       showToast(`${label} feature is not available yet`);
       return;
     }
 
-    // Navigate for available features
     if (route) {
       router.push(route as any);
     }
@@ -138,7 +136,14 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
           </ScrollView>
 
           <View style={styles.footerSection}>
-            <TouchableOpacity style={[styles.footerButton, { borderColor: palette.border }]} onPress={() => handleNavigate('/support', 'Legacy Mode')}>
+            <TouchableOpacity
+              style={[styles.footerButton, { borderColor: palette.border }]}
+              onPress={() => {
+                // Close the drawer and navigate to the legacy page
+                onClose();
+                router.push('/legacy');
+              }}
+            >
               <Text style={{ color: palette.text }}>Legacy Mode</Text>
               <MaterialCommunityIcons name="toggle-switch-off-outline" size={22} color={palette.icon} />
             </TouchableOpacity>

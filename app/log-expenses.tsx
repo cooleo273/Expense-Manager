@@ -69,10 +69,6 @@ export default function LogExpensesScreen() {
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const scrollToInput = useCallback((yOffset: number) => {
-    scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
-  }, [transactionType]);
-
   const scrollToEnd = useCallback(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, []);
@@ -82,11 +78,7 @@ export default function LogExpensesScreen() {
 
   const [localSelectedAccount, setLocalSelectedAccount] = useState<string | null>(fallbackAccountId);
   useEffect(() => {
-    // Do not force a fallback account here — allow the dropdown to show 'All'
-    // when opening Log Expenses. Users expect 'All' as default when adding a record.
-    // if (filters.selectedAccount === 'all' && fallbackAccountId) {
-    //   setSelectedAccount(fallbackAccountId);
-    // }
+   
   }, [filters.selectedAccount, fallbackAccountId, setSelectedAccount]);
 
   const selectedAccountId = localSelectedAccount ?? (filters.selectedAccount === 'all' ? fallbackAccountId : filters.selectedAccount);
@@ -276,8 +268,6 @@ export default function LogExpensesScreen() {
       );
 
       setStoredRecords((prev) => [...records, ...prev]);
-      // Persist usage counts for categories (and subcategories) so "MOST FREQUENT"
-      // shows the selected items after saving a record.
       try {
         await Promise.all(
           records.map((record) => StorageService.incrementCategoryUsage(record.subcategoryId ?? record.category))
@@ -295,7 +285,6 @@ export default function LogExpensesScreen() {
         return;
       }
 
-      // Ensure records page shows All Accounts by default after adding a record.
       setSelectedAccount('all');
       router.push('/(tabs)/records');
     } catch (error) {
@@ -307,7 +296,6 @@ export default function LogExpensesScreen() {
   const buildRecords = useCallback((): StoredRecord[] | null => {
     let hasError = false;
 
-    // Amount validation
     const amountStr = singleDraft.amount.trim();
     if (!amountStr) {
       setAmountError('Amount is required');
@@ -325,7 +313,6 @@ export default function LogExpensesScreen() {
       }
     }
 
-    // Category validation
     if (!singleDraft.category || singleDraft.category.trim() === '') {
       setCategoryError('Category is required');
       hasError = true;
@@ -333,7 +320,6 @@ export default function LogExpensesScreen() {
       setCategoryError('');
     }
 
-    // Payee validation
     if (!singleDraft.payee || singleDraft.payee.trim() === '') {
       setPayeeError(`${transactionType === 'income' ? 'Payer' : 'Payee'} is required`);
       hasError = true;
@@ -422,14 +408,10 @@ export default function LogExpensesScreen() {
       setTransactionType(value);
       transactionDraftState.setTransactionType(value);
       if (value === 'income') {
-        // Pre-populate the Category dropdown as 'Income' when switching to income
         handleSingleChange('category', 'income');
-        // Remove any subcategory — Income must not display subcategories when switched
         handleSingleChange('subcategoryId', undefined);
-        // store that Income was chosen so future openings remember it under income type
         transactionDraftState.setLastSelectedCategory('income', 'income');
       } else if (value === 'expense') {
-        // Restore last selected expense category when switching back to expense
         const lastExpense = transactionDraftState.getLastSelectedCategory('expense');
         handleSingleChange('category', lastExpense);
       }
@@ -480,7 +462,6 @@ export default function LogExpensesScreen() {
           <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
             <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
           </TouchableOpacity>
-          {/* Delete (discard) removed from header — delete should only be available on the list page */}
           <Menu
             visible={showMenu}
             onDismiss={() => setShowMenu(false)}
@@ -520,7 +501,6 @@ export default function LogExpensesScreen() {
       const draftEdited = isSingleDraftEdited(singleDraft);
       const anyStored = storedRecords.length > 0;
       if (!draftEdited && !anyStored) {
-        // allow navigation
         return;
       }
 
@@ -534,7 +514,6 @@ export default function LogExpensesScreen() {
             text: 'Discard',
             style: 'destructive',
             onPress: () => {
-              // Reset draft and continue navigation
               transactionDraftState.resetSingleDraft(lastSelectedCategory);
               navigation.dispatch(e.data.action);
             },
@@ -546,12 +525,6 @@ export default function LogExpensesScreen() {
 
     return unsubscribe;
   }, [navigation, singleDraft, isSingleDraftEdited, storedRecords, lastSelectedCategory]);
-
-  // Dont force global selection when adding a record; keep log-expenses local so
-  // it won't affect Records filters. After saving we will set the record page's
-  // global selection to 'all' so the account dropdown there shows All Accounts.
-
-  const totalSaved = storedRecords.length;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
@@ -680,7 +653,6 @@ export default function LogExpensesScreen() {
               ) : null}
             </View>
 
-            {/* Labels inside input wrapper with chips and a '+' button */}
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>

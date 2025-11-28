@@ -29,14 +29,11 @@ export default function FABTransitionScreen() {
   }));
 
   const handleFABPress = async () => {
-    // Show Bottom Sheet
     bottomSheetTranslateY.value = withTiming(0, { duration: 100 });
     setShowBottomSheet(true);
 
-    // Delay
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Red Wipe
     redWipeHeight.value = withTiming(screenHeight, { duration: 300 }, (finished) => {
       if (finished) {
         runOnJS(onTransitionComplete)();
@@ -45,7 +42,6 @@ export default function FABTransitionScreen() {
   };
 
   const onTransitionComplete = () => {
-    // Placeholder for navigation or next action
     console.log('Transition complete - navigate to next screen');
   };
 

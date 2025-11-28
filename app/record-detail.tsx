@@ -61,7 +61,12 @@ export default function RecordDetailScreen() {
           payee: parsed.payee ?? '',
           note: parsed.note ?? '',
           labels: Array.isArray(parsed.labels) ? parsed.labels : [],
-          occurredAt: typeof parsed.occurredAt === 'string' ? parsed.occurredAt : undefined,
+          occurredAt:
+            typeof parsed.occurredAt === 'string'
+              ? parsed.occurredAt
+              : parsed.date
+                ? new Date(parsed.date).toISOString()
+                : undefined,
         };
       } catch (error) {
         console.warn('Failed to hydrate record detail payload', error);
@@ -74,11 +79,13 @@ export default function RecordDetailScreen() {
       payee: typeof params.payee === 'string' ? params.payee : '',
       note: typeof params.note === 'string' ? params.note : '',
       labels: [],
-      occurredAt: undefined,
+      occurredAt:
+        typeof params.date === 'string'
+          ? new Date(params.date).toISOString()
+          : undefined,
     };
   }, [params.amount, params.category, params.note, params.payload, params.payee, params.subcategoryId]);
 
-  // Keep the parsed payload (if any) accessible so we can infer record type and original id
   const parsedPayload = useMemo(() => {
     const payloadStr = typeof params.payload === 'string' ? params.payload : undefined;
     if (!payloadStr) return undefined;
@@ -261,7 +268,6 @@ export default function RecordDetailScreen() {
     };
     setDraft(nextDraft);
 
-    // If editing an existing stored record (id provided), persist changes to storage
     const existingId = typeof params.id === 'string' ? params.id : undefined;
     if (existingId) {
       try {
@@ -287,7 +293,6 @@ export default function RecordDetailScreen() {
       return;
     }
 
-    // Default: notify log-expenses-list about the change so it can update in-memory drafts
     emitRecordDetailUpdate({
       target: 'log-expenses-list',
       recordIndex,
@@ -368,7 +373,6 @@ export default function RecordDetailScreen() {
                   <ThemedText style={[styles.categoryText, { color: palette.text }]} numberOfLines={1}>
                     {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
                   </ThemedText>
-                  {/* chevron removed — category label shouldn't look like a dropdown */}
                 </TouchableOpacity>
               </View>
             </View>

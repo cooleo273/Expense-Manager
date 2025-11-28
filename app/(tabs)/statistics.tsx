@@ -1,5 +1,5 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,15 +8,31 @@ import { BreakdownChart } from '@/components/BreakdownChart';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { ThemedText } from '@/components/themed-text';
-import { getCategoryColor, getCategoryDefinition, type CategoryKey } from '@/constants/categories';
+import { getCategoryColor, getCategoryDefinition, getSubcategoryDefinition, type CategoryKey } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
+import { formatCompactCurrency } from '@/utils/currency';
 import { mockRecordsData } from '../../constants/mock-data';
 import { useFilterContext } from '../../contexts/FilterContext';
 import { StorageService } from '../../services/storage';
 
-const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const incomeColorForKey = (key: string) => {
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = key.charCodeAt(index) + ((hash << 5) - hash);
+  }
+  const adjustChannel = (value: number) => {
+    const normalized = (value & 0xff);
+    const mixed = Math.floor(normalized * 0.6 + 96);
+    return mixed.toString(16).padStart(2, '0');
+  };
+  const r = adjustChannel(hash);
+  const g = adjustChannel(hash >> 8);
+  const b = adjustChannel(hash >> 16);
+  return `#${r}${g}${b}`;
+};
+
 
 const formatDateRange = (range: { start: Date; end: Date } | null) => {
   if (!range) {
@@ -28,13 +44,11 @@ const formatDateRange = (range: { start: Date; end: Date } | null) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 7) {
-    // Assume it's a week, show day names
     const startDay = start.toLocaleDateString('en-US', { weekday: 'short' });
     const endDay = end.toLocaleDateString('en-US', { weekday: 'short' });
     return `${startDay} - ${endDay}`;
   }
 
-  // Check if it's a full month
   const startOfMonth = new Date(start.getFullYear(), start.getMonth(), 1);
   const endOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0);
   if (start.getTime() === startOfMonth.getTime() && end.getTime() === endOfMonth.getTime()) {
@@ -75,6 +89,7 @@ export default function Statistics() {
   const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
   const tabBarHeight = useBottomTabBarHeight();
   const { filters } = useFilterContext();
+  const navigation = useNavigation();
 
   const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -82,9 +97,7 @@ export default function Statistics() {
   const loadTransactions = useCallback(async () => {
     try {
       const data = await StorageService.getTransactions();
-      // Use mock data if no real data exists
       const transactionsToUse = data.length > 0 ? data : mockRecordsData;
-      // Transform data to match UI expectations
       const transformedData = transactionsToUse.map(transaction => ({
         ...transaction,
         date: new Date(transaction.date), // Convert string to Date
@@ -94,11 +107,10 @@ export default function Statistics() {
       setTransactions(transformedData);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      // Fallback to mock data on error
       const transformedData = mockRecordsData.map(transaction => ({
         ...transaction,
-        date: new Date(transaction.date), // Convert string to Date
-        dateLabel: new Date(transaction.date).toLocaleDateString(), // Add dateLabel
+        date: new Date(transaction.date), 
+        dateLabel: new Date(transaction.date).toLocaleDateString(), 
         subtitle: `${transaction.categoryId}${transaction.subcategoryId ? ` - ${transaction.subcategoryId}` : ''}`, // Add subtitle
       }));
       setTransactions(transformedData);
@@ -107,7 +119,10 @@ export default function Statistics() {
 
   useEffect(() => {
     loadTransactions();
-  }, [loadTransactions]);
+    navigation.setOptions({
+      headerTitle: '',
+    } as any);
+  }, [loadTransactions, navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,9 +156,15 @@ export default function Statistics() {
         }
       }
 
+      if (filters.selectedAccount && filters.selectedAccount !== 'all') {
+        if (record.accountId !== filters.selectedAccount) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [filters.dateRange, filters.searchTerm, transactions]);
+  }, [filters.dateRange, filters.searchTerm, filters.selectedAccount, transactions]);
 
   const expenseSegments = useMemo(() => {
     const totals = new Map<CategoryKey, number>();
@@ -168,6 +189,41 @@ export default function Statistics() {
       })
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, palette.tint]);
+
+  const incomeSegments = useMemo(() => {
+    const totals = new Map<string, number>();
+
+    filteredTransactions.forEach((record) => {
+      if (record.type !== 'income') {
+        return;
+      }
+      const amount = Math.abs(record.amount);
+      const key = record.subcategoryId ?? record.categoryId ?? 'income';
+      totals.set(key, (totals.get(key) ?? 0) + amount);
+    });
+
+    return Array.from(totals.entries())
+      .map(([segmentId, value]) => {
+        const subcategory = getSubcategoryDefinition(segmentId);
+        const label = subcategory?.name ?? getCategoryDefinition(segmentId)?.name ?? segmentId;
+        return {
+          id: segmentId,
+          label,
+          value,
+          color: incomeColorForKey(segmentId),
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [filteredTransactions]);
+
+  const structureSegments = selectedType === 'income' ? incomeSegments : expenseSegments;
+  const structureTitle = selectedType === 'income' ? 'Income Structure' : 'Expense Structure';
+  const structureSubtitle = selectedType === 'income' ? 'Top subcategories' : 'Top categories';
+  const structureLegendVariant: 'simple' | 'detailed' = 'simple';
+  const structureTotalValue = useMemo(
+    () => structureSegments.reduce((sum, segment) => sum + segment.value, 0),
+    [structureSegments]
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top']}>
@@ -194,14 +250,15 @@ export default function Statistics() {
         />
 
         <ExpenseStructureCard
-          title="Expense Structure"
-          subtitle="Top categories"
+          title={structureTitle}
+          subtitle={structureSubtitle}
           icon="chart-pie"
-          data={expenseSegments}
-          totalLabel={`$${expenseSegments.reduce((sum, segment) => sum + segment.value, 0).toLocaleString()}`}
+          data={structureSegments}
+          totalLabel={formatCompactCurrency(structureTotalValue)}
           totalCaption="All time"
-          legendVariant="simple"
-          valueFormatter={(value) => `$${value.toLocaleString()}`}
+          legendVariant={structureLegendVariant}
+          valueFormatter={(value) => formatCompactCurrency(value)}
+          fullValueFormatter={(value) => `$${value.toLocaleString()}`}
           containerStyle={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
           chartSize={expenseChartSize}
         />

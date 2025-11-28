@@ -10,10 +10,7 @@ const DROPDOWN_MAX_HEIGHT = 240;
 
  type AccountDropdownProps = {
   allowAll?: boolean;
-  // when false the dropdown uses local state and does not update the global filter
   useGlobalState?: boolean;
-  // optional callback for when an account is selected. Useful when using local
-  // state (useGlobalState=false) but parent still wants to react to selection.
   onSelect?: (accountId: string) => void;
   selectedId?: string;
  };
@@ -40,8 +37,6 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({
   const globalSelection = accountOptions.find(acc => acc.id === filters.selectedAccount) || fallbackAccount!;
 
   useEffect(() => {
-    // If for some reason no account is selected and there are options available,
-    // default to the first available account.
     if (useGlobalState && !globalSelection && accountOptions.length > 0) {
       setSelectedAccount(accountOptions[0].id);
     }
@@ -199,8 +194,6 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   anchorTextWrapper: {
-    // allow the text block to shrink so the chevron sits closer to the end
-    // of the text instead of being pushed to the far-right edge
     flexShrink: 1,
     marginRight: Spacing.sm,
   },

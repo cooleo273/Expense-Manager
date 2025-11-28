@@ -1,8 +1,9 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
+import { InfoTooltip } from '@/components/InfoTooltip';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -25,9 +26,9 @@ type ExpenseStructureCardProps = {
   totalCaption?: string;
   legendVariant?: 'simple' | 'detailed';
   valueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
+  fullValueFormatter?: (value: number, segment: ExpenseStructureSegment) => string;
   containerStyle?: StyleProp<ViewStyle>;
   chartSize?: number;
-  /** Limit how many segments are shown; when exceeded smaller segments are grouped as 'Others' */
   maxLegendItems?: number;
   footer?: ReactNode;
   footerSeparator?: boolean;
@@ -37,6 +38,20 @@ type ExpenseStructureCardProps = {
 const defaultValueFormatter = (value: number) => value.toLocaleString();
 const fallbackValueFormatter: NonNullable<ExpenseStructureCardProps['valueFormatter']> = (value) =>
   defaultValueFormatter(value);
+const fallbackFullValueFormatter: NonNullable<ExpenseStructureCardProps['fullValueFormatter']> = (value) =>
+  defaultValueFormatter(value);
+
+const MARGIN_KEYS = [
+  'margin',
+  'marginTop',
+  'marginBottom',
+  'marginLeft',
+  'marginRight',
+  'marginHorizontal',
+  'marginVertical',
+  'marginStart',
+  'marginEnd',
+] as const;
 
 const clampPercent = (value: number) => {
   if (!Number.isFinite(value)) {
@@ -64,6 +79,7 @@ export function ExpenseStructureCard({
   totalCaption,
   legendVariant = 'simple',
   valueFormatter,
+  fullValueFormatter,
   containerStyle,
   chartSize = 180,
   maxLegendItems,
@@ -74,10 +90,48 @@ export function ExpenseStructureCard({
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
 
+  const flattenedContainerStyle = useMemo<ViewStyle | undefined>(() => {
+    if (!containerStyle) {
+      return undefined;
+    }
+    return StyleSheet.flatten(containerStyle) as ViewStyle | undefined;
+  }, [containerStyle]);
+
+  const outerContainerStyle = useMemo<ViewStyle | undefined>(() => {
+    if (!flattenedContainerStyle) {
+      return undefined;
+    }
+    const style: ViewStyle = {};
+    MARGIN_KEYS.forEach((key) => {
+      const value = (flattenedContainerStyle as Record<string, any>)[key];
+      if (value !== undefined) {
+        (style as Record<string, any>)[key] = value;
+      }
+    });
+    return style;
+  }, [flattenedContainerStyle]);
+
+  const innerContainerOverrides = useMemo<ViewStyle | undefined>(() => {
+    if (!flattenedContainerStyle) {
+      return undefined;
+    }
+    const style = { ...flattenedContainerStyle } as Record<string, any>;
+    MARGIN_KEYS.forEach((key) => {
+      if (key in style) {
+        delete style[key];
+      }
+    });
+    return style as ViewStyle;
+  }, [flattenedContainerStyle]);
+
   const totalValue = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
   const formatValue = useMemo(
     () => valueFormatter ?? fallbackValueFormatter,
     [valueFormatter]
+  );
+  const formatFullValue = useMemo(
+    () => fullValueFormatter ?? fallbackFullValueFormatter,
+    [fullValueFormatter]
   );
 
   const segments = useMemo(() => {
@@ -118,23 +172,14 @@ export function ExpenseStructureCard({
     }));
   }, [segments, palette]);
 
-  // If `maxLegendItems` is provided and segments exceed that limit, aggregate the
-  // smallest segments into an 'Others' slice so both the chart and legend
-  // remain legible on small screens (e.g. the Home page wants only top 5).
   const { displayedSegments, aggregatedPieData } = useMemo(() => {
-    // If no limit specified or segments fit within the desired number, no aggregation
     if (!maxLegendItems) {
       return { displayedSegments: segments, aggregatedPieData: pieData };
     }
-
-    // maxLegendItems is the total count for the legend including the ALL item and a possible 'Others'
-    // Reserve one slot for 'ALL', so the restSlots are for categories + optional 'Others'
     const totalSlots = maxLegendItems;
     const slotsForCategoriesPlusMaybeOthers = Math.max(0, totalSlots - 1);
-
     const sorted = [...segments].sort((a, b) => b.value - a.value);
 
-    // If there are fewer or equal segments than the slots available, just show them
     if (sorted.length <= slotsForCategoriesPlusMaybeOthers) {
       const displayed = sorted.slice(0, slotsForCategoriesPlusMaybeOthers);
       return {
@@ -142,8 +187,6 @@ export function ExpenseStructureCard({
         aggregatedPieData: displayed.map((segment) => ({ x: segment.label, y: segment.value, color: segment.color, segment })),
       };
     }
-
-    // Need to show 'Others' — it will occupy one slot
     const slotsLeftForTop = Math.max(0, slotsForCategoriesPlusMaybeOthers - 1);
     const top = sorted.slice(0, slotsLeftForTop);
     const rest = sorted.slice(slotsLeftForTop);
@@ -162,11 +205,9 @@ export function ExpenseStructureCard({
     };
   }, [segments, maxLegendItems, pieData, totalValue]);
 
-  // Default to 'all' so the center shows total amount on first render
   const [activeSegmentId, setActiveSegmentId] = useState<string | undefined>(() => 'all');
 
   useEffect(() => {
-    // If activeSegmentId is 'all' (special state) keep it — don't overwrite.
     if (activeSegmentId === 'all') {
       return;
     }
@@ -200,40 +241,70 @@ export function ExpenseStructureCard({
     }
     return formatValue(totalValue, fallbackSegmentForFormatter);
   }, [formatValue, fallbackSegmentForFormatter, totalLabel, totalValue]);
+  const totalFullValue = useMemo(
+    () => formatFullValue(totalValue, fallbackSegmentForFormatter),
+    [formatFullValue, fallbackSegmentForFormatter, totalValue]
+  );
 
-  const centerValueText = activeSegment
-    ? formatValue(activeSegment.value, activeSegment)
-    : formattedTotalValue;
-  // When all is active, the caption should say ALL and the percent should be unchecked
+  const centerValue = useMemo(() => {
+    if (activeSegment) {
+      return {
+        display: formatValue(activeSegment.value, activeSegment),
+        full: formatFullValue(activeSegment.value, activeSegment),
+      };
+    }
+    return {
+      display: formattedTotalValue,
+      full: totalFullValue,
+    };
+  }, [activeSegment, formatFullValue, formatValue, formattedTotalValue, totalFullValue]);
   const centerCaptionText = activeSegment
     ? activeSegment.label
     : activeSegmentId === 'all'
-    ? 'Total Expenses'
-    : totalCaption ?? title;
+      ? totalCaption ?? 'Total Expenses'
+      : totalCaption ?? title;
   const centerPercentText = activeSegment ? formatPercentLabel(clampPercent(activeSegment.percent ?? 0)) : undefined;
-  // Make small screens adapt by reducing the chart size and switching to vertical layout
   const window = useWindowDimensions();
   const isNarrow = window.width <= 360;
-  const effectiveChartSize = Math.min(chartSize, isNarrow ? 120 : chartSize);
+  const effectiveChartSize = Math.min(chartSize, isNarrow ? 130 : chartSize);
   const outerRadius = Math.max(effectiveChartSize / 2 - 8, 24);
-  const innerRadius = Math.max(effectiveChartSize * 0.2, 16);
+  const innerRadius = isNarrow ? 20 : Math.max(effectiveChartSize * 0.2, 16);
   const labelRadius = (innerRadius + outerRadius) / 2;
   const centerDiameter = Math.min(Math.max(Math.round(effectiveChartSize * 0.44), 44), effectiveChartSize - 16);
   const chartCenterBorderColor = activeSegment
     ? `${activeSegment.color}55`
     : activeSegmentId === 'all'
-    ? palette.tint
-    : palette.border;
+      ? palette.tint
+      : palette.border;
+
+  const innerContainerStyle = (innerContainerOverrides ?? containerStyle) as StyleProp<ViewStyle> | undefined;
+  const rippleColor = `${palette.tint}1A`;
 
   return (
-    <ThemedView
-      style={[
-        styles.container,
-        { backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 },
-        containerStyle,
+    <Pressable
+      onPress={() => {}}
+      android_ripple={{ color: rippleColor, borderless: false }}
+      style={({ pressed }) => [
+        styles.cardPressable,
+        outerContainerStyle ?? null,
+        pressed ? styles.cardPressablePressed : null,
       ]}
     >
-      <View style={styles.header}>
+      {({ pressed }) => (
+        <ThemedView
+          style={[
+            styles.container,
+            {
+              backgroundColor: palette.card,
+              borderColor: palette.border,
+              borderWidth: 1,
+            },
+            pressed ? styles.containerPressed : null,
+            pressed ? { borderColor: palette.tint } : null,
+            innerContainerStyle,
+          ]}
+        >
+          <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
           {icon && <MaterialCommunityIcons name={icon as any} size={20} color={palette.tint} />}
           <ThemedText type="subtitle">{title}</ThemedText>
@@ -244,7 +315,7 @@ export function ExpenseStructureCard({
       <View
         style={[
           styles.contentRow,
-          isNarrow && { flexDirection: 'column', alignItems: 'center', gap: Spacing.md },
+          isNarrow && { gap: Spacing.sm },
         ]}
       >
         <View style={[styles.chartWrapper, { width: effectiveChartSize, height: effectiveChartSize }]}>
@@ -294,7 +365,7 @@ export function ExpenseStructureCard({
               },
             ]}
           />
-          {(centerValueText || centerCaptionText || centerPercentText) && (
+          {(centerValue.display || centerCaptionText || centerPercentText) && (
             <View style={styles.chartOverlay}>
               <View
                 style={[
@@ -302,29 +373,43 @@ export function ExpenseStructureCard({
                   {
                     backgroundColor: palette.card,
                     borderColor: chartCenterBorderColor,
+                    width: isNarrow ? 60 : 88,
+                    height: isNarrow ? 60 : 88,
+                    borderRadius: isNarrow ? 30 : 44,
                   },
                 ]}
+                pointerEvents="auto"
               >
-                {centerValueText ? (
-                  <ThemedText
-                    adjustsFontSizeToFit
-                    numberOfLines={1}
-                    style={[styles.centerValue, { color: palette.text }]}
-                  >
-                    {centerValueText}
-                  </ThemedText>
+                {centerValue.display ? (
+                  <View style={styles.centerValueRow}>
+                    <ThemedText
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[styles.centerValue, { color: palette.text, fontSize: isNarrow ? FontSizes.md : FontSizes.lg }]}
+                    >
+                      {centerValue.display}
+                    </ThemedText>
+                    {/* {centerValue.display !== centerValue.full ? (
+                      <InfoTooltip
+                        content={centerValue.full}
+                        size={16}
+                        iconColor={palette.icon}
+                        testID="expense-structure-center-tooltip"
+                      />
+                    ) : null} */}
+                  </View>
                 ) : null}
                 {centerCaptionText ? (
                   <ThemedText
                     adjustsFontSizeToFit
                     numberOfLines={1}
-                    style={[styles.centerCaption, { color: palette.icon }]}
+                    style={[styles.centerCaption, { color: palette.icon, fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}
                   >
                     {centerCaptionText}
                   </ThemedText>
                 ) : null}
                 {centerPercentText ? (
-                  <ThemedText style={[styles.centerPercent, { color: palette.icon }]}>
+                  <ThemedText style={[styles.centerPercent, { color: palette.icon, fontSize: isNarrow ? 10 : FontSizes.xs }]}>
                     {centerPercentText}
                   </ThemedText>
                 ) : null}
@@ -333,25 +418,27 @@ export function ExpenseStructureCard({
           )}
         </View>
 
-        <View style={[styles.legendContainer, isNarrow && { width: '100%' }]}>
+        <View style={[styles.legendContainer]}>
           {[{
             id: 'all',
             label: 'ALL',
             value: totalValue,
-            // Render 'ALL' label in white; swatch will be white too
             color: '#FFFFFF',
           } as ExpenseStructureSegment, ...displayedSegments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
             const percentLabel = formatPercentLabel(percentValue);
-            const formattedValue = valueFormatter
-              ? valueFormatter(segment.value, segment)
-              : defaultValueFormatter(segment.value);
+            const formattedValue = formatValue(segment.value, segment);
+            const fullValue = formatFullValue(segment.value, segment);
+            const showTooltip = formattedValue !== fullValue;
 
             return (
               <TouchableOpacity
                 key={segment.id}
                 activeOpacity={0.8}
-                onPress={() => setActiveSegmentId(segment.id)}
+                onPress={(event) => {
+                  event.stopPropagation?.();
+                  setActiveSegmentId(segment.id);
+                }}
                 style={[
                   styles.legendItem,
                   activeSegmentId === segment.id && {
@@ -376,32 +463,46 @@ export function ExpenseStructureCard({
                       <View style={styles.legendHeaderRow}>
                         {segment.id === 'all' ? (
                           <View style={{ backgroundColor: palette.tint, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm }}>
-                            <ThemedText style={[styles.legendLabel, { color: '#000000' }]} numberOfLines={1}>
+                            <ThemedText style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]} numberOfLines={1}>
                               {segment.label}
                             </ThemedText>
                           </View>
                         ) : (
                           <ThemedText
-                            style={[styles.legendLabel, { color: '#000000' }]}
+                            style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]}
                             numberOfLines={1}
                           >
                             {segment.label}
                           </ThemedText>
                         )}
-                        <ThemedText style={[styles.legendPercent, { color: '#000000' }]}>{percentLabel}</ThemedText>
+                        <ThemedText style={[styles.legendPercent, { color: '#000000', fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}>{percentLabel}</ThemedText>
                       </View>
                       <View style={[styles.progressTrack, { backgroundColor: palette.muted }]}>
                         <View style={[styles.progressFill, { width: `${percentValue}%`, backgroundColor: segment.color }]} />
                       </View>
-                      <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.legendAmount, { color: '#000000' }]}>
-                        {formattedValue}
-                      </ThemedText>
+                      <View style={styles.legendAmountRow}>
+                        <ThemedText
+                          adjustsFontSizeToFit
+                          numberOfLines={1}
+                          style={[styles.legendAmount, { color: '#000000', fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}
+                        >
+                          {formattedValue}
+                        </ThemedText>
+                        {showTooltip ? (
+                          <InfoTooltip
+                            content={fullValue}
+                            size={16}
+                            iconColor={palette.icon}
+                            testID={`expense-structure-${segment.id}-tooltip`}
+                          />
+                        ) : null}
+                      </View>
                     </>
                   ) : (
                     <>
                       <View style={styles.legendHeaderRow}>
                         <ThemedText
-                          style={[styles.legendLabel, { color: '#000000' }]}
+                          style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]}
                           numberOfLines={1}
                         >
                           {segment.label}
@@ -424,11 +525,27 @@ export function ExpenseStructureCard({
           {footer}
         </>
       ) : null}
-    </ThemedView>
+        </ThemedView>
+      )}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  cardPressable: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+  },
+  cardPressablePressed: {
+    transform: [{ scale: 0.995 }],
+  },
+  containerPressed: {
+    shadowColor: 'rgba(15,23,42,0.25)',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
   container: {
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
@@ -444,7 +561,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
   chartWrapper: {
     alignItems: 'center',
@@ -459,7 +576,7 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    pointerEvents: 'none',
+    pointerEvents: 'box-none',
   },
   chartCenter: {
     width: 88,
@@ -476,6 +593,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.bold as any,
     textAlign: 'center',
   },
+  centerValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   centerCaption: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.medium as any,
@@ -489,7 +611,6 @@ const styles = StyleSheet.create({
   legendContainer: {
     flex: 1,
     gap: Spacing.md,
-    // Allow the legend to shrink on small phones / narrow widths so it doesn't overflow
     minWidth: 0,
   },
   legendItem: {
@@ -520,6 +641,11 @@ const styles = StyleSheet.create({
   },
   legendAmount: {
     fontSize: FontSizes.sm,
+  },
+  legendAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.tiny,
   },
   legendPercent: {
     fontSize: FontSizes.sm,

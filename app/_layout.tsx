@@ -7,7 +7,6 @@ import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
-import { CartProvider } from '@/contexts/CartContext';
 import { FilterProvider } from '@/contexts/FilterContext';
 import { ThemeProvider as AppThemeProvider, useThemeContext } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
@@ -55,14 +54,13 @@ function RootLayoutContent() {
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <PaperProvider theme={paperTheme}>
-        <CartProvider>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="scan" options={{ headerShown: false, headerLeft: () => null, headerTitle: '' }} />
+            <Stack.Screen name="legacy" options={{ headerShown: false, headerLeft: () => null, headerTitle: '' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        </CartProvider>
       </PaperProvider>
     </NavigationThemeProvider>
   );

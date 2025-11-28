@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+
 export type DateRange = {
   start: Date;
   end: Date;
 };
+
 
 export type FilterState = {
   selectedAccount: string; // 'all' or account id
@@ -17,7 +19,10 @@ export type FilterState = {
   selectedPayers?: string[]; // payee values
   selectedLabels?: string[];
   keyTerms?: string[]; // free-text tokens user may add for filtering
+  tempSelectedCategories: string[]; // temp for filter modal
 };
+  // recentResults: { id: string; record: any }[];
+
 
 const defaultFilterState: FilterState = {
   selectedAccount: 'all',
@@ -30,7 +35,10 @@ const defaultFilterState: FilterState = {
   selectedPayers: [],
   selectedLabels: [],
   keyTerms: [],
+  tempSelectedCategories: [],
+  // recentResults: [],
 };
+
 
 type FilterContextType = {
   filters: FilterState;
@@ -44,10 +52,13 @@ type FilterContextType = {
   setSelectedPayers: (payers: string[]) => void;
   setSelectedLabels: (labels: string[]) => void;
   setKeyTerms: (terms: string[]) => void;
+  setTempSelectedCategories: (categories: string[]) => void;
   resetFilters: () => void;
 };
 
+
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
+
 
 export const useFilterContext = () => {
   const context = useContext(FilterContext);
@@ -57,8 +68,10 @@ export const useFilterContext = () => {
   return context;
 };
 
+
 export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [filters, setFilters] = useState<FilterState>(defaultFilterState);
+
 
   // Load search history from AsyncStorage on mount
   useEffect(() => {
@@ -76,6 +89,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     loadSearchHistory();
   }, []);
 
+
   // Save search history to AsyncStorage whenever it changes
   useEffect(() => {
     const saveSearchHistory = async () => {
@@ -88,54 +102,76 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     saveSearchHistory();
   }, [filters.searchHistory]);
 
+
   const setSelectedAccount = (account: string) => {
     setFilters(prev => ({ ...prev, selectedAccount: account }));
   };
+
 
   const setSearchTerm = (term: string) => {
     setFilters(prev => ({ ...prev, searchTerm: term }));
   };
 
+
   const setDateRange = (range: DateRange | null) => {
     setFilters(prev => ({ ...prev, dateRange: range }));
   };
+
 
   const setAmountRange = (range: { min?: number | null; max?: number | null } | null) => {
     setFilters(prev => ({ ...prev, amountRange: range }));
   };
 
+
   const setSelectedPayers = (payers: string[]) => {
     setFilters(prev => ({ ...prev, selectedPayers: payers }));
   };
+
 
   const setSelectedLabels = (labels: string[]) => {
     setFilters(prev => ({ ...prev, selectedLabels: labels }));
   };
 
+
   const setKeyTerms = (terms: string[]) => {
     setFilters(prev => ({ ...prev, keyTerms: terms }));
   };
+
 
   const setSearchCategory = (category: 'all' | 'income' | 'expense') => {
     setFilters(prev => ({ ...prev, searchCategory: category }));
   };
 
+
   const addToSearchHistory = (term: string) => {
-    if (term.trim() && !filters.searchHistory.includes(term.trim())) {
-      setFilters(prev => ({
-        ...prev,
-        searchHistory: [term.trim(), ...prev.searchHistory.slice(0, 4)] // Keep last 5
-      }));
+    const normalized = term.trim();
+    if (!normalized) {
+      return;
     }
+    setFilters(prev => {
+      const existing = prev.searchHistory.filter(entry => entry.toLowerCase() !== normalized.toLowerCase());
+      return {
+        ...prev,
+        searchHistory: [normalized, ...existing].slice(0, 5),
+      };
+    });
   };
+
 
   const setSelectedCategories = (categories: string[]) => {
     setFilters(prev => ({ ...prev, selectedCategories: categories }));
   };
 
+
+  const setTempSelectedCategories = (categories: string[]) => {
+    setFilters(prev => ({ ...prev, tempSelectedCategories: categories }));
+  };
+
+
   const resetFilters = () => {
     setFilters({ ...defaultFilterState, amountRange: null });
   };
+
 
   return (
     <FilterContext.Provider
@@ -151,6 +187,7 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSelectedPayers,
         setSelectedLabels,
         setKeyTerms,
+        setTempSelectedCategories,
         resetFilters,
       }}
     >

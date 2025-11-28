@@ -38,10 +38,20 @@ export const homeStyles = StyleSheet.create({
     gap: Spacing.xs,
     maxWidth: '60%',
   },
+  balanceLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   balanceLabel: {
     fontSize: FontSizes.lg,
     color: '#6B7280',
     marginBottom: 0,
+  },
+  balanceValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   balanceValue: {
     fontSize: FontSizes.huge,
@@ -58,6 +68,11 @@ export const homeStyles = StyleSheet.create({
   metaValue: {
     fontWeight: FontWeights.semibold as any,
     fontSize: FontSizes.md,
+  },
+  metaValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.tiny,
   },
   chartContainer: {
     alignItems: 'center',
