@@ -369,19 +369,6 @@ export default function LogExpensesListScreen() {
       headerLeft: () => (
         <TouchableOpacity
           onPress={() => {
-            const anyEdited = records.some((r) => isRecordEdited(r));
-            if (anyEdited) {
-              Alert.alert(
-                'Discard changes?',
-                'You have unsaved changes. Do you want to discard and go back?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
-                ],
-                { cancelable: true }
-              );
-              return;
-            }
             navigation.goBack();
           }}
           style={{ padding: 8 }}
@@ -395,7 +382,7 @@ export default function LogExpensesListScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [handleNext, navigation, palette.icon, palette.tint, records, isRecordEdited]);
+  }, [handleNext, navigation, palette.icon, palette.tint]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -590,7 +577,7 @@ export default function LogExpensesListScreen() {
               accessibilityRole="button"
               accessibilityLabel="Review records"
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>NEXT</ThemedText>
             </TouchableOpacity>
           </View>
         </View>

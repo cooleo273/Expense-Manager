@@ -218,9 +218,10 @@ export default function ScanScreen() {
     }
 
     setStatusStep(0);
+    const intervalDelay = 2500;
     const interval = setInterval(() => {
       setStatusStep((prev) => (prev + 1) % statusMessages.length);
-    }, 1200);
+    }, intervalDelay);
 
     return () => clearInterval(interval);
   }, [isAnalyzing, isProcessing, statusMessages.length]);

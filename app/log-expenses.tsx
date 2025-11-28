@@ -840,7 +840,7 @@ export default function LogExpensesScreen() {
               accessibilityRole="button"
               accessibilityLabel="Save record"
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>SAVE</ThemedText>
             </TouchableOpacity>
           </View>
         </View>

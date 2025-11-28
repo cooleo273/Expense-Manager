@@ -9,6 +9,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
+import { transactionDraftState } from '@/state/transactionDraftState';
 import { RecordType, SingleDraft } from '@/types/transactions';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -174,7 +175,7 @@ export default function LogExpensesReviewScreen() {
         );
         const pluralSuffix = savedCount === 1 ? '' : 's';
         const successMessage = stayOnScreen
-          ? `${savedCount} record${pluralSuffix} saved.`
+          ? `${savedCount} record${pluralSuffix} saved. Starting a new list.`
           : `${savedCount} record${pluralSuffix} saved. Taking you to Records.`;
         showToast(successMessage, { tone: 'success' });
         try {
@@ -187,10 +188,14 @@ export default function LogExpensesReviewScreen() {
           console.error('Failed to increment category usage for batch', err);
         }
 
-        if (!stayOnScreen) {
-          setSelectedAccount('all');
-          router.replace('/(tabs)/records');
+        if (stayOnScreen) {
+          transactionDraftState.resetBatchDrafts();
+          router.replace('/log-expenses-list');
+          return;
         }
+
+        setSelectedAccount('all');
+        router.replace('/(tabs)/records');
       } catch (error) {
         console.error('Failed to save batch records', error);
         Alert.alert('Error', 'Failed to save these records. Please try again.');
@@ -701,7 +706,7 @@ export default function LogExpensesReviewScreen() {
               accessibilityRole="button"
               accessibilityLabel="Save records"
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>SAVE</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
