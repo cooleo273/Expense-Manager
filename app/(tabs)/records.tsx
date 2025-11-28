@@ -9,6 +9,8 @@ import { FAB, Portal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
+import DualSlider from '@/components/DualSlider';
+import KeyTermsEditor from '@/components/KeyTermsEditor';
 import RecordList from '@/components/RecordList';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
@@ -20,8 +22,6 @@ import { recordsStyles } from '@/styles/records.styles';
 import { isSameDay, startOfDay } from '@/utils/date';
 import { getAccountMeta, mockAccounts, mockRecordsData, resolveAccountId } from '../../constants/mock-data';
 import { DateRange, useFilterContext } from '../../contexts/FilterContext';
-import DualSlider from '@/components/DualSlider';
-import KeyTermsEditor from '@/components/KeyTermsEditor';
 import { StorageService } from '../../services/storage';
 
 
