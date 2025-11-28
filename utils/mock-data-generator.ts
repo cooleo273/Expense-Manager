@@ -122,6 +122,48 @@ export const generateRealisticMockData = async () => {
 
   transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+  const totals = transactions.reduce(
+    (acc, tx) => {
+      if (tx.type === 'income') {
+        acc.income += tx.amount;
+      } else {
+        acc.expense += Math.abs(tx.amount);
+      }
+      return acc;
+    },
+    { income: 0, expense: 0 }
+  );
+
+  const desiredIncome = totals.expense * 0.95;
+  let incomeShortfall = desiredIncome - totals.income;
+
+  while (incomeShortfall > 0) {
+    const amount = Math.min(Math.max(1800, incomeShortfall / 2), 6500);
+    const salaryDate = randomDateWithin(start, now);
+    const account = mockAccounts.find((acc) => acc.id === 'rbc') ?? mockAccounts[0];
+
+    transactions.push({
+      id: `mock-income-balance-${salaryDate.getTime()}-${incomeShortfall.toFixed(0)}`,
+      title: 'Supplemental Income',
+      account: account.name,
+      accountId: account.id,
+      note: 'Auto-generated to balance cash flow',
+      amount,
+      date: salaryDate.toISOString(),
+      type: 'income',
+      icon: CATEGORY_MAP.income.icon,
+      categoryId: 'income',
+      subcategoryId: 'income:wage-invoices',
+      labels: ['recurring'],
+      payee: 'Company X',
+    });
+
+    usage['income:wage-invoices'] = (usage['income:wage-invoices'] ?? 0) + 1;
+    incomeShortfall -= amount;
+  }
+
+  transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
   await StorageService.saveTransactions(transactions);
   await StorageService.setCategoryUsage(usage);
 

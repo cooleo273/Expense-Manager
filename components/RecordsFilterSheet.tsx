@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { Portal } from 'react-native-paper';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
@@ -334,7 +334,63 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     [],
   );
 
+  const executeResetFilters = useCallback(() => {
+    onRecordTypeChange(DEFAULT_RECORD_TYPE);
+    onResetSortOption();
+    resetFilters();
+    setSelectedCategories([]);
+    setTempSelectedCategories([]);
+    setSelectedAccount('all');
+    setAmountRange(null);
+    applyDateFilter(null, null);
+    setSelectedPayers([]);
+    setSelectedLabels([]);
+    setKeyTerms([]);
+    setLocalMinAmount(0);
+    setLocalMaxAmount(maxTransactionAbs);
+    setLocalFilters({
+      selectedPayers: [],
+      selectedLabels: [],
+      keyTerms: [],
+      amountRange: null,
+      dateRange: null,
+      selectedAccount: 'all',
+      selectedRecordType: DEFAULT_RECORD_TYPE,
+      datePreset: null,
+    });
+    setDraftRange(null);
+    setCalendarMode('presets');
+    setMonthCursor(startOfDay(new Date()));
+    setExpandedFilter('recordType');
+    setPayerInput('');
+    setKeyTermInput('');
+    setShowPayerNote(false);
+    setShowCalendarModal(false);
+  }, [
+    applyDateFilter,
+    maxTransactionAbs,
+    onRecordTypeChange,
+    onResetSortOption,
+    resetFilters,
+    setAmountRange,
+    setCalendarMode,
+    setDraftRange,
+    setKeyTerms,
+    setMonthCursor,
+    setSelectedAccount,
+    setSelectedCategories,
+    setSelectedLabels,
+    setSelectedPayers,
+    setShowCalendarModal,
+    setTempSelectedCategories,
+  ]);
+
   const confirmResetFilters = useCallback(() => {
+    if (Platform.OS === 'web') {
+      executeResetFilters();
+      return;
+    }
+
     Alert.alert(
       'Reset filters?',
       'Are you sure you want to clear all filter selections?',
@@ -343,61 +399,12 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: () => {
-            onRecordTypeChange(DEFAULT_RECORD_TYPE);
-            onResetSortOption();
-            resetFilters();
-            setSelectedCategories([]);
-            setTempSelectedCategories([]);
-            setSelectedAccount('all');
-            setAmountRange(null);
-            applyDateFilter(null, null);
-            setSelectedPayers([]);
-            setSelectedLabels([]);
-            setKeyTerms([]);
-            setLocalMinAmount(0);
-            setLocalMaxAmount(maxTransactionAbs);
-            setLocalFilters({
-              selectedPayers: [],
-              selectedLabels: [],
-              keyTerms: [],
-              amountRange: null,
-              dateRange: null,
-              selectedAccount: 'all',
-              selectedRecordType: DEFAULT_RECORD_TYPE,
-              datePreset: null,
-            });
-            setDraftRange(null);
-            setCalendarMode('presets');
-            setMonthCursor(startOfDay(new Date()));
-            setExpandedFilter('recordType');
-            setPayerInput('');
-            setKeyTermInput('');
-            setShowPayerNote(false);
-            setShowCalendarModal(false);
-          },
+          onPress: executeResetFilters,
         },
       ],
       { cancelable: true },
     );
-  }, [
-    maxTransactionAbs,
-    onRecordTypeChange,
-    onResetSortOption,
-    setAmountRange,
-    applyDateFilter,
-    setKeyTerms,
-    setMonthCursor,
-    setSelectedAccount,
-    setSelectedCategories,
-    setSelectedLabels,
-    setSelectedPayers,
-    resetFilters,
-    setCalendarMode,
-    setDraftRange,
-    setShowCalendarModal,
-    setTempSelectedCategories,
-  ]);
+  }, [executeResetFilters]);
 
   const selectedCategoryLabels = useMemo(
     () =>

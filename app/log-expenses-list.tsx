@@ -3,12 +3,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert, KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert, KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -395,7 +395,7 @@ export default function LogExpensesListScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, palette.icon, palette.tint, handleNext, records, isRecordEdited]);
+  }, [handleNext, navigation, palette.icon, palette.tint, records, isRecordEdited]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -445,31 +445,33 @@ export default function LogExpensesListScreen() {
         style={styles.keyboardWrapper}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
-          keyboardShouldPersistTaps="always"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.summaryContainer, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-            <View style={styles.summaryHeader}> 
-              <View style={styles.summaryAmounts}> 
-                <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total Amount ({totalRecords})</ThemedText> 
-                <ThemedText style={[styles.summaryTotal, { color: palette.text }]}>${formattedTotal}</ThemedText> 
-              </View> 
-              <TouchableOpacity
-                style={[styles.iconButton, { borderColor: palette.border }]}
-                onPress={() => router.push('/scan')}
-                accessibilityRole="button"
-                accessibilityLabel="Scan receipt"
-              >
-                <MaterialCommunityIcons name="camera-outline" size={20} color={palette.icon} />
-              </TouchableOpacity>
-            </View> 
-          </View>
+        <View style={styles.contentWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollArea}
+            contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.summaryContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
+              <View style={styles.summaryHeader}>
+                <View style={styles.summaryAmounts}>
+                  <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total Amount ({totalRecords})</ThemedText>
+                  <ThemedText style={[styles.summaryTotal, { color: palette.text }]}>${formattedTotal}</ThemedText>
+                </View>
+                <TouchableOpacity
+                  style={[styles.iconButton, { borderColor: palette.border }]}
+                  onPress={() => router.push('/scan')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scan receipt"
+                >
+                  <MaterialCommunityIcons name="camera-outline" size={20} color={palette.icon} />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          {records.map((record, index) => {
+            {records.map((record, index) => {
             const categoryIcon = getCategoryIcon(record.subcategoryId || record.category, 'shape-outline');
             const categoryColor = getCategoryColor(record.subcategoryId || record.category, palette.tint);
             const categoryLabel = getFullCategoryLabel(record.category, record.subcategoryId) || 'Select category';
@@ -570,14 +572,28 @@ export default function LogExpensesListScreen() {
             );
           })}
 
-          <TouchableOpacity
-            onPress={addRecord}
-            style={[styles.addListButton, { marginTop: 16 }]}
+            <TouchableOpacity
+              onPress={addRecord}
+              style={[styles.addListButton, { marginTop: 16 }]}
+            >
+              <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
+              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>ADD RECORD</ThemedText>
+            </TouchableOpacity>
+          </ScrollView>
+          <View
+            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
           >
-            <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
-            <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>ADD RECORD</ThemedText>
-          </TouchableOpacity>
-        </ScrollView>
+            <TouchableOpacity
+              onPress={handleNext}
+              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Review records"
+            >
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

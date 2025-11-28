@@ -16,14 +16,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -110,11 +109,10 @@ export default function LogExpensesReviewScreen() {
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
   const headerClearedRef = useRef(false);
 
   const handlePersist = useCallback(
-    async (stayOnScreen: boolean) => {
+    async () => {
       if (!payload || reviewRecords.length === 0) {
         showToast('Nothing to save', { tone: 'error' });
         return;
@@ -142,35 +140,36 @@ export default function LogExpensesReviewScreen() {
       try {
         const timestamp = recordDate.getTime();
         const savedCount = reviewRecords.length;
-      await StorageService.addBatchTransactions(
-        reviewRecords.map((record, idx) => {
-          const amount = Number(record.amount);
-          const normalized = transactionType === 'expense' ? -Math.abs(amount) : Math.abs(amount);
-          const candidateDate = record.occurredAt ? new Date(record.occurredAt) : null;
-          const resolvedDate = candidateDate && !Number.isNaN(candidateDate.getTime())
-            ? candidateDate
-            : new Date(timestamp + idx);
-          const occurredAt = resolvedDate.toISOString();
+        await StorageService.addBatchTransactions(
+          reviewRecords.map((record, idx) => {
+            const amount = Number(record.amount);
+            const normalized = transactionType === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+            const candidateDate = record.occurredAt ? new Date(record.occurredAt) : null;
+            const resolvedDate = candidateDate && !Number.isNaN(candidateDate.getTime())
+              ? candidateDate
+              : new Date(timestamp + idx);
+            const occurredAt = resolvedDate.toISOString();
 
-          return {
-            id: `${timestamp}-${idx}`,
-            title: record.note || 'Transaction',
-            account: resolvedAccountName,
-            accountId: resolvedAccountId,
-            note: record.note,
-            amount: normalized,
-            date: occurredAt,
-            type: transactionType,
-            icon: 'cash',
-            categoryId: record.category,
-            subcategoryId: record.subcategoryId,
-            labels: record.labels,
-            payee: record.payee,
-            userId: 'default-user',
-          };
-        })
-      );
-        showToast(`Added ${savedCount} record${savedCount > 1 ? 's' : ''}`, { tone: 'success' });
+            return {
+              id: `${timestamp}-${idx}`,
+              title: record.note || 'Transaction',
+              account: resolvedAccountName,
+              accountId: resolvedAccountId,
+              note: record.note,
+              amount: normalized,
+              date: occurredAt,
+              type: transactionType,
+              icon: 'cash',
+              categoryId: record.category,
+              subcategoryId: record.subcategoryId,
+              labels: record.labels,
+              payee: record.payee,
+              userId: 'default-user',
+            };
+          })
+        );
+        const successMessage = `${savedCount} record${savedCount === 1 ? '' : 's'} saved successfully`;
+        showToast(successMessage, { tone: 'success' });
         try {
           await Promise.all(
             reviewRecords.map((record) =>
@@ -179,11 +178,6 @@ export default function LogExpensesReviewScreen() {
           );
         } catch (err) {
           console.error('Failed to increment category usage for batch', err);
-        }
-
-        if (stayOnScreen) {
-          Alert.alert('Saved', `${reviewRecords.length} record${reviewRecords.length > 1 ? 's' : ''} stored.`);
-          return;
         }
 
         setSelectedAccount('all');
@@ -195,10 +189,6 @@ export default function LogExpensesReviewScreen() {
     },
     [accountName, fallbackAccount, localAccountId, payload, recordDate, reviewRecords, router, setSelectedAccount, showToast, transactionType]
   );
-    const handlePersistRef = useRef(handlePersist);
-    useEffect(() => {
-      handlePersistRef.current = handlePersist;
-    }, [handlePersist]);
 
   useEffect(() => {
     if (!payload) {
@@ -226,18 +216,9 @@ export default function LogExpensesReviewScreen() {
           />
         </View>
       ),
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => handlePersistRef.current(false)} style={{ padding: 8, marginRight: 8 }}>
-            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
-            <MaterialCommunityIcons name="dots-vertical" size={24} color={palette.icon} />
-          </TouchableOpacity>
-        </View>
-      ),
+      headerRight: () => null,
     });
-  }, [localAccountId, navigation, palette.icon, palette.tint, payload]);
+  }, [localAccountId, navigation, palette.icon, payload]);
 
   useEffect(() => {
     if (!payload || !payload.records || payload.records.length === 0) {
@@ -456,12 +437,14 @@ export default function LogExpensesReviewScreen() {
         style={styles.keyboardWrapper}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
-          keyboardShouldPersistTaps="always"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.contentWrapper}>
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
           <ThemedView
             style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border, alignItems: 'center', gap: Spacing.md }]}
           >
@@ -615,46 +598,22 @@ export default function LogExpensesReviewScreen() {
               )}
             </View>
           ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      <Modal
-        visible={showMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowMenu(false)}
-      >
-        <TouchableOpacity
-          style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={() => setShowMenu(false)}
-        >
+          </ScrollView>
           <View
-            style={[styles.menuContainer, { backgroundColor: palette.card, borderColor: palette.border }]}
+            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
           >
-              <TouchableOpacity
-                onPress={() => {
-                  handlePersistRef.current(true);
-                  setShowMenu(false);
-                }}
-              style={styles.menuItem}
-            >
-              <MaterialCommunityIcons name="content-save" size={20} color={palette.icon} />
-              <ThemedText style={[styles.menuLabel, { color: palette.text }]}>Save and stay here</ThemedText>
-            </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => {
-                Alert.alert('Template saved', 'Batch saved as template for future use.');
-                setShowMenu(false);
-              }}
-              style={styles.menuItem}
+              onPress={handlePersist}
+              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Save records"
             >
-              <MaterialCommunityIcons name="file-plus" size={20} color={palette.icon} />
-              <ThemedText style={[styles.menuLabel, { color: palette.text }]}>Save template</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

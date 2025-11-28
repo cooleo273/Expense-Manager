@@ -549,13 +549,15 @@ export default function LogExpensesScreen() {
         style={styles.keyboardWrapper}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
-          keyboardShouldPersistTaps="always"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.contentWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollArea}
+            contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.topControls}>
             <TransactionTypeFilter
               options={['expense', 'income']}
@@ -849,7 +851,21 @@ export default function LogExpensesScreen() {
           ) : null}
 
           {/* Removed saved summary - users should not see record count at the bottom */}
-        </ScrollView>
+          </ScrollView>
+          <View
+            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
+          >
+            <TouchableOpacity
+              onPress={() => handleSave(false)}
+              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Save record"
+            >
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>Save</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
 
     </SafeAreaView>
