@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCategoryColor, getCategoryIcon, getCategoryDefinition, getFullCategoryLabel } from '@/constants/categories';
+import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getFullCategoryLabel } from '@/constants/categories';
 import { getAccountMeta, mockAccounts } from '@/constants/mock-data';
 import { Colors } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
