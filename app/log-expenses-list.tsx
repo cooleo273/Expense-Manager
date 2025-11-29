@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCategoryColor, getCategoryIcon, getFullCategoryLabel } from '@/constants/categories';
+import { getCategoryColor, getCategoryIcon, getCategoryDefinition, getFullCategoryLabel } from '@/constants/categories';
 import { getAccountMeta, mockAccounts } from '@/constants/mock-data';
 import { Colors } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
@@ -119,6 +119,38 @@ export default function LogExpensesListScreen() {
   const handleNoteChange = useCallback((index: number, value: string) => {
     updateRecord(index, 'note', value);
   }, [updateRecord]);
+
+  const openCategoryPicker = useCallback(
+    (record: SingleDraft, index: number) => {
+      const recordType = getCategoryDefinition(record.category)?.type ?? transactionType;
+      const shouldSkipCategory = recordType === 'income';
+
+      if (shouldSkipCategory) {
+        router.push({
+          pathname: '/subcategories',
+          params: {
+            category: record.category || 'income',
+            selected: record.subcategoryId ?? '',
+            returnTo: 'log-expenses-list',
+            recordIndex: index.toString(),
+          },
+        });
+        return;
+      }
+
+      router.push({
+        pathname: '/Category',
+        params: {
+          current: record.category,
+          currentSubcategory: record.subcategoryId,
+          returnTo: 'log-expenses-list',
+          recordIndex: index.toString(),
+          type: transactionType,
+        },
+      });
+    },
+    [router, transactionType]
+  );
 
   const openRecordDetails = useCallback((index: number) => {
     const targetRecord = records[index];
@@ -511,18 +543,7 @@ export default function LogExpensesListScreen() {
                     <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
                     <TouchableOpacity
                       style={[styles.categoryPill, { borderWidth: 0 }]}
-                      onPress={() =>
-                      router.push({
-                        pathname: '/Category',
-                        params: {
-                          current: record.category,
-                          currentSubcategory: record.subcategoryId,
-                          returnTo: 'log-expenses-list',
-                          recordIndex: index.toString(),
-                          type: transactionType,
-                        },
-                      })
-                      }
+                      onPress={() => openCategoryPicker(record, index)}
                     >
                     <View style={[styles.categoryIconBadge, { backgroundColor: `${categoryColor}22` }]}> 
                       <MaterialCommunityIcons name={categoryIcon} size={16} color={categoryColor} /> 

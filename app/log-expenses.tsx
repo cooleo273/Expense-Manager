@@ -262,6 +262,33 @@ export default function LogExpensesScreen() {
     setSingleDraft(next);
   }, [lastSelectedCategory]);
 
+  const handleCategoryPress = useCallback(() => {
+    const categoryType = getCategoryDefinition(singleDraft.category)?.type ?? transactionType;
+    const shouldSkipCategory = categoryType === 'income';
+
+    if (shouldSkipCategory) {
+      router.push({
+        pathname: '/subcategories',
+        params: {
+          category: singleDraft.category || 'income',
+          selected: singleDraft.subcategoryId ?? '',
+          returnTo: 'log-expenses',
+        },
+      });
+      return;
+    }
+
+    router.push({
+      pathname: '/Category',
+      params: {
+        current: singleDraft.category,
+        currentSubcategory: singleDraft.subcategoryId,
+        returnTo: 'log-expenses',
+        type: transactionType,
+      },
+    });
+  }, [router, singleDraft.category, singleDraft.subcategoryId, transactionType]);
+
   const persistRecords = useCallback(async (records: StoredRecord[], stayOnScreen: boolean) => {
     try {
       await StorageService.addBatchTransactions(
@@ -609,17 +636,7 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Category*</ThemedText>
                 <TouchableOpacity
                   style={[styles.categoryPill, { borderWidth: 0, backgroundColor: 'transparent' }]}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/Category',
-                      params: {
-                        current: singleDraft.category,
-                        currentSubcategory: singleDraft.subcategoryId,
-                        returnTo: 'log-expenses',
-                        type: transactionType,
-                      },
-                    })
-                  }
+                  onPress={handleCategoryPress}
                 >
                   <View style={[styles.categoryIconBadge, { backgroundColor: `${getCategoryDefinition(singleDraft.category)?.color ?? palette.tint}22` }]}> 
                     <MaterialCommunityIcons name={getCategoryDefinition(singleDraft.category)?.icon ?? 'shape-outline' as any} size={16} color={getCategoryDefinition(singleDraft.category)?.color ?? palette.tint} />
