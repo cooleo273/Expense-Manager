@@ -4,7 +4,7 @@ import { LayoutRectangle, Pressable, StyleSheet, useWindowDimensions, View } fro
 import { Portal } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
-import { BorderRadius, Colors, IconSizes, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, IconSizes, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type InfoTooltipProps = {
@@ -64,7 +64,7 @@ export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID, a
       <Pressable
         ref={iconRef}
         accessibilityRole="button"
-        accessibilityHint="Show full value"
+        accessibilityLabel="Show full value"
         onPress={visible ? hide : show}
         onHoverIn={() => show()}
         onHoverOut={hide}
@@ -122,11 +122,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    shadowColor: 'rgba(15,23,42,0.16)',
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    ...(Shadows.modalSubtle ?? {}),
   },
   tooltipText: {
     fontSize: 13,

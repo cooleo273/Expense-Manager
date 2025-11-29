@@ -171,16 +171,16 @@ export default function DualSlider({
           styles.marker,
           { left: leftPos - MARKER_SIZE / 2 },
           activeMarker.current === 'left' && pressedMarkerStyle ? pressedMarkerStyle : markerStyle,
+          { pointerEvents: 'none' } as ViewStyle,
         ] as any}
-        pointerEvents="none"
       />
       <View
         style={[
           styles.marker,
           { left: rightPos - MARKER_SIZE / 2 },
           activeMarker.current === 'right' && pressedMarkerStyle ? pressedMarkerStyle : markerStyle,
+          { pointerEvents: 'none' } as ViewStyle,
         ] as any}
-        pointerEvents="none"
       />
     </View>
   );

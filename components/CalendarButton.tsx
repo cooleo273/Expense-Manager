@@ -3,7 +3,7 @@ import { DatePreset, DateRange, useFilterContext } from '@/contexts/FilterContex
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type DraftRange = {
@@ -189,8 +189,8 @@ export const CalendarButton: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setCalendarVisible(false)}
       >
-        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
-          <View style={StyleSheet.absoluteFill} pointerEvents={backdropPointerEvents}>
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' } as ViewStyle]}>
+          <View style={[StyleSheet.absoluteFill, { pointerEvents: backdropPointerEvents } as ViewStyle]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setCalendarVisible(false)}>
               <View style={styles.backdrop} />
             </Pressable>
@@ -202,7 +202,6 @@ export const CalendarButton: React.FC = () => {
                 backgroundColor: palette.card,
                 marginTop: insets.top + Spacing.lg,
                 marginRight: Spacing.lg,
-                shadowColor: 'rgba(15,23,42,0.25)',
               },
             ]}
           >

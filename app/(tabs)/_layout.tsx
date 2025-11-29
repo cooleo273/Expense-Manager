@@ -38,7 +38,7 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} accessibilityHint={undefined} />,
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,
@@ -62,7 +62,7 @@ export default function TabLayout() {
           name="statistics"
           options={{
             title: 'Statistics',
-            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} accessibilityHint={undefined} />,
+            tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
             headerRight: () => <HeaderRight />,

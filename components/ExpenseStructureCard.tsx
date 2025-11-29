@@ -6,7 +6,7 @@ import { VictoryLabel, VictoryPie } from 'victory-native';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export type ExpenseStructureSegment = {
@@ -408,8 +408,8 @@ export function ExpenseStructureCard({
                     height: isNarrow ? 60 : 88,
                     borderRadius: isNarrow ? 30 : 44,
                   },
+                  { pointerEvents: 'auto' } as ViewStyle,
                 ]}
-                pointerEvents="auto"
               >
                 {centerValue.display ? (
                   <View style={styles.centerValueRow}>
@@ -572,11 +572,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.995 }],
   },
   containerPressed: {
-    shadowColor: 'rgba(15,23,42,0.25)',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...(Shadows.modalSubtle ?? {}),
   },
   container: {
     borderRadius: BorderRadius.xl,

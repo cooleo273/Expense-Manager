@@ -1,4 +1,4 @@
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { StyleSheet } from 'react-native';
 
 export const logExpensesStyles = StyleSheet.create({
@@ -665,11 +665,8 @@ export const logExpensesStyles = StyleSheet.create({
     borderWidth: 1,
     gap: Spacing.xs,
     // subtle elevation/shadow for visual depth
+    ...(Shadows.light ?? {}),
     elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
   },
   labelAddButtonText: {
     fontSize: FontSizes.sm,

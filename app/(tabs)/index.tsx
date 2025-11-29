@@ -397,7 +397,7 @@ export default function HomeScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
           >
             <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
-            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} accessibilityHint={undefined} />
+            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
           </Pressable>
         </ThemedView>
       </ScrollView>
