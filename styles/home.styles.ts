@@ -56,6 +56,7 @@ export const homeStyles = StyleSheet.create({
   balanceValue: {
     fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.huge + 4,
   },
   metaPill: {
     flexDirection: 'row',

@@ -24,6 +24,7 @@ export const statisticsStyles = StyleSheet.create({
   toolbarTitle: {
     fontSize: FontSizes.xxxl,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.xxxl + 2,
   },
   calendarButton: {
     padding: Spacing.md,

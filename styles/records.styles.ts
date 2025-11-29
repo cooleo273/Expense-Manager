@@ -30,6 +30,7 @@ export const recordsStyles = StyleSheet.create({
   headerTitle: {
     fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.huge + 4,
   },
   headerButton: {
     padding: Spacing.md,
@@ -172,6 +173,7 @@ export const recordsStyles = StyleSheet.create({
   filterTitle: {
     fontSize: FontSizes.xxxl,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.xxxl + 2,
   },
   filterContent: {
   },
@@ -296,6 +298,7 @@ export const recordsStyles = StyleSheet.create({
   calendarTitle: {
     fontSize: FontSizes.xxxl,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.xxxl + 2,
   },
   monthHeader: {
     flexDirection: 'row',

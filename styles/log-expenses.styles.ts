@@ -57,6 +57,7 @@ export const logExpensesStyles = StyleSheet.create({
   summaryTotal: {
     fontSize: FontSizes.huge,
     fontWeight: FontWeights.bold as any,
+    lineHeight: FontSizes.huge + 4,
   },
   bottomActionBar: {
     paddingHorizontal: Spacing.lg,
