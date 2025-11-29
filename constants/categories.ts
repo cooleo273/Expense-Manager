@@ -1,6 +1,7 @@
-import type { ComponentProps } from 'react';
-
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { ComponentProps } from 'react';
+import i18n from '../services/i18n';
+import { CATEGORY_MAP as CATEGORY_MAP_FR, SUBCATEGORY_SETS as SUBCATEGORY_SETS_FR } from './categories-fr';
 
 export type CategoryType = 'income' | 'expense';
 
@@ -240,36 +241,60 @@ export function isSubcategoryId(id: string | undefined): id is SubcategoryKey {
 }
 
 export function getNodeDisplayName(id: string | undefined): string | undefined {
+  const isFrench = i18n.language === 'fr';
   if (!id) {
     return undefined;
   }
   const subcategory = getSubcategoryDefinition(id);
   if (subcategory) {
+    if (isFrench) {
+      const frenchSubcategory = SUBCATEGORY_SETS_FR[subcategory.parentId]?.find((s: SubcategoryDefinition) => s.id === subcategory.id);
+      return frenchSubcategory?.name ?? subcategory.name;
+    }
     return subcategory.name;
   }
-  return getCategoryDefinition(id)?.name;
+  const category = getCategoryDefinition(id);
+  if (category) {
+    if (isFrench) {
+      return CATEGORY_MAP_FR[category.id]?.name ?? category.name;
+    }
+    return category.name;
+  }
+  return undefined;
 }
 
 export function getFullCategoryLabel(categoryId: string | undefined, subcategoryId?: string | null): string {
+  const isFrench = i18n.language === 'fr';
   const subcategory = getSubcategoryDefinition(subcategoryId || undefined);
   if (subcategory) {
+    if (isFrench) {
+      const frenchSubcategory = SUBCATEGORY_SETS_FR[subcategory.parentId]?.find((s: SubcategoryDefinition) => s.id === subcategory.id);
+      return frenchSubcategory?.name ?? subcategory.name;
+    }
     return subcategory.name;
   }
   const category = getCategoryDefinition(categoryId);
-  return category?.name ?? categoryId ?? '';
+  if (category) {
+    if (isFrench) {
+      return CATEGORY_MAP_FR[category.id]?.name ?? category.name;
+    }
+    return category.name;
+  }
+  return categoryId ?? '';
 }
 
 export function getCategoryDefinition(id: CategoryKey | string | undefined): CategoryDefinition | undefined {
+  const isFrench = i18n.language === 'fr';
   if (!id) {
     return undefined;
   }
-  const category = CATEGORY_MAP[id as CategoryKey];
+  const category = (isFrench ? CATEGORY_MAP_FR : CATEGORY_MAP)[id as CategoryKey];
   if (category) {
     return category;
   }
   const subcategory = getSubcategoryDefinition(id);
   if (subcategory) {
-    return CATEGORY_MAP[subcategory.parentId];
+    return (isFrench ? CATEGORY_MAP_FR : CATEGORY_MAP)[subcategory.parentId];
   }
   return undefined;
 }

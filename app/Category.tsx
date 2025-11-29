@@ -9,11 +9,13 @@ import { transactionDraftState } from '@/state/transactionDraftState';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function CategoriesScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -263,7 +265,7 @@ export default function CategoriesScreen() {
         }}
       />
       <View style={{ paddingVertical: Spacing.tiny, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border }}>
-        <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8, marginHorizontal: Spacing.lg, padding: Spacing.tiny }}>MOST FREQUENT</ThemedText>
+        <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8, marginHorizontal: Spacing.lg, padding: Spacing.tiny }}>{t('most_frequent')}</ThemedText>
         {mostFrequentWithLastUsed.length > 0 ? (
           <View style={{ backgroundColor: palette.card, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg }}>
             <ScrollView
@@ -306,7 +308,7 @@ export default function CategoriesScreen() {
             </ScrollView>
           </View>
         ) : (
-          <ThemedText style={{ color: palette.icon }}>No categories selected</ThemedText>
+          <ThemedText style={{ color: palette.icon }}>{t('no_categories_selected')}</ThemedText>
         )}
       </View>
 
@@ -314,7 +316,7 @@ export default function CategoriesScreen() {
       <FlatList
         ListHeaderComponent={() => (
           <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.border }}>
-            <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', padding: Spacing.tiny }}>ALL CATEGORIES</ThemedText>
+            <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', padding: Spacing.tiny }}>{t('all_categories')}</ThemedText>
           </View>
         )}
         data={typeParam ? categoryList.filter(c => c.type === typeParam) : categoryList}

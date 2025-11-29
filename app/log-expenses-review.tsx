@@ -16,6 +16,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -86,6 +87,7 @@ export default function LogExpensesReviewScreen() {
   const payloadKey = Array.isArray(params.payload) ? params.payload[0] ?? '' : params.payload ?? '';
   const payload = useMemo(() => parsePayload(payloadKey), [payloadKey]);
 
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const navigation = useNavigation();
@@ -96,7 +98,7 @@ export default function LogExpensesReviewScreen() {
   const fallbackAccount = useMemo(() => mockAccounts.find((acc) => acc.id !== 'all') ?? null, []);
   const [localAccountId, setLocalAccountId] = useState<string | null>(() => payload?.accountId ?? fallbackAccount?.id ?? null);
   const accountMeta = useMemo(() => getAccountMeta(localAccountId ?? '') ?? (localAccountId ? null : fallbackAccount), [fallbackAccount, localAccountId]);
-  const accountName = accountMeta?.name ?? payload?.accountName ?? 'Select account';
+  const accountName = accountMeta?.name ?? payload?.accountName ?? t('select_account');
   const transactionType = payload?.transactionType ?? 'expense';
   const [reviewRecords, setReviewRecords] = useState<SingleDraft[]>(() => payload?.records ?? []);
   const [recordDate, setRecordDate] = useState<Date>(() => {
@@ -134,13 +136,13 @@ export default function LogExpensesReviewScreen() {
   const handlePersist = useCallback(
     async (stayOnScreen = false) => {
       if (!payload || reviewRecords.length === 0) {
-        showToast('Nothing to save', { tone: 'error' });
+        showToast(t('nothing_to_save'), { tone: 'error' });
         return;
       }
 
       const resolvedAccountId = localAccountId ?? payload.accountId ?? fallbackAccount?.id;
       if (!resolvedAccountId) {
-        Alert.alert('Account required', 'Please select an account before saving.');
+        Alert.alert(t('account_required'), t('select_account_before_saving'));
         return;
       }
 
@@ -153,7 +155,7 @@ export default function LogExpensesReviewScreen() {
       });
 
       if (invalidRecord) {
-        Alert.alert('Invalid record', 'One or more records are missing required information.');
+        Alert.alert(t('invalid_record'), t('invalid_record_message'));
         return;
       }
 
@@ -173,7 +175,7 @@ export default function LogExpensesReviewScreen() {
 
             return {
               id: `tx-${batchSeed}-${idx}`,
-              title: record.note || 'Transaction',
+              title: record.note || t('transaction'),
               account: resolvedAccountName,
               accountId: resolvedAccountId,
               note: record.note,
@@ -214,7 +216,7 @@ export default function LogExpensesReviewScreen() {
         router.replace('/(tabs)/records');
       } catch (error) {
         console.error('Failed to save batch records', error);
-        Alert.alert('Error', 'Failed to save these records. Please try again.');
+        Alert.alert(t('error'), t('failed_to_save_records'));
       }
     },
     [accountName, fallbackAccount, localAccountId, payload, recordDate, reviewRecords, router, setSelectedAccount, showToast, transactionType]
@@ -271,15 +273,15 @@ export default function LogExpensesReviewScreen() {
                 handlePersist(true);
                 setShowMenu(false);
               }}
-              title="Save and stay here"
+              title={t('save_and_stay_here')}
               titleStyle={{ color: palette.text }}
             />
             <Menu.Item
               onPress={() => {
-                Alert.alert('Template saved', 'Batch saved as template for future use.');
+                Alert.alert(t('template_saved'), t('batch_template_saved'));
                 setShowMenu(false);
               }}
-              title="Save template"
+              title={t('save_template')}
               titleStyle={{ color: palette.text }}
             />
           </Menu>
@@ -380,7 +382,7 @@ export default function LogExpensesReviewScreen() {
     });
 
     if (orderedNames.length === 0) {
-      return 'No categories';
+      return t('no_categories');
     }
     if (orderedNames.length === 1) {
       return orderedNames[0];
@@ -507,7 +509,7 @@ export default function LogExpensesReviewScreen() {
     const normalized = trimmed.toLowerCase();
     const alreadyShared = sharedLabels.some((label) => label.trim().toLowerCase() === normalized);
     if (alreadyShared) {
-      showToast('Label already added', { tone: 'warning' });
+      showToast(t('label_already_added'), { tone: 'warning' });
       setCurrentLabelInput('');
       setShowLabelInput(false);
       return;
@@ -543,9 +545,9 @@ export default function LogExpensesReviewScreen() {
   if (!payload || reviewRecords.length === 0) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ThemedText style={{ color: palette.text, fontSize: 16 }}>Nothing to review.</ThemedText>
+        <ThemedText style={{ color: palette.text, fontSize: 16 }}>{t('nothing_to_review')}</ThemedText>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: Spacing.md }}>
-          <ThemedText style={{ color: palette.tint }}>Go back</ThemedText>
+          <ThemedText style={{ color: palette.tint }}>{t('go_back')}</ThemedText>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -581,7 +583,7 @@ export default function LogExpensesReviewScreen() {
           >
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapperNoBorder, { backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Categories</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>{t('categories')}</ThemedText>
                 <ThemedText style={[styles.notchedInput, { color: palette.text }]} numberOfLines={1} ellipsizeMode="tail">
                   {categoriesSummary}
                 </ThemedText>
@@ -591,11 +593,11 @@ export default function LogExpensesReviewScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  {transactionType === 'income' ? 'Payer' : 'Payee'}
+                  {transactionType === 'income' ? t('payer') : t('payee')}
                 </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                  placeholder={transactionType === 'income' ? t('eg_company_x') : t('eg_boardwalk_housing')}
                   placeholderTextColor={palette.icon}
                   value={payeeValue}
                   onChangeText={handlePayeeInputChange}
@@ -607,7 +609,7 @@ export default function LogExpensesReviewScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>{t('labels')}</ThemedText>
                 <Pressable
                   style={({ pressed }) => [styles.labelsSummaryRow, pressed && styles.labelsSummaryRowPressed]}
                   onPress={() => {
@@ -662,7 +664,7 @@ export default function LogExpensesReviewScreen() {
                       setShowLabelInput(true);
                       setCurrentLabelInput('');
                     }}
-                    accessibilityLabel="Add label"
+                    accessibilityLabel={t('add_label')}
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
                   </TouchableOpacity>
@@ -678,7 +680,7 @@ export default function LogExpensesReviewScreen() {
                       styles.sharedLabelInput,
                       { backgroundColor: palette.card, color: palette.text },
                     ]}
-                    placeholder="Add Label"
+                    placeholder={t('add_label')}
                     placeholderTextColor={palette.icon}
                     value={currentLabelInput}
                     onChangeText={setCurrentLabelInput}
@@ -703,7 +705,7 @@ export default function LogExpensesReviewScreen() {
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
                   >
-                    Date
+                    {t('date')}
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
@@ -719,7 +721,7 @@ export default function LogExpensesReviewScreen() {
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
                   >
-                    Time
+                    {t('time')}
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
@@ -743,7 +745,7 @@ export default function LogExpensesReviewScreen() {
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity style={styles.pickerDoneButton} onPress={closePicker}>
-                  <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
+                  <ThemedText style={{ color: palette.tint }}>{t('done')}</ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -759,9 +761,9 @@ export default function LogExpensesReviewScreen() {
               style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Save records"
+              accessibilityLabel={t('save_records')}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>SAVE</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>

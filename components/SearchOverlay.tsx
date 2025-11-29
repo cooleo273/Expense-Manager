@@ -363,7 +363,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                   <Text style={{ color: palette.icon }}>Start typing to see results</Text>
                 )
               ) : results.length === 0 ? (
-              <Text style={{ color: palette.icon }}>No results available for "{tempSearch}"</Text>
+              <Text style={{ color: palette.icon }}>No results available for &ldquo;{tempSearch}&rdquo;</Text>
             ) : (
               <>
                 <View style={styles.resultsListWrapper}>

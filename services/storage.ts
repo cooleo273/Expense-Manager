@@ -59,7 +59,7 @@ export class StorageService {
     };
   }
 
-  private static sanitizeTransactions(transactions: Array<Transaction & { labels?: LabelValue }>): {
+  private static sanitizeTransactions(transactions: (Transaction & { labels?: LabelValue })[]): {
     list: Transaction[];
     changed: boolean;
   } {
@@ -112,7 +112,7 @@ export class StorageService {
   static async getTransactions(): Promise<Transaction[]> {
     try {
       const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
-      const parsed: Array<Transaction & { labels?: LabelValue }> = data ? JSON.parse(data) : [];
+      const parsed: (Transaction & { labels?: LabelValue })[] = data ? JSON.parse(data) : [];
       const { list, changed } = this.sanitizeTransactions(parsed);
       if (changed) {
         await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
@@ -220,5 +220,13 @@ export class StorageService {
     } catch (error) {
       console.error('Error setting category usage:', error);
     }
+  }
+
+  public static async getLanguage(): Promise<string | null> {
+    return AsyncStorage.getItem('user-language');
+  }
+
+  public static async setLanguage(language: string): Promise<void> {
+    await AsyncStorage.setItem('user-language', language);
   }
 }

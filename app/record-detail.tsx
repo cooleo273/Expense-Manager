@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,7 +22,7 @@ const styles = logExpensesStyles;
 
 export const options = {
   headerShown: true,
-  headerTitle: 'Record Details',
+  headerTitle: 'record_details',
 };
 
 type DraftErrors = {
@@ -32,6 +33,7 @@ type DraftErrors = {
 type PickerMode = 'date' | 'time' | null;
 
 export default function RecordDetailScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -254,15 +256,15 @@ export default function RecordDetailScreen() {
     const nextErrors: DraftErrors = {};
     const amountValue = Number(draft.amount.trim());
     if (!draft.amount.trim()) {
-      nextErrors.amount = 'Amount is required';
+      nextErrors.amount = t('amount_is_required');
     } else if (Number.isNaN(amountValue) || !Number.isFinite(amountValue)) {
-      nextErrors.amount = 'Enter a valid number';
+      nextErrors.amount = t('enter_valid_number');
     } else if (amountValue <= 0) {
-      nextErrors.amount = 'Amount must be greater than zero';
+      nextErrors.amount = t('amount_must_be_positive');
     }
 
     if (!draft.note.trim()) {
-      nextErrors.note = 'Note is required';
+      nextErrors.note = t('note_is_required');
     }
 
     setErrors(nextErrors);
@@ -289,7 +291,7 @@ export default function RecordDetailScreen() {
 
   const handleSave = useCallback(async () => {
     if (!validate()) {
-      showToast('Fix errors to continue', { tone: 'error' });
+      showToast(t('fix_errors_to_continue'), { tone: 'error' });
       return;
     }
 
@@ -307,7 +309,7 @@ export default function RecordDetailScreen() {
         const updates: any = {
           amount: signedAmount,
           note: nextDraft.note ?? '',
-          title: nextDraft.note ?? 'Transaction',
+          title: nextDraft.note ?? t('transaction'),
           payee: nextDraft.payee ?? '',
           categoryId: nextDraft.category ?? undefined,
           subcategoryId: nextDraft.subcategoryId ?? undefined,
@@ -315,10 +317,10 @@ export default function RecordDetailScreen() {
           date: nextDraft.occurredAt ?? recordDate.toISOString(),
         };
         await StorageService.updateTransaction(existingId, updates);
-        showToast('Record Updated');
+        showToast(t('record_updated'));
       } catch (err) {
         console.error('Failed to persist record changes:', err);
-        showToast('Failed to save record', { tone: 'error' });
+        showToast(t('failed_to_save_record'), { tone: 'error' });
       }
       navigation.goBack();
       return;
@@ -329,13 +331,13 @@ export default function RecordDetailScreen() {
       recordIndex,
       record: nextDraft,
     });
-    showToast('Record Updated');
+    showToast(t('record_updated'));
     navigation.goBack();
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
 
   useEffect(() => {
     navigation.setOptions({
-      headerTitle: 'Record Details',
+      headerTitle: t('record_details'),
       headerLeft: () => (
         <TouchableOpacity
           onPress={() => {
@@ -365,12 +367,12 @@ export default function RecordDetailScreen() {
 
       e.preventDefault();
       Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Do you want to discard and leave?',
+        t('discard_changes'),
+        t('discard_changes_confirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('discard'),
             style: 'destructive',
             onPress: () => {
               navigation.dispatch(e.data.action);
@@ -401,7 +403,7 @@ export default function RecordDetailScreen() {
           >
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('amount')}</ThemedText>
                 <View style={styles.amountRow}>
                   <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
                   <TextInput
@@ -421,7 +423,7 @@ export default function RecordDetailScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('category')}</ThemedText>
                 <TouchableOpacity
                   style={[styles.categoryPill, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={() =>
@@ -450,7 +452,7 @@ export default function RecordDetailScreen() {
                   </View>
                   <View style={styles.categoryTextWrapper}>
                     <ThemedText style={[styles.categoryLabel, { color: palette.text }]} numberOfLines={1}>
-                      {getFullCategoryLabel(draft.category, draft.subcategoryId) || 'Select category'}
+                      {getFullCategoryLabel(draft.category, draft.subcategoryId) || t('select_category')}
                     </ThemedText>
                   </View>
                 </TouchableOpacity>
@@ -461,11 +463,11 @@ export default function RecordDetailScreen() {
               <View style={styles.fieldGroup}>
                 <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
                   <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
-                    {recordType === 'income' ? 'Payer' : 'Payee'}
+                    {recordType === 'income' ? t('payer') : t('payee')}
                   </ThemedText>
                   <TextInput
                     style={[styles.notchedInput, { color: palette.text }]}
-                    placeholder={recordType === 'income' ? 'Eg: Company X' : 'Eg: Grocery Store'}
+                    placeholder={recordType === 'income' ? t('eg_company_x') : t('eg_grocery_store')}
                     placeholderTextColor={palette.icon}
                     value={draft.payee}
                     onChangeText={(value) => setDraft((prev) => ({ ...prev, payee: value }))}
@@ -476,10 +478,10 @@ export default function RecordDetailScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note*</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('note')}</ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Add a note"
+                  placeholder={t('add_a_note')}
                   placeholderTextColor={palette.icon}
                   value={draft.note}
                   onChangeText={(value) => setDraft((prev) => ({ ...prev, note: value }))}
@@ -492,7 +494,7 @@ export default function RecordDetailScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Labels</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('labels')}</ThemedText>
                 <Pressable
                   style={({ pressed }) => [styles.labelsSummaryRow, pressed && styles.labelsSummaryRowPressed]}
                   onPress={openLabelInput}
@@ -533,7 +535,7 @@ export default function RecordDetailScreen() {
                       event.stopPropagation();
                       openLabelInput();
                     }}
-                    accessibilityLabel="Add label"
+                    accessibilityLabel={t('add_label')}
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
                   </TouchableOpacity>
@@ -547,7 +549,7 @@ export default function RecordDetailScreen() {
                   <TextInput
                     ref={labelInputRef}
                     style={[styles.sharedLabelInput, { backgroundColor: palette.card, color: palette.text }]}
-                    placeholder="Add Label"
+                    placeholder={t('add_label')}
                     placeholderTextColor={palette.icon}
                     value={currentLabelInput}
                     onChangeText={setCurrentLabelInput}
@@ -563,14 +565,14 @@ export default function RecordDetailScreen() {
                     <TouchableOpacity
                       onPress={closeLabelInput}
                       style={[styles.sharedLabelActionButton, styles.sharedLabelCloseButton]}
-                      accessibilityLabel="Cancel label entry"
+                      accessibilityLabel={t('cancel_label_entry')}
                     >
                       <MaterialCommunityIcons name="close" size={18} color={palette.icon} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={addLabel}
                       style={[styles.sharedLabelActionButton, styles.sharedLabelCheckButton]}
-                      accessibilityLabel="Save label"
+                      accessibilityLabel={t('save_label')}
                     >
                       <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
                     </TouchableOpacity>
@@ -585,7 +587,7 @@ export default function RecordDetailScreen() {
                   <View
                     style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                   >
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Date</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('date')}</ThemedText>
                     <TouchableOpacity
                       style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                       onPress={() => setPickerMode('date')}
@@ -597,7 +599,7 @@ export default function RecordDetailScreen() {
                   <View
                     style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                   >
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Time</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>{t('time')}</ThemedText>
                     <TouchableOpacity
                       style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
                       onPress={() => setPickerMode('time')}
@@ -621,13 +623,14 @@ export default function RecordDetailScreen() {
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity style={styles.pickerDoneButton} onPress={() => setPickerMode(null)}>
-                  <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
+                  <ThemedText style={{ color: palette.tint }}>{t('done')}</ThemedText>
                 </TouchableOpacity>
               )}
             </View>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
     </SafeAreaView>
+   
   );
 }

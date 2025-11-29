@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +10,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { mockInitialReminders } from '../constants/mock-data';
 
 export default function RemindersScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -39,20 +41,20 @@ export default function RemindersScreen() {
         contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
         ListHeaderComponent={
           <View style={styles.header}>
-            <ThemedText type="title">Reminders</ThemedText>
+            <ThemedText type="title">{t('reminders')}</ThemedText>
             <ThemedText style={{ color: palette.icon }}>
               Create manual nudges for recurring expenses or incomes.
             </ThemedText>
             <View style={styles.form}>
               <TextInput
-                placeholder="Reminder title"
+                placeholder={t('reminder_title_placeholder')}
                 value={title}
                 onChangeText={setTitle}
                 style={[styles.input, { borderColor: palette.border, color: palette.text }]}
                 placeholderTextColor={palette.icon}
               />
               <TextInput
-                placeholder="Amount (₹)"
+                placeholder={t('amount_placeholder')}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
@@ -63,7 +65,7 @@ export default function RemindersScreen() {
                 style={[styles.addButton, { backgroundColor: palette.tint }]}
                 onPress={handleAddReminder}
               >
-                <ThemedText style={styles.addButtonText}>Add Reminder</ThemedText>
+                <ThemedText style={styles.addButtonText}>{t('add_record')}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
