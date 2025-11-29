@@ -12,11 +12,12 @@ type InfoTooltipProps = {
   iconColor?: string;
   size?: number;
   testID?: string;
+  anchorVisible?: boolean; // When false, do not render the visual help icon; still enables the tooltip on press/hover
 };
 
 type AnchorRect = LayoutRectangle | null;
 
-export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID }: InfoTooltipProps) {
+export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID, anchorVisible = true }: InfoTooltipProps) {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const [visible, setVisible] = useState(false);
@@ -67,10 +68,12 @@ export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID }:
         onPress={visible ? hide : show}
         onHoverIn={() => show()}
         onHoverOut={hide}
-        style={styles.iconButton}
+        style={[styles.iconButton, !anchorVisible && styles.hiddenAnchor]}
         testID={testID}
       >
-        <MaterialCommunityIcons name="help-circle-outline" size={size} color={iconColor ?? palette.icon} />
+        {anchorVisible ? (
+          <MaterialCommunityIcons name="help-circle-outline" size={size} color={iconColor ?? palette.icon} />
+        ) : null}
       </Pressable>
       {visible ? (
         <Portal>
@@ -99,6 +102,12 @@ const TOOLTIP_HEIGHT = 40;
 const styles = StyleSheet.create({
   iconButton: {
     padding: Spacing.tiny,
+  },
+  hiddenAnchor: {
+    padding: Spacing.tiny,
+    opacity: 0,
+    width: 16,
+    height: 16,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

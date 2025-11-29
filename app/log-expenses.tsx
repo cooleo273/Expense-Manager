@@ -294,10 +294,14 @@ export default function LogExpensesScreen() {
       }
       resetDrafts();
 
-      showToast('Record saved successfully');
+      if (records.length === 1) {
+        showToast('Record Added');
+      } else {
+        showToast(`${records.length} Records Added`);
+      }
 
       if (stayOnScreen) {
-        showToast(`${records.length} record${records.length > 1 ? 's' : ''} stored.`);
+        showToast(`${records.length} Records Added.`);
         return;
       }
 

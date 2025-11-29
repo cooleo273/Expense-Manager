@@ -48,15 +48,76 @@ const TRANSACTIONS_KEY = '@transactions';
 const CATEGORY_USAGE_KEY = '@category_usage';
 
 export class StorageService {
+  private static transactionListeners = new Set<() => void>();
+
+  private static normalizeTransaction(transaction: Transaction & { labels?: LabelValue }): Transaction {
+    return {
+      ...transaction,
+      id: transaction.id || `tx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      accountId: resolveAccountId(transaction.accountId, transaction.account),
+      labels: normalizeLabels(transaction.labels),
+    };
+  }
+
+  private static sanitizeTransactions(transactions: Array<Transaction & { labels?: LabelValue }>): {
+    list: Transaction[];
+    changed: boolean;
+  } {
+    const deduped: Transaction[] = [];
+    const idIndex = new Map<string, number>();
+    let changed = false;
+
+    transactions.forEach((transaction) => {
+      if (!transaction) {
+        return;
+      }
+      const normalized = this.normalizeTransaction(transaction as Transaction & { labels?: LabelValue });
+      if (normalized.id !== transaction.id) {
+        changed = true;
+      }
+      const existingIndex = idIndex.get(normalized.id);
+      if (existingIndex != null) {
+        changed = true;
+        deduped[existingIndex] = normalized;
+      } else {
+        idIndex.set(normalized.id, deduped.length);
+        deduped.push(normalized);
+      }
+    });
+
+    if (deduped.length !== transactions.length) {
+      changed = true;
+    }
+
+    return { list: deduped, changed };
+  }
+
+  static subscribeTransactions(listener: () => void) {
+    this.transactionListeners.add(listener);
+    return () => {
+      this.transactionListeners.delete(listener);
+    };
+  }
+
+  private static notifyTransactionsChanged() {
+    this.transactionListeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Transactions listener failed', error);
+      }
+    });
+  }
+
   static async getTransactions(): Promise<Transaction[]> {
     try {
       const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
       const parsed: Array<Transaction & { labels?: LabelValue }> = data ? JSON.parse(data) : [];
-      return parsed.map((transaction) => ({
-        ...transaction,
-        accountId: resolveAccountId(transaction.accountId, transaction.account),
-        labels: normalizeLabels(transaction.labels),
-      }));
+      const { list, changed } = this.sanitizeTransactions(parsed);
+      if (changed) {
+        await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
+      }
+      return list;
     } catch (error) {
       console.error('Error loading transactions:', error);
       return [];
@@ -65,11 +126,9 @@ export class StorageService {
 
   static async saveTransactions(transactions: Transaction[]): Promise<void> {
     try {
-      const normalized = transactions.map((transaction) => ({
-        ...transaction,
-        labels: normalizeLabels(transaction.labels),
-      }));
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(normalized));
+      const { list } = this.sanitizeTransactions(transactions);
+      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
+      this.notifyTransactionsChanged();
     } catch (error) {
       console.error('Error saving transactions:', error);
     }
@@ -78,12 +137,7 @@ export class StorageService {
   static async addTransaction(transaction: Transaction): Promise<void> {
     try {
       const transactions = await this.getTransactions();
-      transactions.push({
-        ...transaction,
-        accountId: resolveAccountId(transaction.accountId, transaction.account),
-        labels: normalizeLabels(transaction.labels),
-      });
-      await this.saveTransactions(transactions);
+      await this.saveTransactions([...transactions, transaction]);
     } catch (error) {
       console.error('Error adding transaction:', error);
     }
@@ -124,14 +178,7 @@ export class StorageService {
   static async addBatchTransactions(newTransactions: Transaction[]): Promise<void> {
     try {
       const transactions = await this.getTransactions();
-      transactions.push(
-        ...newTransactions.map((transaction) => ({
-          ...transaction,
-          accountId: resolveAccountId(transaction.accountId, transaction.account),
-          labels: normalizeLabels(transaction.labels),
-        }))
-      );
-      await this.saveTransactions(transactions);
+      await this.saveTransactions([...transactions, ...newTransactions]);
     } catch (error) {
       console.error('Error adding batch transactions:', error);
     }
@@ -140,6 +187,7 @@ export class StorageService {
   static async clearAll(): Promise<void> {
     try {
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
+      this.notifyTransactionsChanged();
     } catch (error) {
       console.error('Error clearing storage:', error);
     }

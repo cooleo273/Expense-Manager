@@ -110,11 +110,26 @@ export default function LogExpensesReviewScreen() {
     return new Date();
   });
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [pickerTarget, setPickerTarget] = useState<{ scope: 'batch' | 'record'; recordIndex?: number }>({ scope: 'batch' });
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [payeeValue, setPayeeValue] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const headerClearedRef = useRef(false);
+  const closePicker = useCallback(() => {
+    setPickerMode(null);
+    setPickerTarget({ scope: 'batch' });
+  }, []);
+
+  const openBatchPicker = useCallback((mode: PickerMode) => {
+    setPickerTarget({ scope: 'batch' });
+    setPickerMode(mode);
+  }, []);
+
+  const openRecordPicker = useCallback((mode: PickerMode, recordIndex: number) => {
+    setPickerTarget({ scope: 'record', recordIndex });
+    setPickerMode(mode);
+  }, []);
 
   const handlePersist = useCallback(
     async (stayOnScreen = false) => {
@@ -144,6 +159,7 @@ export default function LogExpensesReviewScreen() {
 
       try {
         const timestamp = recordDate.getTime();
+        const batchSeed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const savedCount = reviewRecords.length;
         await StorageService.addBatchTransactions(
           reviewRecords.map((record, idx) => {
@@ -156,7 +172,7 @@ export default function LogExpensesReviewScreen() {
             const occurredAt = resolvedDate.toISOString();
 
             return {
-              id: `${timestamp}-${idx}`,
+              id: `tx-${batchSeed}-${idx}`,
               title: record.note || 'Transaction',
               account: resolvedAccountName,
               accountId: resolvedAccountId,
@@ -175,8 +191,8 @@ export default function LogExpensesReviewScreen() {
         );
         const pluralSuffix = savedCount === 1 ? '' : 's';
         const successMessage = stayOnScreen
-          ? `${savedCount} record${pluralSuffix} saved. Starting a new list.`
-          : `${savedCount} record${pluralSuffix} saved. Taking you to Records.`;
+          ? (savedCount === 1 ? 'Record Added. Starting a new list.' : `${savedCount} Records Added. Starting a new list.`)
+          : (savedCount === 1 ? 'Record Added. Taking you to Records.' : `${savedCount} Records Added. Taking you to Records.`);
         showToast(successMessage, { tone: 'success' });
         try {
           await Promise.all(
@@ -397,6 +413,22 @@ export default function LogExpensesReviewScreen() {
     [setReviewRecords]
   );
 
+  const pickerValue = useMemo(() => {
+    if (!pickerMode) {
+      return recordDate;
+    }
+    if (pickerTarget.scope === 'record' && typeof pickerTarget.recordIndex === 'number') {
+      const targetRecord = reviewRecords[pickerTarget.recordIndex];
+      if (targetRecord?.occurredAt) {
+        const parsed = new Date(targetRecord.occurredAt);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    }
+    return recordDate;
+  }, [pickerMode, pickerTarget, recordDate, reviewRecords]);
+
   const totalAmount = useMemo(() => {
     return reviewRecords.reduce((sum, record) => {
       const numeric = Number(record.amount);
@@ -414,31 +446,54 @@ export default function LogExpensesReviewScreen() {
     (_event: DateTimePickerEvent, selectedDate?: Date) => {
       if (!selectedDate || !pickerMode) {
         if (Platform.OS !== 'ios') {
-          setPickerMode(null);
+          closePicker();
         }
         return;
       }
 
-      const next = new Date(recordDate);
-      if (pickerMode === 'date') {
-        next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      } else {
-        next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-      }
+      if (pickerTarget.scope === 'batch') {
+        const next = new Date(recordDate);
+        if (pickerMode === 'date') {
+          next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        } else {
+          next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+        }
 
-      setRecordDate(next);
-      setReviewRecords((prev) =>
-        prev.map((record, idx) => ({
-          ...record,
-          occurredAt: new Date(next.getTime() + idx).toISOString(),
-        }))
-      );
+        setRecordDate(next);
+        setReviewRecords((prev) =>
+          prev.map((record, idx) => ({
+            ...record,
+            occurredAt: new Date(next.getTime() + idx).toISOString(),
+          }))
+        );
+      } else if (pickerTarget.scope === 'record' && typeof pickerTarget.recordIndex === 'number') {
+        setReviewRecords((prev) =>
+          prev.map((record, idx) => {
+            if (idx !== pickerTarget.recordIndex) {
+              return record;
+            }
+            const base = record.occurredAt ? new Date(record.occurredAt) : new Date(recordDate);
+            if (Number.isNaN(base.getTime())) {
+              base.setTime(recordDate.getTime());
+            }
+            if (pickerMode === 'date') {
+              base.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+            } else {
+              base.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+            }
+            return {
+              ...record,
+              occurredAt: base.toISOString(),
+            };
+          })
+        );
+      }
 
       if (Platform.OS !== 'ios') {
-        setPickerMode(null);
+        closePicker();
       }
     },
-    [pickerMode, recordDate]
+    [pickerMode, pickerTarget, recordDate, closePicker]
   );
 
   const addSharedLabel = useCallback(() => {
@@ -652,7 +707,7 @@ export default function LogExpensesReviewScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
-                    onPress={() => setPickerMode('date')}
+                    onPress={() => openBatchPicker('date')}
                   >
                     <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
                     <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
@@ -668,7 +723,7 @@ export default function LogExpensesReviewScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
-                    onPress={() => setPickerMode('time')}
+                    onPress={() => openBatchPicker('time')}
                   >
                     <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
                     <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
@@ -681,13 +736,13 @@ export default function LogExpensesReviewScreen() {
           {pickerMode ? (
             <View style={[styles.pickerContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
               <DateTimePicker
-                value={recordDate}
+                value={pickerValue}
                 mode={pickerMode}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleDateTimeChange}
               />
               {Platform.OS === 'ios' && (
-                <TouchableOpacity style={styles.pickerDoneButton} onPress={() => setPickerMode(null)}>
+                <TouchableOpacity style={styles.pickerDoneButton} onPress={closePicker}>
                   <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
                 </TouchableOpacity>
               )}

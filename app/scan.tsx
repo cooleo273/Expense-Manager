@@ -139,7 +139,7 @@ export default function ScanScreen() {
           };
       console.debug('[Scan] outgoing parsed payload', JSON.stringify(payloadToSend, null, 2));
       const encodedFields = encodeURIComponent(JSON.stringify(payloadToSend));
-      showToast('Receipt imported');
+      // No toast: navigates to the import review screen directly without success toast.
       router.replace({
         pathname: '/log-expenses-list',
         params: { parsed: encodedFields },

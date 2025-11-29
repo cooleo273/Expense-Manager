@@ -92,6 +92,7 @@ export default function LogExpensesListScreen() {
       payee: '',
       note: '',
       labels: [],
+      occurredAt: undefined,
     }
   ]);
   const [recordErrors, setRecordErrors] = useState<string[]>(['']);
@@ -130,19 +131,27 @@ export default function LogExpensesListScreen() {
       params: {
         recordIndex: index.toString(),
         payload,
+        returnTo: 'log-expenses-list',
       },
     });
   }, [records, router]);
 
   const addRecord = useCallback(() => {
-    setRecords(prev => [...prev, {
-      amount: '',
-      category: params.defaultCategory as string || '',
-      subcategoryId: '',
-      payee: '',
-      note: '',
-      labels: [],
-    }]);
+    setRecords(prev => {
+      const referenceTimestamp = prev.find((item) => item.occurredAt)?.occurredAt;
+      return [
+        ...prev,
+        {
+          amount: '',
+          category: params.defaultCategory as string || '',
+          subcategoryId: '',
+          payee: '',
+          note: '',
+          labels: [],
+          occurredAt: referenceTimestamp,
+        },
+      ];
+    });
     setRecordErrors(prev => [...prev, '']);
     setRecordCategoryErrors(prev => [...prev, '']);
     setRecordNoteErrors(prev => [...prev, '']);
@@ -281,7 +290,7 @@ export default function LogExpensesListScreen() {
         setRecordErrors(Array(incoming.length).fill(''));
           setRecordNoteErrors(Array(incoming.length).fill(''));
           setRecordCategoryErrors(Array(incoming.length).fill(''));
-        showToast('Receipt items imported');
+        // import processed; no success toast to avoid duplicate notifications
         scanPrefillRef.current = parsedParam;
         return;
       }
@@ -315,7 +324,7 @@ export default function LogExpensesListScreen() {
       setRecordCategoryErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
         
 
-      showToast('Receipt fields imported');
+      // receipt fields applied; no success toast to avoid duplicate notifications
       scanPrefillRef.current = parsedParam;
     } catch (error) {
       console.error('Failed to import scan payload', error);

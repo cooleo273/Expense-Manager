@@ -426,6 +426,7 @@ export function ExpenseStructureCard({
                         size={12}
                         iconColor={palette.icon}
                         testID="expense-structure-center-tooltip"
+                        anchorVisible={false}
                       />
                     ) : null}
                   </View>

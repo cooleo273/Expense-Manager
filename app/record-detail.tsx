@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -37,7 +37,9 @@ export default function RecordDetailScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams();
+  const returnTo = useMemo(() => (typeof params.returnTo === 'string' ? params.returnTo : undefined), [params.returnTo]);
   const { showToast } = useToast();
+  const allowDateEditing = returnTo !== 'log-expenses-list';
 
   const recordIndex = useMemo(() => {
     const indexParam = params.recordIndex;
@@ -267,6 +269,24 @@ export default function RecordDetailScreen() {
     return Object.keys(nextErrors).length === 0;
   }, [draft.amount, draft.note]);
 
+  const isDraftEdited = useCallback(() => {
+    const keys: (keyof SingleDraft)[] = ['amount', 'note', 'category', 'subcategoryId', 'payee', 'occurredAt', 'labels'];
+    for (const key of keys) {
+      const a = (initialDraft as any)[key];
+      const b = (draft as any)[key];
+      if (key === 'labels') {
+        const la = Array.isArray(a) ? a : [];
+        const lb = Array.isArray(b) ? b : [];
+        if (la.length !== lb.length || la.some((value, index) => value !== lb[index])) {
+          return true;
+        }
+      } else if ((a ?? '') !== (b ?? '')) {
+        return true;
+      }
+    }
+    return false;
+  }, [initialDraft, draft]);
+
   const handleSave = useCallback(async () => {
     if (!validate()) {
       showToast('Fix errors to continue', { tone: 'error' });
@@ -295,7 +315,7 @@ export default function RecordDetailScreen() {
           date: nextDraft.occurredAt ?? recordDate.toISOString(),
         };
         await StorageService.updateTransaction(existingId, updates);
-        showToast('Record saved');
+        showToast('Record Updated');
       } catch (err) {
         console.error('Failed to persist record changes:', err);
         showToast('Failed to save record', { tone: 'error' });
@@ -309,7 +329,7 @@ export default function RecordDetailScreen() {
       recordIndex,
       record: nextDraft,
     });
-    showToast('Details updated');
+    showToast('Record Updated');
     navigation.goBack();
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
 
@@ -317,7 +337,12 @@ export default function RecordDetailScreen() {
     navigation.setOptions({
       headerTitle: 'Record Details',
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+        <TouchableOpacity
+          onPress={() => {
+            navigation.goBack();
+          }}
+          style={{ padding: 8 }}
+        >
           <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
         </TouchableOpacity>
       ),
@@ -328,6 +353,36 @@ export default function RecordDetailScreen() {
       ),
     });
   }, [handleSave, navigation, palette.icon, palette.tint]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (returnTo !== 'log-expenses-list') {
+        return;
+      }
+      if (!isDraftEdited()) {
+        return;
+      }
+
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Do you want to discard and leave?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, isDraftEdited, returnTo]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
@@ -402,20 +457,22 @@ export default function RecordDetailScreen() {
               </View>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
-                  {recordType === 'income' ? 'Payer' : 'Payee'}
-                </ThemedText>
-                <TextInput
-                  style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder={recordType === 'income' ? 'Eg: Company X' : 'Eg: Grocery Store'}
-                  placeholderTextColor={palette.icon}
-                  value={draft.payee}
-                  onChangeText={(value) => setDraft((prev) => ({ ...prev, payee: value }))}
-                />
+            {returnTo !== 'log-expenses-list' && (
+              <View style={styles.fieldGroup}>
+                <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
+                  <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                    {recordType === 'income' ? 'Payer' : 'Payee'}
+                  </ThemedText>
+                  <TextInput
+                    style={[styles.notchedInput, { color: palette.text }]}
+                    placeholder={recordType === 'income' ? 'Eg: Company X' : 'Eg: Grocery Store'}
+                    placeholderTextColor={palette.icon}
+                    value={draft.payee}
+                    onChangeText={(value) => setDraft((prev) => ({ ...prev, payee: value }))}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
@@ -522,37 +579,39 @@ export default function RecordDetailScreen() {
               </View>
             )}
 
-            <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
-              <View style={styles.dateTimeRow}>
-                <View
-                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
-                >
-                  <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Date</ThemedText>
-                  <TouchableOpacity
-                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
-                    onPress={() => setPickerMode('date')}
+            {allowDateEditing && (
+              <View style={[styles.fieldGroup, showLabelInput && { marginTop: Spacing.md }]}>
+                <View style={styles.dateTimeRow}>
+                  <View
+                    style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                   >
-                    <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
-                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
-                  </TouchableOpacity>
-                </View>
-                <View
-                  style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
-                >
-                  <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Time</ThemedText>
-                  <TouchableOpacity
-                    style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
-                    onPress={() => setPickerMode('time')}
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Date</ThemedText>
+                    <TouchableOpacity
+                      style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
+                      onPress={() => setPickerMode('date')}
+                    >
+                      <MaterialCommunityIcons name="calendar" size={18} color={palette.tint} />
+                      <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedDate}</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  <View
+                    style={[styles.inputWrapper, styles.dateInputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}
                   >
-                    <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
-                    <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
-                  </TouchableOpacity>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Time</ThemedText>
+                    <TouchableOpacity
+                      style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
+                      onPress={() => setPickerMode('time')}
+                    >
+                      <MaterialCommunityIcons name="clock-outline" size={18} color={palette.tint} />
+                      <ThemedText style={[styles.dateTimeText, { color: palette.text }]}>{formattedTime}</ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
           </ThemedView>
 
-          {pickerMode ? (
+          {allowDateEditing && pickerMode ? (
             <View style={[styles.pickerContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
               <DateTimePicker
                 value={recordDate}

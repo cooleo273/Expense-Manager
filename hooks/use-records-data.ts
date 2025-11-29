@@ -53,6 +53,13 @@ export const useRecordsData = () => {
     loadTransactions();
   }, [loadTransactions]);
 
+  useEffect(() => {
+    const unsubscribe = StorageService.subscribeTransactions(() => {
+      loadTransactions();
+    });
+    return unsubscribe;
+  }, [loadTransactions]);
+
   const maxTransactionAbs = useMemo(() => {
     if (transactions.length === 0) {
       return 100;
