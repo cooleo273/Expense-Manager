@@ -336,23 +336,43 @@ export const CalendarButton: React.FC = () => {
                       const isStart = draftRange?.start && isSameDay(draftRange.start, day);
                       const isEnd = draftRange?.end && isSameDay(draftRange.end, day);
                       const isActive = isWithinDraftRange(day);
+                      const isFutureDay = startOfDay(day) > today;
                       return (
                         <TouchableOpacity
                           key={day.toISOString()}
                           onPress={() => handleDayPress(day)}
+                          disabled={isFutureDay}
+                          accessibilityState={isFutureDay ? { disabled: true } : undefined}
                           style={[
                             styles.dayCell,
                             isActive && { backgroundColor: palette.highlight },
                             (isStart || isEnd) && { backgroundColor: palette.tint },
-                            !inMonth && { opacity: 0.35 },
+                            (!inMonth || isFutureDay) && { opacity: 0.35 },
+                            isFutureDay && styles.disabledDayCell,
                           ]}
                         >
-                          <Text style={{ color: (isStart || isEnd) ? palette.background : palette.text }}>{day.getDate()}</Text>
+                          <Text
+                            style={{
+                              color: (isStart || isEnd)
+                                ? palette.background
+                                : isFutureDay
+                                  ? palette.icon
+                                  : palette.text,
+                            }}
+                          >
+                            {day.getDate()}
+                          </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 ))}
+
+                <View style={styles.hintRow}>
+                  <Text style={[styles.hintText, { color: palette.icon }]}>
+                    Future dates can’t be selected. Latest available day is today.
+                  </Text>
+                </View>
 
                 <TouchableOpacity
                   style={[styles.confirmButton, { backgroundColor: palette.tint }]}
@@ -454,6 +474,19 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  disabledDayCell: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'transparent',
+  },
+  hintRow: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  hintText: {
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
   },
   confirmButton: {
     marginTop: Spacing.md,

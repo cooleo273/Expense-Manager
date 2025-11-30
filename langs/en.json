@@ -150,7 +150,7 @@
   "eg_grocery_store": "Eg: Grocery Store",
   "reset_filters": "Reset filters?",
   "reset_filters_confirm": "Are you sure you want to clear all filter selections?",
-  "reset": "Reset",
+  "reset": "RESET",
   "field_is_required": "{{field}} is required",
   "record_type": "Record Type",
   "expense": "Expense",
