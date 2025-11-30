@@ -3,6 +3,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, TouchableOpacity, View } from 'react-native';
 import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
@@ -18,8 +19,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRecordsData } from '@/hooks/use-records-data';
 import { useRecordsFiltering } from '@/hooks/use-records-filtering';
 import { recordsStyles as styles } from '@/styles/records.styles';
+import { subscribeToRecordFiltersReset } from '@/utils/navigation-events';
 
 export default function RecordsScreen() {
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const accent = palette.tint;
@@ -53,6 +56,16 @@ export default function RecordsScreen() {
     }
   }, [isFocused]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToRecordFiltersReset(() => {
+      setSelectedRecordType(DEFAULT_RECORD_TYPE);
+      setSortOption('date-desc');
+      setShowFilters(false);
+      setShowSortDropdown(false);
+    });
+    return unsubscribe;
+  }, []);
+
   const { filteredAndSortedData, appliedFiltersCount, filterLabel, sortLabel } = useRecordsFiltering(
     transactions,
     sortOption,
@@ -61,6 +74,8 @@ export default function RecordsScreen() {
 
   const filterIconColor = appliedFiltersCount > 0 ? palette.tint : palette.icon;
   const sortIconColor = sortOption === 'date-desc' ? palette.icon : palette.tint;
+  const mainFabColor = fabOpen ? palette.card : accent;
+  const mainFabIconColor = fabOpen ? palette.text : '#FFFFFF';
 
   const formatCurrency = useCallback((value: number, type: 'income' | 'expense') => {
     const abs = Math.abs(value).toLocaleString(undefined, {
@@ -82,7 +97,7 @@ export default function RecordsScreen() {
     () => [
       {
         icon: 'camera',
-        label: 'Scan Receipt',
+        label: t('scan_receipt'),
         labelTextColor: '#FFFFFF',
         color: palette.accent,
         style: { backgroundColor: palette.card, borderRadius: 28 },
@@ -91,7 +106,7 @@ export default function RecordsScreen() {
       },
       {
         icon: 'plus',
-        label: 'Add Record',
+        label: t('add_record'),
         labelTextColor: '#FFFFFF',
         color: '#FFFFFF',
         style: { backgroundColor: palette.tint, transform: [{ scale: 1.1 }], borderRadius: 28 },
@@ -99,7 +114,7 @@ export default function RecordsScreen() {
         small: false,
       },
     ],
-    [handleFabNavigate, palette],
+    [handleFabNavigate, palette, i18n.language],
   );
 
   return (
@@ -184,7 +199,7 @@ export default function RecordsScreen() {
           ]}
         >
           <View style={styles.sortHeader}>
-            <ThemedText style={[styles.sortTitle, { color: palette.text }]}>Sort by</ThemedText>
+            <ThemedText style={[styles.sortTitle, { color: palette.text }]}>{t('sort_by')}</ThemedText>
             <TouchableOpacity onPress={() => setShowSortDropdown(false)}>
               <MaterialCommunityIcons name="close" size={20} color={palette.icon} />
             </TouchableOpacity>
@@ -221,9 +236,16 @@ export default function RecordsScreen() {
             visible
             actions={fabActions}
             onStateChange={({ open }) => setFabOpen(open)}
-            fabStyle={[styles.fabMain, { backgroundColor: accent }]}
+            fabStyle={[
+              styles.fabMain,
+              {
+                backgroundColor: mainFabColor,
+                borderColor: palette.border,
+                borderWidth: fabOpen ? 1 : 0,
+              },
+            ]}
             style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}
-            color="#FFFFFF"
+            color={mainFabIconColor}
             backdropColor="transparent"
           />
         </Portal>

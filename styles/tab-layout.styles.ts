@@ -1,15 +1,11 @@
 import { BorderRadius, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const tabLayoutStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
   tabBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     height: 68,
     borderRadius: 0,
     borderWidth: 1,
@@ -18,6 +14,17 @@ export const tabLayoutStyles = StyleSheet.create({
     borderTopWidth: 0,
     zIndex: 100,
     ...Shadows.tabBar,
+    ...(Platform.OS === 'web'
+      ? {
+          position: 'relative',
+          width: '100%',
+        }
+      : {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }),
   },
   tabBarItem: {
     justifyContent: 'center',

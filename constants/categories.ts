@@ -53,7 +53,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   housing: {
     id: 'housing',
     name: 'Housing',
-    color: '#EF4444',
+    color: '#FBBF24',
     icon: 'home-variant-outline',
     type: 'expense',
   },
@@ -67,7 +67,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   vehicle: {
     id: 'vehicle',
     name: 'Vehicle',
-    color: '#22C55E',
+    color: '#0284C7',
     icon: 'car',
     type: 'expense',
   },
@@ -95,7 +95,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   investments: {
     id: 'investments',
     name: 'Investments',
-    color: '#10B981',
+    color: '#7C3AED',
     icon: 'chart-line',
     type: 'expense',
   },
@@ -215,25 +215,45 @@ const SUBCATEGORY_SETS: Record<CategoryKey, SubcategoryDefinition[]> = {
 type SubcategorySets = typeof SUBCATEGORY_SETS;
 export type SubcategoryKey = SubcategorySets[keyof SubcategorySets][number]['id'];
 
-const SUBCATEGORY_INDEX: Record<SubcategoryKey, SubcategoryDefinition> = Object.values(SUBCATEGORY_SETS).flat().reduce(
-  (acc, item) => {
-    acc[item.id as SubcategoryKey] = item;
-    return acc;
-  },
-  {} as Record<SubcategoryKey, SubcategoryDefinition>
-);
+const buildSubcategoryIndex = (sets: Record<CategoryKey, SubcategoryDefinition[]>) => {
+  return Object.values(sets).flat().reduce(
+    (acc, item) => {
+      acc[item.id as SubcategoryKey] = item;
+      return acc;
+    },
+    {} as Record<SubcategoryKey, SubcategoryDefinition>
+  );
+};
+
+const SUBCATEGORY_INDEX = buildSubcategoryIndex(SUBCATEGORY_SETS);
+const SUBCATEGORY_INDEX_FR = buildSubcategoryIndex(SUBCATEGORY_SETS_FR as Record<CategoryKey, SubcategoryDefinition[]>);
+
+const isFrenchLocale = () => i18n.language === 'fr';
+const getActiveCategoryMap = () => (isFrenchLocale() ? CATEGORY_MAP_FR : CATEGORY_MAP);
+const getActiveSubcategorySets = () => (isFrenchLocale() ? SUBCATEGORY_SETS_FR : SUBCATEGORY_SETS);
+const getActiveSubcategoryIndex = () => (isFrenchLocale() ? SUBCATEGORY_INDEX_FR : SUBCATEGORY_INDEX);
 
 export const subcategoryList: SubcategoryDefinition[] = Object.values(SUBCATEGORY_INDEX);
 
+export function getCategoryList(): CategoryDefinition[] {
+  return Object.values(getActiveCategoryMap());
+}
+
+export function getSubcategoryList(): SubcategoryDefinition[] {
+  return Object.values(getActiveSubcategoryIndex());
+}
+
 export function getSubcategories(parentId: CategoryKey): SubcategoryDefinition[] {
-  return SUBCATEGORY_SETS[parentId] ?? [];
+  const sets = getActiveSubcategorySets();
+  return sets[parentId] ?? [];
 }
 
 export function getSubcategoryDefinition(id: string | undefined): SubcategoryDefinition | undefined {
   if (!id) {
     return undefined;
   }
-  return SUBCATEGORY_INDEX[id];
+  const index = getActiveSubcategoryIndex();
+  return index[id as SubcategoryKey];
 }
 
 export function isSubcategoryId(id: string | undefined): id is SubcategoryKey {
@@ -241,60 +261,44 @@ export function isSubcategoryId(id: string | undefined): id is SubcategoryKey {
 }
 
 export function getNodeDisplayName(id: string | undefined): string | undefined {
-  const isFrench = i18n.language === 'fr';
   if (!id) {
     return undefined;
   }
   const subcategory = getSubcategoryDefinition(id);
   if (subcategory) {
-    if (isFrench) {
-      const frenchSubcategory = SUBCATEGORY_SETS_FR[subcategory.parentId]?.find((s: SubcategoryDefinition) => s.id === subcategory.id);
-      return frenchSubcategory?.name ?? subcategory.name;
-    }
     return subcategory.name;
   }
   const category = getCategoryDefinition(id);
   if (category) {
-    if (isFrench) {
-      return CATEGORY_MAP_FR[category.id]?.name ?? category.name;
-    }
     return category.name;
   }
   return undefined;
 }
 
 export function getFullCategoryLabel(categoryId: string | undefined, subcategoryId?: string | null): string {
-  const isFrench = i18n.language === 'fr';
   const subcategory = getSubcategoryDefinition(subcategoryId || undefined);
   if (subcategory) {
-    if (isFrench) {
-      const frenchSubcategory = SUBCATEGORY_SETS_FR[subcategory.parentId]?.find((s: SubcategoryDefinition) => s.id === subcategory.id);
-      return frenchSubcategory?.name ?? subcategory.name;
-    }
     return subcategory.name;
   }
   const category = getCategoryDefinition(categoryId);
   if (category) {
-    if (isFrench) {
-      return CATEGORY_MAP_FR[category.id]?.name ?? category.name;
-    }
     return category.name;
   }
   return categoryId ?? '';
 }
 
 export function getCategoryDefinition(id: CategoryKey | string | undefined): CategoryDefinition | undefined {
-  const isFrench = i18n.language === 'fr';
   if (!id) {
     return undefined;
   }
-  const category = (isFrench ? CATEGORY_MAP_FR : CATEGORY_MAP)[id as CategoryKey];
+  const categoryMap = getActiveCategoryMap();
+  const category = categoryMap[id as CategoryKey];
   if (category) {
     return category;
   }
   const subcategory = getSubcategoryDefinition(id);
   if (subcategory) {
-    return (isFrench ? CATEGORY_MAP_FR : CATEGORY_MAP)[subcategory.parentId];
+    return categoryMap[subcategory.parentId];
   }
   return undefined;
 }
@@ -306,7 +310,8 @@ export function getCategoryColor(id: CategoryKey | string | undefined, fallback:
   }
   const subcategory = getSubcategoryDefinition(id);
   if (subcategory) {
-    return CATEGORY_MAP[subcategory.parentId].color;
+    const categoryMap = getActiveCategoryMap();
+    return categoryMap[subcategory.parentId].color;
   }
   return fallback;
 }

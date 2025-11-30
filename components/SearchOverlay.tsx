@@ -8,17 +8,17 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Easing,
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    Easing,
+    FlatList,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,7 +34,13 @@ const DRAWER_MAX_HEIGHT = Math.min(Dimensions.get('window').height * 0.85, 640);
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme];
-  const { filters, addToSearchHistory, setSearchCategory } = useFilterContext();
+  const {
+    filters,
+    addToSearchHistory,
+    setSearchCategory,
+    removeFromSearchHistory,
+    clearSearchHistory,
+  } = useFilterContext();
   const [tempSearch, setTempSearch] = useState(filters.searchTerm);
   const [results, setResults] = useState<any[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -336,7 +342,13 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
               <Text style={[styles.historyTitle, { color: palette.text }]}>
                 {tempSearch.trim().length === 0 ? 'Recent searches' : 'Results'}
               </Text>
-              {loadingResults ? <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} /> : null}
+              {tempSearch.trim().length === 0 && filters.searchHistory.length > 0 ? (
+                <TouchableOpacity onPress={clearSearchHistory} style={styles.clearHistoryButton}>
+                  <Text style={{ color: palette.tint, fontWeight: FontWeights.semibold as any }}>Clear all</Text>
+                </TouchableOpacity>
+              ) : loadingResults ? (
+                <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} />
+              ) : null}
             </View>
             {tempSearch.trim().length === 0 ? (
                 // Show recent searches when the field is empty
@@ -347,16 +359,31 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item }) => (
-                      <TouchableOpacity
+                      <View
                         style={[styles.historyItem, { borderColor: palette.border, backgroundColor: palette.surface }]}
-                        onPress={() => handleSelectHistory(item)}
                       >
-                        <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
-                          <MaterialCommunityIcons name="history" size={16} color={palette.icon} />
-                        </View>
-                        <Text style={{ color: palette.text, flex: 1 }}>{item}</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.historyContent}
+                          onPress={() => handleSelectHistory(item)}
+                          accessibilityLabel={`Search for ${item}`}
+                        >
+                          <View style={[styles.historyIcon, { backgroundColor: palette.background }]}>
+                            <MaterialCommunityIcons name="history" size={16} color={palette.icon} />
+                          </View>
+                          <Text style={{ color: palette.text, flex: 1 }} numberOfLines={1}>
+                            {item}
+                          </Text>
+                          <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => removeFromSearchHistory(item)}
+                          style={styles.historyRemoveButton}
+                          accessibilityLabel={`Remove ${item} from history`}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <MaterialCommunityIcons name="close" size={14} color={palette.icon} />
+                        </TouchableOpacity>
+                      </View>
                     )}
                   />
                 ) : (
@@ -420,6 +447,10 @@ const styles = StyleSheet.create({
   historyContainer: {
     marginTop: Spacing.xl,
   },
+  clearHistoryButton: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs / 2,
+  },
   historyTitle: {
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold as any,
@@ -427,11 +458,16 @@ const styles = StyleSheet.create({
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingLeft: Spacing.md,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.sm,
+  },
+  historyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: Spacing.sm,
   },
   headerRow: {
     flexDirection: 'row',
@@ -478,6 +514,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
+  },
+  historyRemoveButton: {
+    paddingHorizontal: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   resultsListWrapper: {
     borderWidth: 0,

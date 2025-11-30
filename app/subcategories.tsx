@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StackActions, useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +16,7 @@ import { transactionDraftState } from '@/state/transactionDraftState';
 import { emitCategorySelection } from '@/utils/navigation-events';
 
 export default function SubcategoriesScreen() {
+  const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const navigation = useNavigation();
@@ -26,8 +28,9 @@ export default function SubcategoriesScreen() {
   const returnTo = params.returnTo as string || 'log-expenses';
   const recordIndex = params.recordIndex as string || '';
 
-  const category = getCategoryDefinition(categoryId);
-  const subcategories = getSubcategories(categoryId);
+  const currentLanguage = i18n.language;
+  const category = useMemo(() => getCategoryDefinition(categoryId), [categoryId, currentLanguage]);
+  const subcategories = useMemo(() => getSubcategories(categoryId), [categoryId, currentLanguage]);
   const categoryColor = getCategoryColor(categoryId, palette.tint);
   const iconName = getCategoryIcon(categoryId);
 

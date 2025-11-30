@@ -2,13 +2,14 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert, KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -50,12 +51,13 @@ const isReceiptImportBatch = (payload: unknown): payload is { records: SingleDra
 
 export const options = {
   headerShown: true,
-  headerTitle: 'Add Expenses List',
+  headerTitle: '',
 };
 
 const styles = logExpensesStyles;
 
 export default function LogExpensesListScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -221,15 +223,15 @@ export default function LogExpensesListScreen() {
     }
 
     Alert.alert(
-      'Delete record',
-      'This record has unsaved edits. Are you sure you want to delete it?',
+      t('delete_record'),
+      t('delete_record_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => removeRecord(index) },
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: () => removeRecord(index) },
       ],
       { cancelable: true }
     );
-  }, [isRecordEdited, records, removeRecord]);
+  }, [isRecordEdited, records, removeRecord, t]);
 
   const handleNext = useCallback(() => {
     let hasErrors = false;
@@ -237,30 +239,30 @@ export default function LogExpensesListScreen() {
       const amountStr = record.amount.trim();
       if (!amountStr) {
         hasErrors = true;
-        return 'Amount is required';
+        return t('amount_is_required');
       }
       const numeric = Number(amountStr);
       if (isNaN(numeric) || !isFinite(numeric)) {
         hasErrors = true;
-        return 'Amount must be a valid number';
+        return t('amount_must_be_valid');
       }
       if (numeric <= 0) {
         hasErrors = true;
-        return 'Amount must be greater than 0';
+        return t('amount_must_be_positive');
       }
       return '';
     });
     const categoryErrors = records.map((record) => {
       if (!record.category || record.category.trim() === '') {
         hasErrors = true;
-        return 'Category is required';
+        return t('category_is_required');
       }
       return '';
     });
     const noteErrors = records.map((record) => {
       if (!record.note || record.note.trim() === '') {
         hasErrors = true;
-        return 'Note is required';
+        return t('note_is_required');
       }
       return '';
     });
@@ -270,7 +272,7 @@ export default function LogExpensesListScreen() {
     setRecordNoteErrors(noteErrors);
     
     if (hasErrors) {
-      showToast('Please fix the errors before proceeding', { tone: 'error' });
+      showToast(t('fix_errors_proceed'), { tone: 'error' });
       return;
     }
 
@@ -287,7 +289,7 @@ export default function LogExpensesListScreen() {
         payload: encodeURIComponent(JSON.stringify(payload)),
       },
     });
-  }, [accountName, records, router, selectedAccountId, showToast, transactionType]);
+  }, [accountName, records, router, selectedAccountId, showToast, t, transactionType]);
 
   useEffect(() => {
     const parsedParam = params.parsed;
@@ -419,11 +421,11 @@ export default function LogExpensesListScreen() {
       ),
       headerRight: () => (
         <TouchableOpacity onPress={handleNext} style={{ padding: 8 }}>
-          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>NEXT</ThemedText>
+          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('next')}</ThemedText>
         </TouchableOpacity>
       ),
     });
-  }, [handleNext, navigation, palette.icon, palette.tint]);
+  }, [handleNext, navigation, palette.icon, palette.tint, t]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -435,12 +437,12 @@ export default function LogExpensesListScreen() {
       e.preventDefault();
 
       Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Do you want to discard and leave?',
+        t('discard_changes'),
+        t('discard_changes_confirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('discard'),
             style: 'destructive',
             onPress: () => {
               navigation.dispatch(e.data.action);
@@ -452,7 +454,7 @@ export default function LogExpensesListScreen() {
     });
 
     return unsubscribe;
-  }, [navigation, records, isRecordEdited]);
+  }, [isRecordEdited, navigation, records, t]);
 
   const totalRecords = records.length;
   const totalAmount = useMemo(() => {
@@ -485,14 +487,16 @@ export default function LogExpensesListScreen() {
             <View style={[styles.summaryContainer, { borderColor: palette.border, backgroundColor: palette.card }]}>
               <View style={styles.summaryHeader}>
                 <View style={styles.summaryAmounts}>
-                  <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>Total Amount ({totalRecords})</ThemedText>
+                  <ThemedText style={[styles.summaryLabel, { color: palette.icon }]}>
+                    {t('total_amount_with_count', { count: totalRecords })}
+                  </ThemedText>
                   <ThemedText style={[styles.summaryTotal, { color: palette.text }]}>${formattedTotal}</ThemedText>
                 </View>
                 <TouchableOpacity
                   style={[styles.iconButton, { borderColor: palette.border }]}
                   onPress={() => router.push('/scan')}
                   accessibilityRole="button"
-                  accessibilityLabel="Scan receipt"
+                  accessibilityLabel={t('scan_receipt')}
                 >
                   <MaterialCommunityIcons name="camera-outline" size={20} color={palette.icon} />
                 </TouchableOpacity>
@@ -502,7 +506,7 @@ export default function LogExpensesListScreen() {
             {records.map((record, index) => {
             const categoryIcon = getCategoryIcon(record.subcategoryId || record.category, 'shape-outline');
             const categoryColor = getCategoryColor(record.subcategoryId || record.category, palette.tint);
-            const categoryLabel = getFullCategoryLabel(record.category, record.subcategoryId) || 'Select category';
+            const categoryLabel = getFullCategoryLabel(record.category, record.subcategoryId) || t('select_category');
 
             return (
               <ThemedView
@@ -511,10 +515,12 @@ export default function LogExpensesListScreen() {
               >
                 <View style={styles.noteRow}>
                   <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 1 }]}>
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Note*</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                      {`${t('note')}*`}
+                    </ThemedText>
                     <TextInput
                       style={[styles.noteInput, styles.notchedInput, { color: palette.text }]}
-                      placeholder="Add a note"
+                      placeholder={t('add_a_note')}
                       placeholderTextColor={palette.icon}
                       value={record.note}
                       onChangeText={(value) => handleNoteChange(index, value)}
@@ -540,7 +546,9 @@ export default function LogExpensesListScreen() {
 
                 <View style={styles.recordFooter}>
                   <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card, flex: 2, padding: 0 }]}> 
-                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Category*</ThemedText>
+                    <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                      {`${t('category')}*`}
+                    </ThemedText>
                     <TouchableOpacity
                       style={[styles.categoryPill, { borderWidth: 0 }]}
                       onPress={() => openCategoryPicker(record, index)}
@@ -559,7 +567,9 @@ export default function LogExpensesListScreen() {
                 
                   <View style={{ flex: 1 }}>
                     <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                      <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>Amount*</ThemedText>
+                      <ThemedText style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}>
+                        {t('amount')}
+                      </ThemedText>
                       <View style={styles.amountInputRow}>
                         <ThemedText style={[styles.currencyTiny, { color: palette.icon }]}>$</ThemedText>
                         <TextInput
@@ -594,7 +604,7 @@ export default function LogExpensesListScreen() {
               style={[styles.addListButton, { marginTop: 16 }]}
             >
               <MaterialCommunityIcons name="plus" size={18} color={palette.tint} />
-              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>ADD RECORD</ThemedText>
+              <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>{t('add_record')}</ThemedText>
             </TouchableOpacity>
           </ScrollView>
           <View
@@ -605,9 +615,9 @@ export default function LogExpensesListScreen() {
               style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Review records"
+              accessibilityLabel={t('review_records')}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>NEXT</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('next')}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>

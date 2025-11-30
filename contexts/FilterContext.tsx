@@ -54,6 +54,8 @@ type FilterContextType = {
   setDatePreset: (preset: DatePreset | null) => void;
   applyDateFilter: (range: DateRange | null, preset: DatePreset | null) => void;
   addToSearchHistory: (term: string) => void;
+  removeFromSearchHistory: (term: string) => void;
+  clearSearchHistory: () => void;
   setSearchCategory: (category: 'all' | 'income' | 'expense') => void;
   setSelectedCategories: (categories: string[]) => void;
   setAmountRange: (range: { min?: number | null; max?: number | null } | null) => void;
@@ -178,6 +180,20 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   };
 
+  const removeFromSearchHistory = (term: string) => {
+    setFilters(prev => ({
+      ...prev,
+      searchHistory: prev.searchHistory.filter(entry => entry !== term),
+    }));
+  };
+
+  const clearSearchHistory = () => {
+    setFilters(prev => ({
+      ...prev,
+      searchHistory: [],
+    }));
+  };
+
 
   const setSelectedCategories = (categories: string[]) => {
     setFilters(prev => ({ ...prev, selectedCategories: categories }));
@@ -206,6 +222,8 @@ export const FilterProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSearchCategory,
         setSelectedCategories,
         addToSearchHistory,
+        removeFromSearchHistory,
+        clearSearchHistory,
         setAmountRange,
         setSelectedPayers,
         setSelectedLabels,

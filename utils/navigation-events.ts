@@ -5,6 +5,7 @@ import { SingleDraft } from '@/types/transactions';
 export const NAV_EVENTS = {
   CATEGORY_SELECTED: 'nav-category-selected',
   RECORD_DETAIL_UPDATED: 'nav-record-detail-updated',
+  RECORD_FILTERS_RESET: 'nav-record-filters-reset',
 } as const;
 
 export type CategorySelectedPayload = {
@@ -18,6 +19,10 @@ export type RecordDetailUpdatedPayload = {
   target: string;
   recordIndex: number;
   record: SingleDraft;
+};
+
+export type RecordFiltersResetPayload = {
+  source: 'log-expenses' | 'log-expenses-review';
 };
 
 const addListener = <T,>(eventName: string, handler: (payload: T) => void): (() => void) => {
@@ -38,3 +43,10 @@ export const emitRecordDetailUpdate = (payload: RecordDetailUpdatedPayload) => {
 
 export const subscribeToRecordDetailUpdates = (handler: (payload: RecordDetailUpdatedPayload) => void) =>
   addListener<RecordDetailUpdatedPayload>(NAV_EVENTS.RECORD_DETAIL_UPDATED, handler);
+
+export const emitRecordFiltersReset = (payload: RecordFiltersResetPayload) => {
+  DeviceEventEmitter.emit(NAV_EVENTS.RECORD_FILTERS_RESET, payload);
+};
+
+export const subscribeToRecordFiltersReset = (handler: (payload: RecordFiltersResetPayload) => void) =>
+  addListener<RecordFiltersResetPayload>(NAV_EVENTS.RECORD_FILTERS_RESET, handler);

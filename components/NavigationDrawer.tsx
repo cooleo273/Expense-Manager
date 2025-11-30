@@ -173,7 +173,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
                 onChange={async (newLang) => {
                   await StorageService.setLanguage(newLang);
                   await i18n.changeLanguage(newLang);
-                  DevSettings.reload();
+                  if (DevSettings?.reload) {
+                    DevSettings.reload();
+                  } else if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
                 }}
               />
             </View>

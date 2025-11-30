@@ -11,6 +11,7 @@ import { StorageService } from '@/services/storage';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft } from '@/types/transactions';
+import { emitRecordFiltersReset } from '@/utils/navigation-events';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -93,7 +94,7 @@ export default function LogExpensesReviewScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { showToast } = useToast();
-  const { setSelectedAccount } = useFilterContext();
+  const { setSelectedAccount, resetFilters } = useFilterContext();
 
   const fallbackAccount = useMemo(() => mockAccounts.find((acc) => acc.id !== 'all') ?? null, []);
   const [localAccountId, setLocalAccountId] = useState<string | null>(() => payload?.accountId ?? fallbackAccount?.id ?? null);
@@ -206,6 +207,9 @@ export default function LogExpensesReviewScreen() {
           console.error('Failed to increment category usage for batch', err);
         }
 
+        resetFilters();
+        emitRecordFiltersReset({ source: 'log-expenses-review' });
+
         if (stayOnScreen) {
           transactionDraftState.resetBatchDrafts();
           router.replace('/log-expenses-list');
@@ -219,7 +223,7 @@ export default function LogExpensesReviewScreen() {
         Alert.alert(t('error'), t('failed_to_save_records'));
       }
     },
-    [accountName, fallbackAccount, localAccountId, payload, recordDate, reviewRecords, router, setSelectedAccount, showToast, transactionType]
+    [accountName, fallbackAccount, localAccountId, payload, recordDate, resetFilters, reviewRecords, router, setSelectedAccount, showToast, transactionType]
   );
 
   useEffect(() => {
