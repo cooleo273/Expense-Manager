@@ -137,6 +137,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
   const [showPayerNote, setShowPayerNote] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarMode, setCalendarMode] = useState<'presets' | 'custom'>('presets');
+  const today = useMemo(() => startOfDay(new Date()), []);
   const [monthCursor, setMonthCursor] = useState(startOfDay(new Date()));
   const [draftRange, setDraftRange] = useState<DraftRange | null>(null);
   const [localFilters, setLocalFilters] = useState<LocalFilters>({
@@ -526,6 +527,9 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
 
   const handleDayPress = useCallback((date: Date) => {
     const normalized = startOfDay(date);
+    if (normalized > today) {
+      return;
+    }
     setDraftRange((prev) => {
       if (!prev || (prev.start && prev.end)) {
         return { start: normalized };
@@ -535,7 +539,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
       }
       return { start: normalized };
     });
-  }, []);
+  }, [today]);
 
   const applyRange = useCallback(
     (range: DateRange | null, preset: DatePreset | null) => {
@@ -1004,7 +1008,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                     onChangeText={handleKeyTermInputChange}
                                     onBlur={finalizeKeyTermInput}
                                     onSubmitEditing={finalizeKeyTermInput}
-                                    placeholder="Enter key terms (comma separated)"
+                                    placeholder={t('key_terms_placeholder')}
                                     placeholderTextColor={palette.icon}
                                     autoCapitalize="none"
                                     keyboardType="default"
@@ -1233,10 +1237,17 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                     <View key={`week-${index}`} style={styles.weekRow}>
                       {week.map((day) => {
                         const inCurrentMonth = day.getMonth() === monthCursor.getMonth();
-                        const isSelected = draftRange &&
+                        const isSelected =
+                          draftRange &&
                           ((draftRange.start && isSameDay(draftRange.start, day)) ||
                             (draftRange.end && isSameDay(draftRange.end, day)));
                         const withinDraftRange = isWithinDraftRange(day);
+                        const isFutureDay = startOfDay(day) > today;
+                        const textColor = !inCurrentMonth
+                          ? palette.icon
+                          : isFutureDay
+                            ? palette.icon
+                            : palette.text;
                         return (
                           <TouchableOpacity
                             key={day.toISOString()}
@@ -1251,10 +1262,13 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                 borderWidth: isSelected ? 1 : 0,
                                 borderColor: isSelected ? palette.tint : 'transparent',
                               },
+                              isFutureDay && styles.disabledDayCell,
                             ]}
                             onPress={() => handleDayPress(day)}
+                            disabled={isFutureDay}
+                            accessibilityState={isFutureDay ? { disabled: true } : undefined}
                           >
-                            <ThemedText style={{ color: inCurrentMonth ? palette.text : palette.icon }}>
+                            <ThemedText style={[styles.dayText, { color: textColor }]}>
                               {day.getDate()}
                             </ThemedText>
                           </TouchableOpacity>
@@ -1262,6 +1276,12 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                       })}
                     </View>
                   ))}
+                </View>
+                <View style={styles.calendarHintRow}>
+                  <MaterialCommunityIcons name="information-outline" size={14} color={palette.icon} />
+                  <ThemedText style={[styles.calendarHintText, { color: palette.icon }]}>
+                    Future dates can’t be selected. Latest available day is today.
+                  </ThemedText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.lg, gap: Spacing.md }}>
                   <TouchableOpacity onPress={() => setShowCalendarModal(false)}>

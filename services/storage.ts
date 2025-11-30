@@ -1,6 +1,37 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 import { resolveAccountId } from '@/constants/mock-data';
+
+const hasWindow = typeof globalThis !== 'undefined' && typeof (globalThis as { window?: unknown }).window !== 'undefined';
+const shouldUseMemoryStorage = Platform.OS === 'web' && !hasWindow;
+const memoryStorage = new Map<string, string>();
+
+const readFromStorage = async (key: string): Promise<string | null> => {
+  if (shouldUseMemoryStorage) {
+    return memoryStorage.get(key) ?? null;
+  }
+
+  return AsyncStorage.getItem(key);
+};
+
+const writeToStorage = async (key: string, value: string): Promise<void> => {
+  if (shouldUseMemoryStorage) {
+    memoryStorage.set(key, value);
+    return;
+  }
+
+  await AsyncStorage.setItem(key, value);
+};
+
+const removeFromStorage = async (key: string): Promise<void> => {
+  if (shouldUseMemoryStorage) {
+    memoryStorage.delete(key);
+    return;
+  }
+
+  await AsyncStorage.removeItem(key);
+};
 
 type LabelValue = string | string[] | null | undefined;
 
@@ -111,11 +142,11 @@ export class StorageService {
 
   static async getTransactions(): Promise<Transaction[]> {
     try {
-      const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
+      const data = await readFromStorage(TRANSACTIONS_KEY);
       const parsed: (Transaction & { labels?: LabelValue })[] = data ? JSON.parse(data) : [];
       const { list, changed } = this.sanitizeTransactions(parsed);
       if (changed) {
-        await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
+        await writeToStorage(TRANSACTIONS_KEY, JSON.stringify(list));
       }
       return list;
     } catch (error) {
@@ -127,7 +158,7 @@ export class StorageService {
   static async saveTransactions(transactions: Transaction[]): Promise<void> {
     try {
       const { list } = this.sanitizeTransactions(transactions);
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
+      await writeToStorage(TRANSACTIONS_KEY, JSON.stringify(list));
       this.notifyTransactionsChanged();
     } catch (error) {
       console.error('Error saving transactions:', error);
@@ -186,7 +217,7 @@ export class StorageService {
 
   static async clearAll(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(TRANSACTIONS_KEY);
+      await removeFromStorage(TRANSACTIONS_KEY);
       this.notifyTransactionsChanged();
     } catch (error) {
       console.error('Error clearing storage:', error);
@@ -195,7 +226,7 @@ export class StorageService {
 
   static async getCategoryUsage(): Promise<Record<string, number>> {
     try {
-      const value = await AsyncStorage.getItem(CATEGORY_USAGE_KEY);
+      const value = await readFromStorage(CATEGORY_USAGE_KEY);
       return value ? JSON.parse(value) : {};
     } catch (error) {
       console.error('Error loading category usage:', error);
@@ -208,7 +239,7 @@ export class StorageService {
       const current = await this.getCategoryUsage();
       const next = { ...current } as Record<string, number>;
       next[categoryId] = (next[categoryId] ?? 0) + 1;
-      await AsyncStorage.setItem(CATEGORY_USAGE_KEY, JSON.stringify(next));
+      await writeToStorage(CATEGORY_USAGE_KEY, JSON.stringify(next));
     } catch (error) {
       console.error('Error incrementing category usage:', error);
     }
@@ -216,17 +247,17 @@ export class StorageService {
 
   static async setCategoryUsage(usage: Record<string, number>): Promise<void> {
     try {
-      await AsyncStorage.setItem(CATEGORY_USAGE_KEY, JSON.stringify(usage));
+      await writeToStorage(CATEGORY_USAGE_KEY, JSON.stringify(usage));
     } catch (error) {
       console.error('Error setting category usage:', error);
     }
   }
 
   public static async getLanguage(): Promise<string | null> {
-    return AsyncStorage.getItem('user-language');
+    return readFromStorage('user-language');
   }
 
   public static async setLanguage(language: string): Promise<void> {
-    await AsyncStorage.setItem('user-language', language);
+    await writeToStorage('user-language', language);
   }
 }

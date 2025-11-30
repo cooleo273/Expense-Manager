@@ -62,6 +62,7 @@ export const CalendarButton: React.FC = () => {
   const palette = Colors[colorScheme];
   const { applyDateFilter, filters } = useFilterContext();
   const insets = useSafeAreaInsets();
+  const activePreset = filters.datePreset;
 
   useEffect(() => {
     if (calendarVisible) {
@@ -95,8 +96,13 @@ export const CalendarButton: React.FC = () => {
     return draftRange.start && isSameDay(draftRange.start, date);
   };
 
+  const today = startOfDay(new Date());
+
   const handleDayPress = (date: Date) => {
     const normalized = startOfDay(date);
+    if (normalized > today) {
+      return;
+    }
     setDraftRange(prev => {
       if (!prev || (prev.start && prev.end)) {
         return { start: normalized };
@@ -111,13 +117,16 @@ export const CalendarButton: React.FC = () => {
   };
 
   const applyRange = (range: DateRange | null, preset: DatePreset | null) => {
-    applyDateFilter(range, preset);
     if (range) {
       const normalizedStart = startOfDay(range.start);
       const normalizedEnd = startOfDay(range.end);
-      setDraftRange({ start: normalizedStart, end: normalizedEnd });
-      setMonthCursor(normalizedStart);
+      const cappedEnd = normalizedEnd > today ? today : normalizedEnd;
+      const cappedStart = normalizedStart > cappedEnd ? cappedEnd : normalizedStart;
+      applyDateFilter({ start: cappedStart, end: cappedEnd }, preset);
+      setDraftRange({ start: cappedStart, end: cappedEnd });
+      setMonthCursor(cappedStart);
     } else {
+      applyDateFilter(null, preset);
       setDraftRange(null);
       setMonthCursor(startOfDay(new Date()));
     }
@@ -216,39 +225,79 @@ export const CalendarButton: React.FC = () => {
 
                 <View style={styles.presetList}>
                   <TouchableOpacity
-                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    style={[
+                      styles.presetButton,
+                      { borderColor: palette.border },
+                      activePreset === 'week' && { borderColor: palette.tint, backgroundColor: `${palette.tint}15` },
+                    ]}
                     onPress={() => quickSelect('week')}
                   >
-                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Week</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                    <Text style={[styles.presetLabel, { color: activePreset === 'week' ? palette.tint : palette.text }]}>This Week</Text>
+                    <MaterialCommunityIcons
+                      name={activePreset === 'week' ? 'check' : 'chevron-right'}
+                      size={18}
+                      color={activePreset === 'week' ? palette.tint : palette.icon}
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    style={[
+                      styles.presetButton,
+                      { borderColor: palette.border },
+                      activePreset === 'month' && { borderColor: palette.tint, backgroundColor: `${palette.tint}15` },
+                    ]}
                     onPress={() => quickSelect('month')}
                   >
-                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Month</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                    <Text style={[styles.presetLabel, { color: activePreset === 'month' ? palette.tint : palette.text }]}>This Month</Text>
+                    <MaterialCommunityIcons
+                      name={activePreset === 'month' ? 'check' : 'chevron-right'}
+                      size={18}
+                      color={activePreset === 'month' ? palette.tint : palette.icon}
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    style={[
+                      styles.presetButton,
+                      { borderColor: palette.border },
+                      activePreset === 'year' && { borderColor: palette.tint, backgroundColor: `${palette.tint}15` },
+                    ]}
                     onPress={() => quickSelect('year')}
                   >
-                    <Text style={[styles.presetLabel, { color: palette.text }]}>This Year</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                    <Text style={[styles.presetLabel, { color: activePreset === 'year' ? palette.tint : palette.text }]}>This Year</Text>
+                    <MaterialCommunityIcons
+                      name={activePreset === 'year' ? 'check' : 'chevron-right'}
+                      size={18}
+                      color={activePreset === 'year' ? palette.tint : palette.icon}
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    style={[
+                      styles.presetButton,
+                      { borderColor: palette.border },
+                      activePreset === 'all' && { borderColor: palette.tint, backgroundColor: `${palette.tint}15` },
+                    ]}
                     onPress={() => quickSelect('all')}
                   >
-                    <Text style={[styles.presetLabel, { color: palette.text }]}>All Time</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
+                    <Text style={[styles.presetLabel, { color: activePreset === 'all' ? palette.tint : palette.text }]}>All Time</Text>
+                    <MaterialCommunityIcons
+                      name={activePreset === 'all' ? 'check' : 'chevron-right'}
+                      size={18}
+                      color={activePreset === 'all' ? palette.tint : palette.icon}
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.presetButton, { borderColor: palette.border }]}
+                    style={[
+                      styles.presetButton,
+                      { borderColor: palette.border },
+                      activePreset === 'custom' && { borderColor: palette.tint, backgroundColor: `${palette.tint}15` },
+                    ]}
                     onPress={() => setCalendarMode('custom')}
                   >
-                    <Text style={[styles.presetLabel, { color: palette.text }]}>Custom</Text>
-                    <MaterialCommunityIcons name="calendar-range" size={18} color={palette.tint} />
+                    <Text style={[styles.presetLabel, { color: activePreset === 'custom' ? palette.tint : palette.text }]}>Custom</Text>
+                    <MaterialCommunityIcons
+                      name={activePreset === 'custom' ? 'check' : 'calendar-range'}
+                      size={18}
+                      color={palette.tint}
+                    />
                   </TouchableOpacity>
                 </View>
               </>
@@ -287,23 +336,43 @@ export const CalendarButton: React.FC = () => {
                       const isStart = draftRange?.start && isSameDay(draftRange.start, day);
                       const isEnd = draftRange?.end && isSameDay(draftRange.end, day);
                       const isActive = isWithinDraftRange(day);
+                      const isFutureDay = startOfDay(day) > today;
                       return (
                         <TouchableOpacity
                           key={day.toISOString()}
                           onPress={() => handleDayPress(day)}
+                          disabled={isFutureDay}
+                          accessibilityState={isFutureDay ? { disabled: true } : undefined}
                           style={[
                             styles.dayCell,
                             isActive && { backgroundColor: palette.highlight },
                             (isStart || isEnd) && { backgroundColor: palette.tint },
-                            !inMonth && { opacity: 0.35 },
+                            (!inMonth || isFutureDay) && { opacity: 0.35 },
+                            isFutureDay && styles.disabledDayCell,
                           ]}
                         >
-                          <Text style={{ color: (isStart || isEnd) ? palette.background : palette.text }}>{day.getDate()}</Text>
+                          <Text
+                            style={{
+                              color: (isStart || isEnd)
+                                ? palette.background
+                                : isFutureDay
+                                  ? palette.icon
+                                  : palette.text,
+                            }}
+                          >
+                            {day.getDate()}
+                          </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 ))}
+
+                <View style={styles.hintRow}>
+                  <Text style={[styles.hintText, { color: palette.icon }]}>
+                    Future dates can’t be selected. Latest available day is today.
+                  </Text>
+                </View>
 
                 <TouchableOpacity
                   style={[styles.confirmButton, { backgroundColor: palette.tint }]}
@@ -405,6 +474,19 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  disabledDayCell: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'transparent',
+  },
+  hintRow: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  hintText: {
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
   },
   confirmButton: {
     marginTop: Spacing.md,

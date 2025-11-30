@@ -26,7 +26,7 @@ import { StorageService } from '../../services/storage';
 import { formatCompactCurrency } from '@/utils/currency';
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function HomeScreen() {
         small: false,
       },
     ],
-    [handleFabNavigate, palette]
+    [handleFabNavigate, palette, i18n.language]
   );
 
   const formatCurrency = (value: number) => {
@@ -369,9 +369,6 @@ export default function HomeScreen() {
         <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
             <ThemedText type="subtitle">{t('records')}</ThemedText>
-            <ThemedText style={{ color: palette.icon }}>
-              {displayedRecords.length} of {filteredRecords.length.toLocaleString()} shown
-            </ThemedText>
           </View>
           <RecordList
             records={filteredRecords}
@@ -396,10 +393,15 @@ export default function HomeScreen() {
 
           <Pressable
             onPress={() => router.push('/records')}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}
           >
-            <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('show_more')}</ThemedText>
-            <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('show_more')}</ThemedText>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
+            </View>
+            <ThemedText style={{ color: palette.icon }}>
+              {displayedRecords.length} of {filteredRecords.length.toLocaleString()} shown
+            </ThemedText>
           </Pressable>
         </ThemedView>
       </ScrollView>

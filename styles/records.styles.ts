@@ -334,6 +334,19 @@ export const recordsStyles = StyleSheet.create({
   dayText: {
     fontSize: FontSizes.md,
   },
+  disabledDayCell: {
+    opacity: 0.45,
+  },
+  calendarHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  calendarHintText: {
+    fontSize: FontSizes.xs,
+  },
   fabBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(6,12,20,0.85)',

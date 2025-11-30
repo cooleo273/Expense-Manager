@@ -4,14 +4,14 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Menu } from 'react-native-paper';
 
@@ -28,7 +28,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
-import { subscribeToCategorySelection } from '@/utils/navigation-events';
+import { emitRecordFiltersReset, subscribeToCategorySelection } from '@/utils/navigation-events';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../services/storage';
@@ -41,13 +41,13 @@ export const options = {
 const styles = logExpensesStyles;
 
 export default function LogExpensesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const navigation = useNavigation();
   const { showToast } = useToast();
-  const { filters, setSelectedAccount } = useFilterContext();
+  const { filters, setSelectedAccount, resetFilters } = useFilterContext();
 
   const [transactionType, setTransactionType] = useState<RecordType>(
     transactionDraftState.getTransactionType()
@@ -107,13 +107,15 @@ export default function LogExpensesScreen() {
 
   const selectedAccountName = selectedAccount?.name ?? t('select_account');
 
+  const activeLocale = useMemo(() => i18n.language || undefined, [i18n.language]);
+
   const formattedDate = useMemo(
-    () => recordDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-    [recordDate]
+    () => recordDate.toLocaleDateString(activeLocale, { month: 'short', day: 'numeric', year: 'numeric' }),
+    [recordDate, activeLocale]
   );
   const formattedTime = useMemo(
-    () => recordDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    [recordDate]
+    () => recordDate.toLocaleTimeString(activeLocale, { hour: '2-digit', minute: '2-digit' }),
+    [recordDate, activeLocale]
   );
 
   const handleDateTimeChange = useCallback(
@@ -296,7 +298,7 @@ export default function LogExpensesScreen() {
       await StorageService.addBatchTransactions(
         records.map((record) => ({
           id: record.id,
-          title: record.note || 'Transaction',
+          title: record.note || t('transaction'),
           account: accountOptions.find((acc) => acc.id === record.accountId)?.name || selectedAccountName,
           accountId: record.accountId,
           note: record.note || '',
@@ -323,14 +325,14 @@ export default function LogExpensesScreen() {
       }
       resetDrafts();
 
-      if (records.length === 1) {
-        showToast(t('record_updated'));
-      } else {
-        showToast(`${records.length} Records Added`);
-      }
+      const successMessage = records.length === 1 ? t('record_updated') : t('records_added', { count: records.length });
+      showToast(successMessage);
+
+      resetFilters();
+      emitRecordFiltersReset({ source: 'log-expenses' });
 
       if (stayOnScreen) {
-        showToast(`${records.length} Records Added.`);
+        showToast(successMessage);
         return;
       }
 
@@ -340,7 +342,7 @@ export default function LogExpensesScreen() {
       console.error('Failed to save transactions:', error);
       Alert.alert(t('error'), t('failed_to_save_record'));
     }
-  }, [accountOptions, resetDrafts, router, selectedAccountName, showToast]);
+  }, [accountOptions, resetDrafts, resetFilters, router, selectedAccountName, setSelectedAccount, showToast, t]);
 
   const buildRecords = useCallback((): StoredRecord[] | null => {
     let hasError = false;
@@ -370,7 +372,8 @@ export default function LogExpensesScreen() {
     }
 
     if (!singleDraft.payee || singleDraft.payee.trim() === '') {
-      setPayeeError(`${transactionType === 'income' ? t('payer') : t('payee')} is required`);
+      const fieldLabel = transactionType === 'income' ? t('payer') : t('payee');
+      setPayeeError(t('field_is_required', { field: fieldLabel }));
       hasError = true;
     } else {
       setPayeeError('');
@@ -399,7 +402,7 @@ export default function LogExpensesScreen() {
         occurredAt: recordDate.toISOString(),
       },
     ];
-  }, [recordDate, selectedAccountId, singleDraft, transactionType]);
+  }, [recordDate, selectedAccountId, singleDraft, t, transactionType]);
 
   const handleSave = useCallback(
     (stayOnScreen: boolean) => {
@@ -447,7 +450,7 @@ export default function LogExpensesScreen() {
       ],
       { cancelable: true }
     );
-  }, [isSingleDraftEdited, lastSelectedCategory, setSingleDraft, singleDraft, showToast]);
+  }, [isSingleDraftEdited, lastSelectedCategory, setSingleDraft, singleDraft, showToast, t]);
 
   const handleTransactionTypeChange = useCallback(
     (value: TransactionTypeValue) => {
@@ -526,7 +529,7 @@ export default function LogExpensesScreen() {
       },
       headerShadowVisible: false,
     });
-  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu]);
+  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu, t]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -556,7 +559,7 @@ export default function LogExpensesScreen() {
     });
 
     return unsubscribe;
-  }, [navigation, singleDraft, isSingleDraftEdited, storedRecords, lastSelectedCategory]);
+  }, [isSingleDraftEdited, lastSelectedCategory, navigation, singleDraft, storedRecords, t]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
@@ -640,7 +643,9 @@ export default function LogExpensesScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Category*</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  {`${t('category')}*`}
+                </ThemedText>
                 <TouchableOpacity
                   style={[styles.categoryPill, { borderWidth: 0, backgroundColor: 'transparent' }]}
                   onPress={handleCategoryPress}
@@ -686,7 +691,9 @@ export default function LogExpensesScreen() {
 
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Labels</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  {t('labels')}
+                </ThemedText>
                 <Pressable
                   style={({ pressed }) => [
                     styles.labelsSummaryRow,
@@ -789,7 +796,7 @@ export default function LogExpensesScreen() {
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
                   >
-                    Date
+                    {t('date')}
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
@@ -808,7 +815,7 @@ export default function LogExpensesScreen() {
                   <ThemedText
                     style={[styles.notchedLabel, { backgroundColor: palette.card, color: palette.icon }]}
                   >
-                    Time
+                    {t('time')}
                   </ThemedText>
                   <TouchableOpacity
                     style={[styles.inputBase, styles.dateTimeButton, styles.dateTimeButtonInput]}
@@ -827,7 +834,9 @@ export default function LogExpensesScreen() {
             {/* NOTE: moved to bottom of the card so it's last in the form as requested */}
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.card }]}>
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Note</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
+                  {t('note')}
+                </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
                   placeholder={t('add_a_note')}
@@ -850,7 +859,7 @@ export default function LogExpensesScreen() {
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity style={styles.pickerDoneButton} onPress={() => setPickerMode(null)}>
-                  <ThemedText style={{ color: palette.tint }}>Done</ThemedText>
+                  <ThemedText style={{ color: palette.tint }}>{t('done')}</ThemedText>
                 </TouchableOpacity>
               )}
             </View>

@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { categoryList, getCategoryColor, getCategoryDefinition, getCategoryIcon, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
+import { getCategoryColor, getCategoryDefinition, getCategoryIcon, getCategoryList, getSubcategories, getSubcategoryDefinition, isSubcategoryId, type CategoryKey } from '@/constants/categories';
 import { mockRecordsData } from '@/constants/mock-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useFilterContext } from '@/contexts/FilterContext';
@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function CategoriesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -41,6 +41,8 @@ export default function CategoriesScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>(filters.tempSelectedCategories);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [mostFrequent, setMostFrequent] = useState<string[]>([]);
+  const localizedCategoryList = useMemo(() => getCategoryList(), [i18n.language]);
+
   const mostFrequentFiltered = useMemo(() => {
     if (!typeParam) return mostFrequent;
     return mostFrequent.filter(id => getCategoryDefinition(id)?.type === typeParam);
@@ -319,7 +321,7 @@ export default function CategoriesScreen() {
             <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', padding: Spacing.tiny }}>{t('all_categories')}</ThemedText>
           </View>
         )}
-        data={typeParam ? categoryList.filter(c => c.type === typeParam) : categoryList}
+        data={typeParam ? localizedCategoryList.filter(c => c.type === typeParam) : localizedCategoryList}
         keyExtractor={(item) => item.id}
         style={{ backgroundColor: palette.card }}
         renderItem={({ item }) => {
@@ -336,7 +338,7 @@ export default function CategoriesScreen() {
 
             return (
               <View key={item.id} style={{ borderBottomWidth: 1, borderBottomColor: palette.border }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 18 }}>
                   <TouchableOpacity
                     style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
                     onPress={() => setExpandedCategory(prev => (prev === item.id ? null : item.id))}
@@ -363,14 +365,14 @@ export default function CategoriesScreen() {
                     </View>
                     <MaterialCommunityIcons
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                      size={20}
+                      size={24}
                       color={palette.icon}
                     />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => toggleCategorySelection(item.id)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <TouchableOpacity onPress={() => toggleCategorySelection(item.id)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
                     <MaterialCommunityIcons
                       name={isCategorySelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                      size={22}
+                      size={28}
                       // Show selected state with app accent (blue) — not the category color
                       color={isCategorySelected ? palette.tint : palette.icon}
                     />
@@ -383,13 +385,13 @@ export default function CategoriesScreen() {
                       return (
                         <TouchableOpacity
                           key={sub.id}
-                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}
                           onPress={() => toggleSubcategorySelection(sub.id)}
                         >
                           <ThemedText style={{ color: palette.text }}>{sub.name}</ThemedText>
                           <MaterialCommunityIcons
                             name={isSubSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                            size={20}
+                            size={24}
                             color={isSubSelected ? palette.tint : palette.icon}
                           />
                         </TouchableOpacity>

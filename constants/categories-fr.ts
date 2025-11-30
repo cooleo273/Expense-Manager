@@ -52,7 +52,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   housing: {
     id: 'housing',
     name: 'Logement',
-    color: '#EF4444',
+    color: '#FBBF24',
     icon: 'home-variant-outline',
     type: 'expense',
   },
@@ -66,7 +66,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   vehicle: {
     id: 'vehicle',
     name: 'Véhicule',
-    color: '#22C55E',
+    color: '#0284C7',
     icon: 'car',
     type: 'expense',
   },
@@ -94,7 +94,7 @@ export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> = {
   investments: {
     id: 'investments',
     name: 'Investissements',
-    color: '#10B981',
+    color: '#7C3AED',
     icon: 'chart-line',
     type: 'expense',
   },
