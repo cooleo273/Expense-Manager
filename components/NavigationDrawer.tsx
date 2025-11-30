@@ -1,12 +1,15 @@
 import { BorderRadius, Colors, FontSizes, FontWeights, Shadows, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StorageService } from '@/services/storage';
 import { generateRealisticMockData } from '@/utils/mock-data-generator';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Animated, DevSettings, Easing, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 type NavigationDrawerProps = {
   visible: boolean;
@@ -20,6 +23,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const palette = Colors[colorScheme];
   const router = useRouter();
   const { showToast } = useToast();
+  const { t, i18n } = useTranslation();
   const [isMounted, setIsMounted] = useState(visible);
   const [developerToggle, setDeveloperToggle] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,20 +31,20 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const insets = useSafeAreaInsets();
 
   const navigationItems = [
-    { label: 'Debts', route: '/reminders', icon: 'credit-card-clock' },
-    { label: 'Budgets', route: '/analysis', icon: 'chart-pie' },
-    { label: 'Accounts', route: '/accounts', icon: 'wallet-outline' },
-    { label: 'Category', route: '/analysis', icon: 'shape-outline' },
-    { label: 'Settings', route: '/settings', icon: 'cog-outline' },
-    { label: 'Templates', route: '/support', icon: 'file-document-edit-outline' },
-    { label: 'Help', route: '/support', icon: 'help-circle-outline' },
+    { label: t('debts'), route: '/reminders', icon: 'credit-card-clock' },
+    { label: t('budgets'), route: '/analysis', icon: 'chart-pie' },
+    { label: t('accounts'), route: '/accounts', icon: 'wallet-outline' },
+    { label: t('statistics'), route: '/analysis', icon: 'shape-outline' },
+    { label: t('settings'), route: '/settings', icon: 'cog-outline' },
+    { label: t('templates'), route: '/support', icon: 'file-document-edit-outline' },
+    { label: t('help'), route: '/support', icon: 'help-circle-outline' },
   ];
 
   const handleNavigate = (route: string, label: string) => {
     onClose();
 
-    if (['Debts', 'Budgets', 'Accounts', 'Category', 'Templates'].includes(label)) {
-      showToast(`${label} feature is not available yet`);
+    if ([t('debts'), t('budgets'), t('accounts'), t('category'), t('templates')].includes(label)) {
+      showToast(t('feature_not_available'));
       return;
     }
 
@@ -160,6 +164,20 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
               </TouchableOpacity>
             ))}
 
+            <View style={[styles.developerRow, { borderColor: 'transparent' }]}>
+              <View style={styles.developerCopy}>
+                <Text style={{ color: palette.text, fontSize: FontSizes.lg }}>Language</Text>
+              </View>
+              <LanguageSwitcher
+                value={i18n.language as 'en' | 'fr'}
+                onChange={async (newLang) => {
+                  await StorageService.setLanguage(newLang);
+                  await i18n.changeLanguage(newLang);
+                  DevSettings.reload();
+                }}
+              />
+            </View>
+
             <View style={[styles.sectionDivider, { borderBottomColor: palette.border }]} />
             <Text style={[styles.sectionLabel, { color: palette.icon }]}>Developer</Text>
             <View style={[styles.developerRow, { borderColor: palette.border }]}>
@@ -189,7 +207,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
                 router.push('/legacy');
               }}
             >
-              <Text style={{ color: palette.text }}>Legacy Mode</Text>
+              <Text style={{ color: palette.text }}>{t('legacy_mode')}</Text>
               <MaterialCommunityIcons name="toggle-switch-off-outline" size={22} color={palette.icon} />
             </TouchableOpacity>
           </View>
@@ -268,7 +286,7 @@ const styles = StyleSheet.create({
   },
   sectionDivider: {
     borderBottomWidth: 1,
-    marginTop: Spacing.xxl,
+    marginTop: Spacing.xl,
     marginBottom: Spacing.md,
   },
   sectionLabel: {

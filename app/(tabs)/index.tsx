@@ -3,6 +3,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type { FABGroupProps } from 'react-native-paper';
 import { FAB, Portal } from 'react-native-paper';
@@ -25,6 +26,7 @@ import { StorageService } from '../../services/storage';
 import { formatCompactCurrency } from '@/utils/currency';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -96,7 +98,7 @@ export default function HomeScreen() {
     () => [
       {
         icon: 'camera',
-        label: 'Scan Receipt',
+        label: t('scan_receipt'),
         labelTextColor: '#FFFFFF',
         color: palette.accent,
         style: { backgroundColor: palette.card, borderRadius: 28 },
@@ -105,7 +107,7 @@ export default function HomeScreen() {
       },
       {
         icon: 'plus',
-        label: 'Add Record',
+        label: t('add_record'),
         labelTextColor: '#FFFFFF',
         color: '#FFFFFF',
         style: { backgroundColor: palette.tint, transform: [{ scale: 1.1 }], borderRadius: 28 },
@@ -288,7 +290,7 @@ export default function HomeScreen() {
         <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
-              <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
+              <ThemedText style={styles.balanceLabel}>{t('balance_summary')}</ThemedText>
               <View style={styles.balanceValueRow}>
                 <ThemedText adjustsFontSizeToFit numberOfLines={1} style={[styles.balanceValue, { color: palette.text }]}>
                   {netBalanceDisplay}
@@ -341,10 +343,10 @@ export default function HomeScreen() {
         </ThemedView>
 
         <ExpenseStructureCard
-          title="Expense Structure"
+          title={t('expense_structure')}
           data={expenseSegments}
           totalLabel={expenseStructureTotalLabel}
-          totalCaption="Total expenses"
+          totalCaption={t('total_expenses')}
           legendVariant="simple"
           maxLegendItems={5}
           valueFormatter={(value: number) => (shouldCompactValue(value) ? formatCompactCurrency(value) : formatCurrency(value))}
@@ -357,7 +359,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/statistics')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
-                <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
+                <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('show_more')}</ThemedText>
                 <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
               </TouchableOpacity>
             </View>
@@ -366,7 +368,7 @@ export default function HomeScreen() {
 
         <ThemedView style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="subtitle">Records</ThemedText>
+            <ThemedText type="subtitle">{t('records')}</ThemedText>
             <ThemedText style={{ color: palette.icon }}>
               {displayedRecords.length} of {filteredRecords.length.toLocaleString()} shown
             </ThemedText>
@@ -396,7 +398,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/records')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
           >
-            <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>Show more</ThemedText>
+            <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('show_more')}</ThemedText>
             <MaterialCommunityIcons name="chevron-right" size={16} color={palette.tint} />
           </Pressable>
         </ThemedView>

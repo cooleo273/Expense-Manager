@@ -1,6 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,7 +9,7 @@ import { BreakdownChart } from '@/components/BreakdownChart';
 import { ExpenseStructureCard } from '@/components/ExpenseStructureCard';
 import { TransactionTypeFilter, TransactionTypeValue } from '@/components/TransactionTypeFilter';
 import { ThemedText } from '@/components/themed-text';
-import { getCategoryColor, getCategoryDefinition, getSubcategoryDefinition, type CategoryKey } from '@/constants/categories';
+import { getCategoryColor, getNodeDisplayName, type CategoryKey } from '@/constants/categories';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { statisticsStyles } from '@/styles/statistics.styles';
@@ -35,14 +36,14 @@ const incomeColorForKey = (key: string) => {
 };
 
 
-const formatDateRange = (range: { start: Date; end: Date } | null) => {
+const formatDateRange = (range: { start: Date; end: Date } | null, t: (key: string) => string) => {
   const presetLabel = getRelativePeriodLabel(range);
   if (presetLabel) {
     return presetLabel;
   }
 
   if (!range) {
-    return 'All Time';
+    return t('all_time');
   }
 
   const { start, end } = range;
@@ -88,6 +89,7 @@ const matchesLabelsSearch = (labels: string[] | string | undefined, search: stri
 };
 
 export default function Statistics() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
@@ -194,10 +196,10 @@ export default function Statistics() {
 
     return Array.from(totals.entries())
       .map(([categoryId, value]) => {
-        const category = getCategoryDefinition(categoryId);
+        const label = getNodeDisplayName(categoryId) ?? categoryId;
         return {
           id: categoryId,
-          label: category?.name ?? categoryId,
+          label,
           value,
           color: getCategoryColor(categoryId, palette.tint),
         };
@@ -219,8 +221,7 @@ export default function Statistics() {
 
     return Array.from(totals.entries())
       .map(([segmentId, value]) => {
-        const subcategory = getSubcategoryDefinition(segmentId);
-        const label = subcategory?.name ?? getCategoryDefinition(segmentId)?.name ?? segmentId;
+        const label = getNodeDisplayName(segmentId) ?? segmentId;
         return {
           id: segmentId,
           label,
@@ -232,8 +233,8 @@ export default function Statistics() {
   }, [filteredTransactions]);
 
   const structureSegments = selectedType === 'income' ? incomeSegments : expenseSegments;
-  const structureTitle = selectedType === 'income' ? 'Income Structure' : 'Expense Structure';
-  const structureSubtitle = selectedType === 'income' ? 'Top subcategories' : 'Top categories';
+  const structureTitle = selectedType === 'income' ? t('income_structure') : t('expense_structure');
+  const structureSubtitle = selectedType === 'income' ? t('top_subcategories') : t('top_categories');
   const structureLegendVariant: 'simple' | 'detailed' = 'simple';
   const structureTotalValue = useMemo(
     () => structureSegments.reduce((sum, segment) => sum + segment.value, 0),
@@ -254,7 +255,7 @@ export default function Statistics() {
             options={['expense', 'income']}
           />
           <ThemedText style={{ color: palette.icon }}>
-            {formatDateRange(filters.dateRange)}
+            {formatDateRange(filters.dateRange, t)}
           </ThemedText>
         </View>
 
@@ -271,7 +272,7 @@ export default function Statistics() {
           icon="chart-pie"
           data={structureSegments}
           totalLabel={formatCompactCurrency(structureTotalValue)}
-          totalCaption="All time"
+          totalCaption={t('all_time')}
           legendVariant={structureLegendVariant}
           valueFormatter={(value) => formatCompactCurrency(value)}
           fullValueFormatter={(value) => `$${value.toLocaleString()}`}

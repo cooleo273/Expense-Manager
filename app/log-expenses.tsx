@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,7 +14,6 @@ import {
   View
 } from 'react-native';
 import { Menu } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
@@ -30,6 +30,7 @@ import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { subscribeToCategorySelection } from '@/utils/navigation-events';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../services/storage';
 
 export const options = {
@@ -40,6 +41,7 @@ export const options = {
 const styles = logExpensesStyles;
 
 export default function LogExpensesScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -103,7 +105,7 @@ export default function LogExpensesScreen() {
     return accountOptions.find(acc => acc.id === selectedAccountId);
   }, [accountOptions, selectedAccountId]);
 
-  const selectedAccountName = selectedAccount?.name ?? 'Select account';
+  const selectedAccountName = selectedAccount?.name ?? t('select_account');
 
   const formattedDate = useMemo(
     () => recordDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -322,7 +324,7 @@ export default function LogExpensesScreen() {
       resetDrafts();
 
       if (records.length === 1) {
-        showToast('Record Added');
+        showToast(t('record_updated'));
       } else {
         showToast(`${records.length} Records Added`);
       }
@@ -336,7 +338,7 @@ export default function LogExpensesScreen() {
       router.push('/(tabs)/records');
     } catch (error) {
       console.error('Failed to save transactions:', error);
-      Alert.alert('Error', 'Failed to save transactions. Please try again.');
+      Alert.alert(t('error'), t('failed_to_save_record'));
     }
   }, [accountOptions, resetDrafts, router, selectedAccountName, showToast]);
 
@@ -345,15 +347,15 @@ export default function LogExpensesScreen() {
 
     const amountStr = singleDraft.amount.trim();
     if (!amountStr) {
-      setAmountError('Amount is required');
+      setAmountError(t('amount_is_required'));
       hasError = true;
     } else {
       const numeric = Number(amountStr);
       if (isNaN(numeric) || !isFinite(numeric)) {
-        setAmountError('Amount must be a valid number');
+        setAmountError(t('amount_must_be_valid'));
         hasError = true;
       } else if (numeric <= 0) {
-        setAmountError('Amount must be greater than 0');
+        setAmountError(t('amount_must_be_positive'));
         hasError = true;
       } else {
         setAmountError('');
@@ -361,14 +363,14 @@ export default function LogExpensesScreen() {
     }
 
     if (!singleDraft.category || singleDraft.category.trim() === '') {
-      setCategoryError('Category is required');
+      setCategoryError(t('category_is_required'));
       hasError = true;
     } else {
       setCategoryError('');
     }
 
     if (!singleDraft.payee || singleDraft.payee.trim() === '') {
-      setPayeeError(`${transactionType === 'income' ? 'Payer' : 'Payee'} is required`);
+      setPayeeError(`${transactionType === 'income' ? t('payer') : t('payee')} is required`);
       hasError = true;
     } else {
       setPayeeError('');
@@ -379,7 +381,7 @@ export default function LogExpensesScreen() {
     }
 
     if (!selectedAccountId) {
-      Alert.alert('Account required', 'Please select an account before saving.');
+      Alert.alert(t('account_required'), t('select_account_before_saving'));
       return null;
     }
 
@@ -425,21 +427,21 @@ export default function LogExpensesScreen() {
   const confirmDiscardSingle = useCallback(() => {
     const draftEdited = isSingleDraftEdited(singleDraft);
     if (!draftEdited) {
-      showToast && showToast('No changes to discard');
+      showToast && showToast(t('no_changes_to_discard'));
       return;
     }
     Alert.alert(
-      'Discard draft',
-      'This record has unsaved changes. Are you sure you want to discard them?',
+      t('discard_draft'),
+      t('discard_draft_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Discard',
+          text: t('discard'),
           style: 'destructive',
           onPress: () => {
             transactionDraftState.resetSingleDraft(lastSelectedCategory);
             setSingleDraft(transactionDraftState.getSingleDraft());
-            showToast && showToast('Changes discarded');
+            showToast && showToast(t('changes_discarded'));
           },
         },
       ],
@@ -502,15 +504,15 @@ export default function LogExpensesScreen() {
                 handleSave(true);
                 setShowMenu(false);
               }}
-              title="Save and add new record"
+              title={t('save_and_add_new')}
               titleStyle={{ color: palette.text }}
             />
             <Menu.Item
               onPress={() => {
-                Alert.alert('Template Saved', 'Record saved as template for future use.');
+                Alert.alert(t('template_saved'), t('save_template_confirm'));
                 setShowMenu(false);
               }}
-              title="Save template"
+              title={t('save_template')}
               titleStyle={{ color: palette.text }}
             />
           </Menu>
@@ -536,12 +538,12 @@ export default function LogExpensesScreen() {
 
       e.preventDefault();
       Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Do you want to discard and leave?',
+        t('discard_changes'),
+        t('discard_changes_confirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('discard'),
             style: 'destructive',
             onPress: () => {
               transactionDraftState.resetSingleDraft(lastSelectedCategory);
@@ -592,14 +594,14 @@ export default function LogExpensesScreen() {
                 style={[styles.addListButton, { borderColor: palette.border, backgroundColor: palette.card }]}
               >
                 <MaterialCommunityIcons name="playlist-plus" size={18} color={palette.tint} />
-                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Add List</ThemedText>
+                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>{t('add_list')}</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => showToast && showToast('Feature not available')}
+                onPress={() => showToast && showToast(t('feature_not_available'))}
                 style={[styles.templatesButton, { borderColor: palette.border, backgroundColor: palette.card }]}
               >
                 <MaterialCommunityIcons name="file-document-multiple" size={18} color={palette.tint} />
-                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>Templates</ThemedText>
+                <ThemedText style={[styles.addListLabel, { color: palette.tint, fontSize: 14 }]}>{t('templates')}</ThemedText>
                 <MaterialCommunityIcons
                   name="information-outline"
                   size={14}
@@ -615,7 +617,7 @@ export default function LogExpensesScreen() {
           >
             <View style={styles.fieldGroup}> 
               <View style={[styles.inputWrapper, styles.inputBase, styles.inputWrapperTall, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Amount*</ThemedText>
+                <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>{t('amount')}</ThemedText>
                 <View style={[styles.amountRow, styles.inputBase, { justifyContent: 'flex-end' }]}> 
                   <ThemedText style={[styles.currencySymbol, { color: palette.icon }]}>$</ThemedText>
                   <TextInput
@@ -665,11 +667,11 @@ export default function LogExpensesScreen() {
             <View style={styles.fieldGroup}>
               <View style={[styles.inputWrapper, styles.inputBase, { borderColor: palette.border, backgroundColor: palette.card }]}> 
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>
-                  {transactionType === 'income' ? 'Payer*' : 'Payee*'}
+                  {transactionType === 'income' ? t('payer') : t('payee')}
                 </ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder={transactionType === 'income' ? 'Eg: Company X' : 'Eg: Boardwalk Housing'}
+                  placeholder={transactionType === 'income' ? t('eg_company_x') : t('eg_boardwalk_housing')}
                   placeholderTextColor={palette.icon}
                   value={singleDraft.payee}
                   onChangeText={(value) => handleSingleChange('payee', value)}
@@ -728,7 +730,7 @@ export default function LogExpensesScreen() {
                       openLabelInput();
                     }}
                     style={[styles.labelActionPill, { borderColor: palette.border, backgroundColor: palette.card }]}
-                    accessibilityLabel="Add label"
+                    accessibilityLabel={t('add_label')}
                     accessibilityRole="button"
                   >
                     <MaterialCommunityIcons name="plus" size={16} color={palette.tint} />
@@ -743,7 +745,7 @@ export default function LogExpensesScreen() {
                   <TextInput
                     ref={labelInputRef}
                     style={[styles.sharedLabelInput, { backgroundColor: palette.card, color: palette.text }]}
-                    placeholder="Add Label"
+                    placeholder={t('add_label')}
                     placeholderTextColor={palette.icon}
                     value={currentLabelInput}
                     onChangeText={setCurrentLabelInput}
@@ -759,14 +761,14 @@ export default function LogExpensesScreen() {
                     <TouchableOpacity
                       onPress={closeLabelInput}
                       style={[styles.sharedLabelActionButton, styles.sharedLabelCloseButton]}
-                      accessibilityLabel="Cancel label entry"
+                      accessibilityLabel={t('cancel_label_entry')}
                     >
                       <MaterialCommunityIcons name="close" size={18} color={palette.icon} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={addLabel}
                       style={[styles.sharedLabelActionButton, styles.sharedLabelCheckButton]}
-                      accessibilityLabel="Save label"
+                      accessibilityLabel={t('save_label')}
                     >
                       <MaterialCommunityIcons name="check" size={20} color={palette.tint} />
                     </TouchableOpacity>
@@ -828,7 +830,7 @@ export default function LogExpensesScreen() {
                 <ThemedText style={[styles.notchedLabel, { color: palette.icon, backgroundColor: palette.card }]}>Note</ThemedText>
                 <TextInput
                   style={[styles.notchedInput, { color: palette.text }]}
-                  placeholder="Add a note"
+                  placeholder={t('add_a_note')}
                   placeholderTextColor={palette.icon}
                   value={singleDraft.note}
                   onChangeText={(value) => handleSingleChange('note', value)}
@@ -864,9 +866,9 @@ export default function LogExpensesScreen() {
               style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Save record"
+              accessibilityLabel={t('save_record')}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>SAVE</ThemedText>
+              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>

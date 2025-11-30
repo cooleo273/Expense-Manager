@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -7,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function AddAccountScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const [accountName, setAccountName] = useState('');
@@ -15,10 +17,10 @@ export default function AddAccountScreen() {
 
   const handleSave = () => {
     if (!accountName.trim()) {
-      Alert.alert('Missing details', 'Please add an account name.');
+      Alert.alert(t('missing_details'), t('add_account_name_alert'));
       return;
     }
-    Alert.alert('Account Added', `${accountName} (${accountType || 'Custom'}) saved with balance ₹${balance || '0'}.`);
+    Alert.alert(t('account_added'), `${accountName} (${accountType || t('custom')}) saved with balance ₹${balance || '0'}.`);
     setAccountName('');
     setAccountType('');
     setBalance('');
@@ -27,27 +29,27 @@ export default function AddAccountScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}> 
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Add account</ThemedText>
-        <ThemedText style={{ color: palette.icon }}>Manual onboarding for banks, cards, wallets or cash.</ThemedText>
+        <ThemedText type="title">{t('add_account')}</ThemedText>
+        <ThemedText style={{ color: palette.icon }}>{t('manual_onboarding_message')}</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.form}>
         <TextInput
-          placeholder="Account name"
+          placeholder={t('account_name')}
           value={accountName}
           onChangeText={setAccountName}
           style={[styles.input, { borderColor: palette.border, color: palette.text }]}
           placeholderTextColor={palette.icon}
         />
         <TextInput
-          placeholder="Type (Bank, Card, Wallet, Cash)"
+          placeholder={t('account_type_placeholder')}
           value={accountType}
           onChangeText={setAccountType}
           style={[styles.input, { borderColor: palette.border, color: palette.text }]}
           placeholderTextColor={palette.icon}
         />
         <TextInput
-          placeholder="Starting balance (₹)"
+          placeholder={t('starting_balance_placeholder')}
           value={balance}
           onChangeText={setBalance}
           keyboardType="numeric"
@@ -55,7 +57,7 @@ export default function AddAccountScreen() {
           placeholderTextColor={palette.icon}
         />
         <TouchableOpacity style={[styles.saveButton, { backgroundColor: palette.tint }]} onPress={handleSave}>
-          <ThemedText style={styles.saveButtonText}>Save account</ThemedText>
+          <ThemedText style={styles.saveButtonText}>{t('save')}</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ScrollView>

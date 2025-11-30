@@ -4,6 +4,7 @@ import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +19,7 @@ export const options = {
 };
 
 export default function ScanScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   React.useEffect(() => {
     navigation.setOptions({ headerShown: false, headerLeft: () => null, headerTitle: '' });
@@ -36,7 +38,7 @@ export default function ScanScreen() {
   const { showToast } = useToast();
   const cameraRef = useRef<CameraView>(null);
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
-  const statusMessages = ['Processing receipt…', 'Analyzing category…', 'Hang on—just a moment…'];
+  const statusMessages = [t('processing_receipt'), t('analyzing_category'), t('hang_on')];
 
   const toggleCameraFacing = () => {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
@@ -58,7 +60,7 @@ export default function ScanScreen() {
     });
 
     if (!response.ok) {
-      let message = 'Receipt upload failed';
+      let message = t('receipt_upload_failed');
       try {
         const errorPayload = await response.json();
         if (errorPayload?.error) {
@@ -82,7 +84,7 @@ export default function ScanScreen() {
       const mappedExpense = mapReceiptToExpense(proxyResponse?.fields);
       console.debug('[Scan] mappedExpense', JSON.stringify(mappedExpense, null, 2));
       if (!mappedExpense) {
-        throw new Error('Receipt fields unavailable');
+        throw new Error(t('receipt_fields_unavailable'));
       }
 
       const apiRecords = proxyResponse?.fields?.records ?? [];
@@ -156,14 +158,14 @@ export default function ScanScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, base64: false });
       if (!photo?.uri) {
-        throw new Error('Unable to capture photo');
+        throw new Error(t('unable_to_capture_photo'));
       }
 
       await processReceipt(photo.uri);
     } catch (error) {
       console.error('Receipt capture failed', error);
-      showToast('Could not process receipt', { tone: 'error' });
-      Alert.alert('Receipt scan failed', 'Please try again or upload another file.');
+      showToast(t('could_not_process_receipt'), { tone: 'error' });
+      Alert.alert(t('receipt_scan_failed'), t('try_again_upload_another'));
     } finally {
       setIsProcessing(false);
     }
@@ -177,7 +179,7 @@ export default function ScanScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert('Permission required', 'Please allow photo library access to import receipts.');
+        Alert.alert(t('permission_required'), t('photo_library_permission'));
         return;
       }
 
@@ -192,11 +194,11 @@ export default function ScanScreen() {
 
       const asset = selection.assets[0];
       if (!asset?.uri) {
-        throw new Error('No image selected');
+        throw new Error(t('no_image_selected'));
       }
 
       if (asset.type && asset.type !== 'image') {
-        Alert.alert('Invalid selection', 'Please select an image file from your library.');
+        Alert.alert(t('invalid_selection'), t('select_image_file'));
         return;
       }
 
@@ -204,8 +206,8 @@ export default function ScanScreen() {
       await processReceipt(asset.uri);
     } catch (error) {
       console.error('Gallery import failed', error);
-      showToast('Could not import receipt', { tone: 'error' });
-      Alert.alert('Receipt import failed', 'Please try again with a different image.');
+      showToast(t('could_not_import_receipt'), { tone: 'error' });
+      Alert.alert(t('receipt_import_failed'), t('try_again_different_image'));
     } finally {
       setIsProcessing(false);
     }
@@ -234,10 +236,10 @@ export default function ScanScreen() {
     return (
       <View style={[styles.permissionContainer, { backgroundColor: palette.background }]}>
         <ThemedText style={{ textAlign: 'center', color: palette.text, marginBottom: Spacing.md }}>
-          We need your permission to access the camera
+          {t('camera_permission')}
         </ThemedText>
         <TouchableOpacity onPress={requestPermission} style={[styles.permissionButton, { backgroundColor: palette.tint }]}>
-          <ThemedText style={{ color: '#FFFFFF', fontWeight: '600' }}>Grant Permission</ThemedText>
+          <ThemedText style={{ color: '#FFFFFF', fontWeight: '600' }}>{t('grant_permission')}</ThemedText>
         </TouchableOpacity>
       </View>
     );
@@ -262,13 +264,13 @@ export default function ScanScreen() {
       >
           <View style={styles.topBar}>
             <TouchableOpacity
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('go_back')}
               accessibilityRole="button"
               onPress={() => navigation.goBack()}
               style={[styles.backButton, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
             >
               <MaterialCommunityIcons name="arrow-left" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.backButtonLabel}>Back</ThemedText>
+              <ThemedText style={styles.backButtonLabel}>{t('back')}</ThemedText>
             </TouchableOpacity>
           </View>
 

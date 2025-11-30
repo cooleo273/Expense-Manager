@@ -92,7 +92,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        "{combinedText}"
+                        &ldquo;{combinedText}&rdquo;
                       </ThemedText>
                     ) : null;
                   })()}
@@ -140,7 +140,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
-                      "{combinedText}"
+                      &ldquo;{combinedText}&rdquo;
                     </ThemedText>
                   ) : null;
                 })()}

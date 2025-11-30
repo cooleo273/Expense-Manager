@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Modal, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { Portal } from 'react-native-paper';
 
@@ -109,6 +110,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
   uniquePayers,
   uniqueLabels,
 }) => {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const accent = palette.tint;
@@ -390,12 +392,12 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
 
   const confirmResetFilters = useCallback(() => {
     Alert.alert(
-      'Reset filters?',
-      'Are you sure you want to clear all filter selections?',
+      t('reset_filters'),
+      t('reset_filters_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Reset',
+          text: t('reset'),
           style: 'destructive',
           onPress: executeResetFilters,
         },
@@ -416,64 +418,64 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     return [
       {
         id: 'recordType',
-        title: 'Record Type',
+        title: t('record_type'),
         detail: undefined,
-        chips: ['Expense', 'Income', 'All'],
+        chips: [t('expense'), t('income'), t('all')],
       },
       {
         id: 'categories',
-        title: `Categories (${filters.tempSelectedCategories.length || 'All'})`,
+        title: `${t('categories')} (${filters.tempSelectedCategories.length || t('all')})`,
         detail:
           selectedCategoryLabels.length > 0
             ? `${selectedCategoryLabels.slice(0, 3).join(', ')}${
                 selectedCategoryLabels.length > 3 ? '...' : ''
               }`
-            : 'Fuel, Groceries, Household…',
+            : t('categories_placeholder'),
       },
       {
         id: 'payers',
-        title: 'Payers & Payees',
+        title: t('payers_payees'),
         detail:
           localFilters.selectedPayers && localFilters.selectedPayers.length > 0
             ? `${localFilters.selectedPayers.slice(0, 2).join(', ')}${
                 localFilters.selectedPayers.length > 2 ? '…' : ''
               }`
-            : 'Comma separated',
+            : t('comma_separated'),
       },
       {
         id: 'labels',
-        title: 'Labels',
+        title: t('labels'),
         detail:
           localFilters.selectedLabels && localFilters.selectedLabels.length > 0
-            ? `${localFilters.selectedLabels.length} selected`
+            ? `${localFilters.selectedLabels.length} ${t('selected')}`
             : undefined,
       },
       {
         id: 'keyTerms',
-        title: 'Key Terms',
+        title: t('key_terms'),
         detail:
           localFilters.keyTerms && localFilters.keyTerms.length > 0
             ? `${localFilters.keyTerms.slice(0, 3).join(', ')}${
                 localFilters.keyTerms.length > 3 ? '…' : ''
               }`
-            : 'Search notes, payers…',
+            : t('key_terms_placeholder'),
       },
       {
         id: 'amount',
-        title: 'Amount',
+        title: t('amount'),
         detail:
           localFilters.amountRange
             ? `$${(localFilters.amountRange.min ?? 0).toLocaleString()} - $${
                 (localFilters.amountRange.max ?? maxTransactionAbs).toLocaleString()
               }`
-            : 'Any amount',
+            : t('any_amount'),
       },
       {
         id: 'accounts',
         title:
           localFilters.selectedAccount === 'all'
-            ? 'Account (All)'
-            : `Account (${getAccountMeta(localFilters.selectedAccount)?.name ?? 'Custom'})`,
+            ? `${t('account')} (${t('all')})`
+            : `${t('account')} (${getAccountMeta(localFilters.selectedAccount)?.name ?? t('custom')})`,
         detail:
           localFilters.selectedAccount === 'all'
             ? undefined
@@ -481,7 +483,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
       },
       {
         id: 'timePeriod',
-        title: 'Time Period',
+        title: t('time_period'),
         detail: formatTimePeriod(localFilters.dateRange),
       },
     ];
@@ -610,9 +612,9 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                 <TouchableOpacity onPress={onClose}>
                   <MaterialCommunityIcons name="close" size={24} color={palette.icon} />
                 </TouchableOpacity>
-                <ThemedText style={[styles.filterTitle, { color: palette.text }]}>Filters</ThemedText>
+                <ThemedText style={[styles.filterTitle, { color: palette.text }]}>{t('filters')}</ThemedText>
                 <TouchableOpacity onPress={confirmResetFilters}>
-                  <ThemedText style={{ color: accent, fontWeight: '600' }}>RESET</ThemedText>
+                  <ThemedText style={{ color: accent, fontWeight: '600' }}>{t('reset')}</ThemedText>
                 </TouchableOpacity>
               </View>
               <ScrollView contentContainerStyle={styles.filterContent}>

@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { HeaderRight } from '@/components/HeaderRight';
@@ -10,6 +11,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { tabLayoutStyles } from '@/styles/tab-layout.styles';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme];
   const tabBarStyle = useMemo(
@@ -37,7 +39,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Home',
+            title: t('home'),
             tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',
@@ -47,7 +49,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="records"
           options={{
-            title: 'Records',
+            title: t('records'),
             tabBarIcon: ({ color, size }) => (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
                 <MaterialCommunityIcons name="format-list-bulleted" color={color} size={size} />
@@ -61,7 +63,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="statistics"
           options={{
-            title: 'Statistics',
+            title: t('statistics'),
             tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" color={color} size={size} />,
             headerLeft: () => <MenuButton />,
             headerTitle: '',

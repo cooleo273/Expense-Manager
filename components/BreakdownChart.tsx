@@ -1,5 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, View } from 'react-native';
 import { VictoryAxis, VictoryBar, VictoryChart } from 'victory-native';
 
@@ -147,6 +148,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   dateRange,
   datePreset,
 }) => {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
@@ -408,28 +410,28 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   let summaryBlocks: { label: string; value: string }[] = [];
 
   if (breakdownType === 'week') {
-    subtitle = 'Weekly Breakdown';
+    subtitle = t('weekly_breakdown');
     const weekendTotal = segments.reduce((sum, segment) => {
       const day = segment.start.getDay();
       return day === 0 || day === 6 ? sum + segment.total : sum;
     }, 0);
     const weekendShare = total === 0 ? 0 : Math.round((weekendTotal / total) * 100);
     summaryBlocks = [
-      { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak day', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
-      { label: 'Daily avg', value: formatFullCurrency(periodAverage) },
-      { label: 'Weekend', value: `${weekendShare}%` },
+      { label: t('total'), value: formatFullCurrency(total) },
+      { label: t('peak_day'), value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: t('daily_avg'), value: formatFullCurrency(periodAverage) },
+      { label: t('weekend'), value: `${weekendShare}%` },
     ];
   } else if (breakdownType === 'month') {
-    subtitle = 'Monthly Breakdown';
+    subtitle = t('monthly_breakdown');
     summaryBlocks = [
-      { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak span', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
-      { label: 'Weekly avg', value: formatFullCurrency(periodAverage) },
-      { label: 'Weeks active', value: amounts.filter((value) => value > 0).length.toString() },
+      { label: t('total'), value: formatFullCurrency(total) },
+      { label: t('peak_span'), value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: t('weekly_avg'), value: formatFullCurrency(periodAverage) },
+      { label: t('weeks_active'), value: amounts.filter((value) => value > 0).length.toString() },
     ];
   } else if (breakdownType === 'year') {
-    subtitle = 'Yearly Breakdown';
+    subtitle = t('yearly_breakdown');
     const quarterlyTotals = [
       amounts.slice(0, 3).reduce((sum, value) => sum + value, 0),
       amounts.slice(3, 6).reduce((sum, value) => sum + value, 0),
@@ -438,26 +440,26 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
     ];
     const peakQuarter = quarterlyTotals.indexOf(Math.max(...quarterlyTotals)) + 1;
     summaryBlocks = [
-      { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak month', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
-      { label: 'Monthly avg', value: formatFullCurrency(periodAverage) },
-      { label: 'Peak quarter', value: `Q${peakQuarter}` },
+      { label: t('total'), value: formatFullCurrency(total) },
+      { label: t('peak_month'), value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: t('monthly_avg'), value: formatFullCurrency(periodAverage) },
+      { label: t('peak_quarter'), value: `Q${peakQuarter}` },
     ];
   } else if (breakdownType === 'custom') {
-    subtitle = 'Custom Breakdown';
+    subtitle = t('custom_breakdown');
     summaryBlocks = [
-      { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak span', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
-      { label: 'Segment avg', value: formatFullCurrency(periodAverage) },
-      { label: 'Segments', value: numPeriods.toString() },
+      { label: t('total'), value: formatFullCurrency(total) },
+      { label: t('peak_span'), value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: t('segment_avg'), value: formatFullCurrency(periodAverage) },
+      { label: t('segments'), value: numPeriods.toString() },
     ];
   } else if (breakdownType === 'all') {
-    subtitle = 'All Time Breakdown';
+    subtitle = t('all_time_breakdown');
     summaryBlocks = [
-      { label: 'Total', value: formatFullCurrency(total) },
-      { label: 'Peak year', value: peakIndex >= 0 ? labels[peakIndex] : '—' },
-      { label: 'Yearly avg', value: formatFullCurrency(periodAverage) },
-      { label: 'Years active', value: amounts.filter((value) => value > 0).length.toString() },
+      { label: t('total'), value: formatFullCurrency(total) },
+      { label: t('peak_year'), value: peakIndex >= 0 ? labels[peakIndex] : '—' },
+      { label: t('yearly_avg'), value: formatFullCurrency(periodAverage) },
+      { label: t('years_active'), value: amounts.filter((value) => value > 0).length.toString() },
     ];
   }
 
@@ -469,7 +471,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
           <ThemedText type="subtitle">{subtitle}</ThemedText>
         </View>
         <ThemedText style={{ color: palette.icon }}>
-          {selectedType === 'income' ? 'Income overview' : 'Expense overview'}
+          {selectedType === 'income' ? t('income_overview') : t('expense_overview')}
         </ThemedText>
       </View>
       <View style={[statisticsStyles.chart, { width: chartWidth }]}>
@@ -537,7 +539,7 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
             </ThemedText>
           </View>
         ) : (
-          <ThemedText style={[statisticsStyles.chartHint, { color: palette.icon }]}>Tap a bar to see that period's total</ThemedText>
+          <ThemedText style={[statisticsStyles.chartHint, { color: palette.icon }]}>{t('tap_a_bar_to_see_total')}</ThemedText>
         )}
       </View>
       <View style={statisticsStyles.barSummaryRow}>
