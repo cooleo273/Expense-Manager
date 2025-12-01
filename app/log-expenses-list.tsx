@@ -4,12 +4,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert, KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,6 +25,7 @@ import { useFilterContext } from '@/contexts/FilterContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import { getCustomHeaderStyles } from '@/styles/custom-header.styles';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { ReceiptImportResult } from '@/types/receipt';
 import { RecordType, SingleDraft } from '@/types/transactions';
@@ -49,11 +52,6 @@ const isReceiptImportBatch = (payload: unknown): payload is { records: SingleDra
   return candidate.records.every((r) => r && typeof r === 'object');
 };
 
-export const options = {
-  headerShown: true,
-  headerTitle: '',
-};
-
 const styles = logExpensesStyles;
 
 export default function LogExpensesListScreen() {
@@ -65,6 +63,7 @@ export default function LogExpensesListScreen() {
   const params = useLocalSearchParams();
   const { showToast } = useToast();
   const { filters } = useFilterContext();
+  const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scanPrefillRef = useRef<string | null>(null);
@@ -83,6 +82,7 @@ export default function LogExpensesListScreen() {
   }, [fallbackAccount, filters.selectedAccount]);
   const accountMeta = useMemo(() => getAccountMeta(selectedAccountId) ?? fallbackAccount, [selectedAccountId, fallbackAccount]);
   const accountName = accountMeta?.name ?? 'RBC Account';
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const transactionType: RecordType = params.type === 'income' ? 'income' : 'expense';
 
@@ -153,6 +153,25 @@ export default function LogExpensesListScreen() {
     },
     [router, transactionType]
   );
+
+    // --- KEYBOARD VISIBILITY EFFECT ---
+    useEffect(() => {
+      // Listeners to track the keyboard's state
+      const keyboardDidShowListener = Keyboard.addListener(
+        'keyboardDidShow',
+        () => setKeyboardVisible(true),
+      );
+      const keyboardDidHideListener = Keyboard.addListener(
+        'keyboardDidHide',
+        () => setKeyboardVisible(false),
+      );
+  
+      // Cleanup listeners on component unmount
+      return () => {
+        keyboardDidHideListener.remove();
+        keyboardDidShowListener.remove();
+      };
+    }, []);
 
   const openRecordDetails = useCallback((index: number) => {
     const targetRecord = records[index];
@@ -406,26 +425,9 @@ export default function LogExpensesListScreen() {
 
   useEffect(() => {
     navigation.setOptions({
-      headerTitle: () => (
-        <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
-      ),
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack();
-          }}
-          style={{ padding: 8 }}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <TouchableOpacity onPress={handleNext} style={{ padding: 8 }}>
-          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('next')}</ThemedText>
-        </TouchableOpacity>
-      ),
+      headerShown: false,
     });
-  }, [handleNext, navigation, palette.icon, palette.tint, t]);
+  }, [navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -470,11 +472,27 @@ export default function LogExpensesListScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={styles.keyboardWrapper}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-      >
+      <View style={customHeaderStyles.headerContainer}>
+        <TouchableOpacity
+          onPress={() => {
+            navigation.goBack();
+          }}
+          style={{ padding: 8 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
+        </View>
+        <TouchableOpacity onPress={handleNext} style={{ padding: 8 }}>
+          <ThemedText style={{ color: palette.tint, fontWeight: '600' }}>{t('next')}</ThemedText>
+        </TouchableOpacity>
+      </View>
+       <KeyboardAvoidingView
+              behavior="padding"
+              style={styles.keyboardWrapper}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
+            >
         <View style={styles.contentWrapper}>
           <ScrollView
             ref={scrollViewRef}
@@ -529,11 +547,11 @@ export default function LogExpensesListScreen() {
                   </View>
                   <View style={styles.stackedIconGroup}>
                     <TouchableOpacity onPress={() => openRecordDetails(index)} style={[styles.smallIconTouch, styles.noteMenuButton]}> 
-                      <MaterialCommunityIcons name="dots-horizontal" size={18} color={palette.icon} />
+                      <MaterialCommunityIcons name="dots-horizontal" size={20} color={palette.icon} />
                     </TouchableOpacity>
                     {records.length > 1 && (
                       <TouchableOpacity onPress={() => confirmAndRemoveRecord(index)} style={[styles.smallIconTouch, { marginTop: 6 }]}> 
-                        <MaterialCommunityIcons name="trash-can" size={18} color={palette.error} />
+                        <MaterialCommunityIcons name="trash-can" size={20} color={palette.error} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -607,19 +625,21 @@ export default function LogExpensesListScreen() {
               <ThemedText style={[styles.addListLabel, { color: palette.tint }]}>{t('add_record')}</ThemedText>
             </TouchableOpacity>
           </ScrollView>
-          <View
-            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
-          >
-            <TouchableOpacity
-              onPress={handleNext}
-              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={t('review_records')}
+          
+          {!isKeyboardVisible &&
+            <View
+              style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('next')}</ThemedText>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                onPress={handleNext}
+                style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={t('review_records')}
+              >
+                <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('next')}</ThemedText>
+              </TouchableOpacity>
+            </View>}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

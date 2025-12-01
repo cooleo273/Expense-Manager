@@ -37,11 +37,12 @@ export function TransactionTypeFilter({
     <View
       style={[
         styles.container,
+        style,
         {
           borderColor: palette.border,
           backgroundColor: palette.card,
         },
-        style,
+        
       ]}
     >
       {chips.map((option, index) => {

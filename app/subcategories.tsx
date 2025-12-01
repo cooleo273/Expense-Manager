@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StackActions, useNavigation } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
@@ -13,20 +13,24 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import { getCustomHeaderStyles } from '@/styles/custom-header.styles';
 import { emitCategorySelection } from '@/utils/navigation-events';
 
 export default function SubcategoriesScreen() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const navigation = useNavigation();
   const params = useLocalSearchParams();
+  const router = useRouter();
+  
 
   const categoryId = params.category as CategoryKey;
   const batchIndex = params.batchIndex as string || '';
   const selectedSubcategory = params.selected as string || '';
   const returnTo = params.returnTo as string || 'log-expenses';
   const recordIndex = params.recordIndex as string || '';
+  const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
 
   const currentLanguage = i18n.language;
   const category = useMemo(() => getCategoryDefinition(categoryId), [categoryId, currentLanguage]);
@@ -35,13 +39,10 @@ export default function SubcategoriesScreen() {
   const iconName = getCategoryIcon(categoryId);
 
   useEffect(() => {
-    if (!category) {
-      return;
-    }
-    navigation.setOptions({
-      headerTitle: category.name,
-    });
-  }, [category, navigation]);
+      navigation.setOptions({
+        headerShown: false,
+      });
+    }, [navigation]);
 
   const parsedRecordIndex = useMemo(() => {
     if (typeof recordIndex === 'string') {
@@ -100,10 +101,18 @@ export default function SubcategoriesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }}>
+      <View style={customHeaderStyles.headerContainer}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+        </TouchableOpacity>
+        <ThemedText style={{ fontSize: 18, flex: 1, fontWeight: '600', color: palette.text }}>
+          { category.name ?? ''}
+        </ThemedText>
+      </View>
       <ScrollView style={{ backgroundColor: palette.card }}>
         <View style={{ backgroundColor: `${palette.surface}80`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>GENERAL</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>General</ThemedText>
         </View>
         <TouchableOpacity
           onPress={handleGeneralSelect}
@@ -136,7 +145,7 @@ export default function SubcategoriesScreen() {
         </TouchableOpacity>
 
         <View style={{ backgroundColor: `${palette.surface}60`, paddingVertical: 8, paddingHorizontal: 16, marginTop: 16 }}>
-          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>SUBCATEGORIES</ThemedText>
+          <ThemedText style={{ color: palette.text, fontWeight: '600', fontSize: 14 }}>{t('subcategories')}</ThemedText>
         </View>
         {subcategories.map((sub) => {
           const isSelected = sub.id === selectedSubcategory;

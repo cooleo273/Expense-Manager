@@ -287,7 +287,7 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border, marginTop: '-20' }]}>
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>{t('balance_summary')}</ThemedText>
@@ -414,7 +414,7 @@ export default function HomeScreen() {
             icon={fabOpen ? 'close' : 'plus'}
             actions={fabActions}
             onStateChange={({ open }) => setFabOpen(open)}
-            fabStyle={[styles.fabMain, { backgroundColor: palette.tint }]}
+            fabStyle={[styles.fabMain, { backgroundColor: fabOpen ? palette.icon : palette.tint }]}
             backdropColor="transparent"
             color="white"
             style={[styles.fabGroupContainer, { bottom: tabBarHeight + Spacing.md }]}

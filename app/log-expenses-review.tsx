@@ -9,6 +9,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import { getCustomHeaderStyles } from '@/styles/custom-header.styles';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft } from '@/types/transactions';
 import { emitRecordFiltersReset } from '@/utils/navigation-events';
@@ -20,6 +21,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -78,11 +80,6 @@ const parsePayload = (raw: string | null | undefined): ReviewPayload | null => {
   }
 };
 
-export const options = {
-  headerShown: true,
-  headerTitle: '',
-};
-
 export default function LogExpensesReviewScreen() {
   const params = useLocalSearchParams<ParsedParams>();
   const payloadKey = Array.isArray(params.payload) ? params.payload[0] ?? '' : params.payload ?? '';
@@ -95,6 +92,7 @@ export default function LogExpensesReviewScreen() {
   const router = useRouter();
   const { showToast } = useToast();
   const { setSelectedAccount, resetFilters } = useFilterContext();
+  const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
 
   const fallbackAccount = useMemo(() => mockAccounts.find((acc) => acc.id !== 'all') ?? null, []);
   const [localAccountId, setLocalAccountId] = useState<string | null>(() => payload?.accountId ?? fallbackAccount?.id ?? null);
@@ -118,6 +116,7 @@ export default function LogExpensesReviewScreen() {
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [payeeValue, setPayeeValue] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const headerClearedRef = useRef(false);
   const closePicker = useCallback(() => {
     setPickerMode(null);
@@ -133,6 +132,24 @@ export default function LogExpensesReviewScreen() {
     setPickerTarget({ scope: 'record', recordIndex });
     setPickerMode(mode);
   }, []);
+
+  useEffect(() => {
+        // Listeners to track the keyboard's state
+        const keyboardDidShowListener = Keyboard.addListener(
+          'keyboardDidShow',
+          () => setKeyboardVisible(true),
+        );
+        const keyboardDidHideListener = Keyboard.addListener(
+          'keyboardDidHide',
+          () => setKeyboardVisible(false),
+        );
+    
+        // Cleanup listeners on component unmount
+        return () => {
+          keyboardDidHideListener.remove();
+          keyboardDidShowListener.remove();
+        };
+      }, []);
 
   const handlePersist = useCallback(
     async (stayOnScreen = false) => {
@@ -238,59 +255,7 @@ export default function LogExpensesReviewScreen() {
     headerClearedRef.current = false;
 
     navigation.setOptions({
-      headerTitle: '',
-      headerLeft: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
-          </TouchableOpacity>
-          <AccountDropdown
-            allowAll={false}
-            useGlobalState={false}
-            onSelect={setLocalAccountId}
-            selectedId={localAccountId ?? undefined}
-          />
-        </View>
-      ),
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => {
-              handlePersist();
-            }}
-            style={{ padding: 8, marginRight: 8 }}
-          >
-            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
-          </TouchableOpacity>
-          <Menu
-            visible={showMenu}
-            onDismiss={() => setShowMenu(false)}
-            anchor={
-              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
-                <MaterialCommunityIcons name="dots-vertical" size={20} color={palette.icon} />
-              </TouchableOpacity>
-            }
-            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
-          >
-            <Menu.Item
-              onPress={() => {
-                handlePersist(true);
-                setShowMenu(false);
-              }}
-              title={t('save_and_stay_here')}
-              titleStyle={{ color: palette.text }}
-            />
-            <Menu.Item
-              onPress={() => {
-                Alert.alert(t('template_saved'), t('batch_template_saved'));
-                setShowMenu(false);
-              }}
-              title={t('save_template')}
-              titleStyle={{ color: palette.text }}
-            />
-          </Menu>
-        </View>
-      ),
+      headerShown: false,
     });
   }, [handlePersist, localAccountId, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, payload, showMenu]);
 
@@ -561,7 +526,57 @@ export default function LogExpensesReviewScreen() {
   const formattedTime = recordDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.card }]}>
+      <View style={customHeaderStyles.headerContainer}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8 }}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+          </TouchableOpacity>
+          <AccountDropdown
+            allowAll={false}
+            useGlobalState={false}
+            onSelect={setLocalAccountId}
+            selectedId={localAccountId ?? undefined}
+          />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => {
+              handlePersist();
+            }}
+            style={{ padding: 8, marginRight: 8 }}
+          >
+            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+          </TouchableOpacity>
+          <Menu
+            visible={showMenu}
+            onDismiss={() => setShowMenu(false)}
+            anchor={
+              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="dots-vertical" size={20} color={palette.icon} />
+              </TouchableOpacity>
+            }
+            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
+          >
+            <Menu.Item
+              onPress={() => {
+                handlePersist(true);
+                setShowMenu(false);
+              }}
+              title={t('save_and_stay_here')}
+              titleStyle={{ color: palette.text }}
+            />
+            <Menu.Item
+              onPress={() => {
+                Alert.alert(t('template_saved'), t('batch_template_saved'));
+                setShowMenu(false);
+              }}
+              title={t('save_template')}
+              titleStyle={{ color: palette.text }}
+            />
+          </Menu>
+        </View>
+      </View>
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.keyboardWrapper}
@@ -746,6 +761,7 @@ export default function LogExpensesReviewScreen() {
                 mode={pickerMode}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleDateTimeChange}
+                maximumDate={new Date()}
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity style={styles.pickerDoneButton} onPress={closePicker}>
@@ -755,21 +771,23 @@ export default function LogExpensesReviewScreen() {
             </View>
           ) : null}
           </ScrollView>
-          <View
-            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
-          >
-            <TouchableOpacity
-              onPress={() => {
-                handlePersist();
-              }}
-              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={t('save_records')}
+          {!isKeyboardVisible &&
+            <View
+              style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                onPress={() => {
+                  handlePersist();
+                }}
+                style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={t('save_records')}
+              >
+                <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
+              </TouchableOpacity>
+            </View>
+          }
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

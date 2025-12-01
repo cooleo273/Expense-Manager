@@ -72,7 +72,7 @@ export function InfoTooltip({ content, iconColor, size = IconSizes.md, testID, a
         testID={testID}
       >
         {anchorVisible ? (
-          <MaterialCommunityIcons name="help-circle-outline" size={size} color={iconColor ?? palette.icon} />
+          <MaterialCommunityIcons name="information-outline" size={size} color={iconColor ?? palette.icon} />
         ) : null}
       </Pressable>
       {visible ? (

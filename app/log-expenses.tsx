@@ -1,19 +1,22 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Menu } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountDropdown } from '@/components/AccountDropdown';
 import { ThemedText } from '@/components/themed-text';
@@ -29,14 +32,8 @@ import { transactionDraftState } from '@/state/transactionDraftState';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { RecordType, SingleDraft, StoredRecord } from '@/types/transactions';
 import { emitRecordFiltersReset, subscribeToCategorySelection } from '@/utils/navigation-events';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../services/storage';
-
-export const options = {
-  headerShown: true,
-  headerTitle: '',
-};
+import { getCustomHeaderStyles } from '../styles/custom-header.styles';
 
 const styles = logExpensesStyles;
 
@@ -48,7 +45,9 @@ export default function LogExpensesScreen() {
   const navigation = useNavigation();
   const { showToast } = useToast();
   const { filters, setSelectedAccount, resetFilters } = useFilterContext();
-
+  const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
+  
+  // --- STATE SETUP ---
   const [transactionType, setTransactionType] = useState<RecordType>(
     transactionDraftState.getTransactionType()
   );
@@ -67,8 +66,33 @@ export default function LogExpensesScreen() {
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
   const [currentLabelInput, setCurrentLabelInput] = useState('');
   const [isAddingLabel, setIsAddingLabel] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  
   const labelInputRef = useRef<TextInput>(null);
+  const singleAmountRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- KEYBOARD VISIBILITY EFFECT ---
+  useEffect(() => {
+    // Listeners to track the keyboard's state
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    );
+
+    // Cleanup listeners on component unmount
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
+  // --- EXISTING HOOKS/CALLBACKS ---
+  
   const focusLabelInput = useCallback(() => {
     setTimeout(() => labelInputRef.current?.focus(), 60);
   }, []);
@@ -83,9 +107,6 @@ export default function LogExpensesScreen() {
     setCurrentLabelInput('');
     labelInputRef.current?.blur();
   }, []);
-
-  const singleAmountRef = useRef<TextInput>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
 
   const scrollToEnd = useCallback(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -473,63 +494,9 @@ export default function LogExpensesScreen() {
 
   useEffect(() => {
     navigation.setOptions({
-      headerTitle: '',
-      headerLeft: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.goBack();
-            }}
-            style={{ padding: 8, marginRight: 8 }}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
-          </TouchableOpacity>
-          <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
-        </View>
-      ),
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
-            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
-          </TouchableOpacity>
-          <Menu
-            visible={showMenu}
-            onDismiss={() => setShowMenu(false)}
-            anchor={
-              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
-                <MaterialCommunityIcons name="dots-vertical" size={18} color={palette.icon} />
-              </TouchableOpacity>
-            }
-            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
-          >
-            <Menu.Item
-              onPress={() => {
-                handleSave(true);
-                setShowMenu(false);
-              }}
-              title={t('save_and_add_new')}
-              titleStyle={{ color: palette.text }}
-            />
-            <Menu.Item
-              onPress={() => {
-                Alert.alert(t('template_saved'), t('save_template_confirm'));
-                setShowMenu(false);
-              }}
-              title={t('save_template')}
-              titleStyle={{ color: palette.text }}
-            />
-          </Menu>
-        </View>
-      ),
-      headerStyle: {
-        backgroundColor: 'transparent',
-        elevation: 0,
-        borderBottomWidth: 0,
-        ...(Platform.OS === 'web' ? { boxShadow: 'none' } : {}),
-      },
-      headerShadowVisible: false,
+      headerShown: false,
     });
-  }, [handleSave, navigation, palette.border, palette.card, palette.icon, palette.text, palette.tint, showMenu, t]);
+  }, [navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -562,17 +529,68 @@ export default function LogExpensesScreen() {
   }, [isSingleDraftEdited, lastSelectedCategory, navigation, singleDraft, storedRecords, t]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background, height: '100%' }]}>
+      <View style={customHeaderStyles.headerContainer}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => {
+              navigation.goBack();
+            }}
+            style={{ padding: 8, marginRight: 8 }}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+          </TouchableOpacity>
+          
+          <AccountDropdown allowAll={false} useGlobalState={false} onSelect={(id) => setLocalSelectedAccount(id)} />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+         
+            <TouchableOpacity onPress={() => handleSave(false)} style={{ padding: 8, marginRight: 8 }}>
+              <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+            </TouchableOpacity>
+          
+          <Menu
+            visible={showMenu}
+            onDismiss={() => setShowMenu(false)}
+            anchor={
+              <TouchableOpacity onPress={() => setShowMenu(true)} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="dots-vertical" size={18} color={palette.icon} />
+              </TouchableOpacity>
+            }
+            contentStyle={{ backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 }}
+          >
+            <Menu.Item
+              onPress={() => {
+                handleSave(true);
+                setShowMenu(false);
+              }}
+              title={t('save_and_add_new')}
+              titleStyle={{ color: palette.text }}
+            />
+            <Menu.Item
+              onPress={() => {
+                Alert.alert(t('template_saved'), t('save_template_confirm'));
+                setShowMenu(false);
+              }}
+              title={t('save_template')}
+              titleStyle={{ color: palette.text }}
+            />
+          </Menu>
+        </View>
+      </View>
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.keyboardWrapper}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
-        <View style={styles.contentWrapper}>
+      <View style={[{ flex: 1, height: '100%', display: 'flex',}]}>
           <ScrollView
             ref={scrollViewRef}
             style={styles.scrollArea}
-            contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
+            contentContainerStyle={[styles.scrollContent, {
+              backgroundColor: palette.background,
+              paddingBottom: Spacing.lg,
+            }]}
             keyboardShouldPersistTaps="always"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
@@ -867,23 +885,22 @@ export default function LogExpensesScreen() {
 
           {/* Removed saved summary - users should not see record count at the bottom */}
           </ScrollView>
-          <View
-            style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
-          >
-            <TouchableOpacity
-              onPress={() => handleSave(false)}
-              style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={t('save_record')}
+          {!isKeyboardVisible &&
+            <View
+              style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
             >
-              <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                onPress={() => handleSave(false)}
+                style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={t('save_record')}
+              >
+                <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
+              </TouchableOpacity>
+            </View>}
         </View>
       </KeyboardAvoidingView>
-
     </SafeAreaView>
   );
 }
-

@@ -8,17 +8,17 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Easing,
-    FlatList,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Easing,
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -373,7 +373,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                           <Text style={{ color: palette.text, flex: 1 }} numberOfLines={1}>
                             {item}
                           </Text>
-                          <MaterialCommunityIcons name="chevron-right" size={18} color={palette.icon} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => removeFromSearchHistory(item)}
@@ -381,7 +380,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ visible, onClose }
                           accessibilityLabel={`Remove ${item} from history`}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <MaterialCommunityIcons name="close" size={14} color={palette.icon} />
+                          <MaterialCommunityIcons name="close" size={16} color={palette.icon} />
                         </TouchableOpacity>
                       </View>
                     )}

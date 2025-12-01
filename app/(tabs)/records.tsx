@@ -118,8 +118,8 @@ export default function RecordsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
-      <View style={{ flex: 1, overflow: 'visible' }}>
+    <SafeAreaView style={[styles.safeArea]} edges={['top', 'bottom']}>
+      <View style={{ flex: 1, overflow: 'visible',  marginTop: '-50' }}>
         <View style={styles.header}>
           <View style={styles.filterRow}>
             <View style={styles.chipWrapper}>

@@ -17,6 +17,7 @@ import { DatePreset, DateRange, useFilterContext } from '@/contexts/FilterContex
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { recordsStyles as styles } from '@/styles/records.styles';
 import { getRelativePeriodLabel, isSameDay, normalizeRange, startOfDay } from '@/utils/date';
+import { InfoTooltip } from './InfoTooltip';
 
 const addMonths = (date: Date, months: number) => {
   const next = new Date(date);
@@ -391,7 +392,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
     setTempSelectedCategories,
   ]);
 
-  const confirmResetFilters = useCallback(() => {
+    const confirmResetFilters = useCallback(() => {
     Alert.alert(
       t('reset_filters'),
       t('reset_filters_confirm'),
@@ -441,7 +442,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
             ? `${localFilters.selectedPayers.slice(0, 2).join(', ')}${
                 localFilters.selectedPayers.length > 2 ? '…' : ''
               }`
-            : t('comma_separated'),
+            : 'Search payer/payee names',
       },
       {
         id: 'labels',
@@ -463,7 +464,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
       },
       {
         id: 'amount',
-        title: t('amount'),
+        title: t('amount_range'),
         detail:
           localFilters.amountRange
             ? `$${(localFilters.amountRange.min ?? 0).toLocaleString()} - $${
@@ -671,11 +672,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                             <View
                               style={[
                                 styles.filterRowItem,
-                                (isExpanded || isActive) && {
-                                  backgroundColor: `${palette.tint}0F`,
-                                  borderColor: palette.tint,
-                                  borderWidth: 1,
-                                },
+                                
                               ]}
                             >
                               <View style={styles.filterRowText}>
@@ -691,28 +688,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                               <MaterialCommunityIcons name="chevron-down" size={22} color={palette.icon} />
                             </View>
                           </TouchableOpacity>
-                          {filters.tempSelectedCategories.length > 0 && (
-                            <ScrollView
-                              horizontal
-                              showsHorizontalScrollIndicator={false}
-                              style={styles.categoryBadgeRow}
-                              contentContainerStyle={styles.categoryBadgeInner}
-                            >
-                              {selectedCategoryLabels.map((label) => (
-                                <View
-                                  key={label}
-                                  style={[
-                                    styles.categoryBadge,
-                                    { backgroundColor: `${palette.tint}18`, borderColor: palette.border },
-                                  ]}
-                                >
-                                  <ThemedText style={{ color: palette.text, fontSize: FontSizes.sm }}>
-                                    {label}
-                                  </ThemedText>
-                                </View>
-                              ))}
-                            </ScrollView>
-                          )}
+                         
                         </>
                       ) : section.id === 'timePeriod' ? (
                         <TouchableOpacity onPress={() => setShowCalendarModal(true)}>
@@ -783,18 +759,27 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                   onPress={() => setShowPayerNote((prev) => !prev)}
                                   style={styles.titleInfoIcon}
                                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                >
-                                  <MaterialCommunityIcons
-                                    name="information-outline"
-                                    size={14}
-                                    color={palette.icon}
-                                  />
+                                        >
+                                          <InfoTooltip
+                                                            content={'Enter a Payee/Payer and tap "Done" on your keyboard'}
+                                                            size={16}
+                                                            iconColor={palette.icon}
+                                                            testID={`payer-tooltip`}
+                                                          />
                                 </TouchableOpacity>
                               </View>
-                            ) : (
+                                    ) : (
+                                        <View style={styles.titleWithIcon}>
                               <ThemedText style={[styles.filterRowTitle, { color: palette.text }]}>
                                 {section.title}
-                              </ThemedText>
+                                        </ThemedText>
+                                        {section.id === 'keyTerms' && (<InfoTooltip
+                                      content={'Enter a Note or Title of a record and tap "Done" on your keyboard'}
+                                      size={16}
+                                      iconColor={palette.icon}
+                                      testID={`payer-tooltip`}
+                                          />)}
+                                          </View>
                             )}
                             {section.detail && (
                               <ThemedText style={{ color: palette.icon, marginTop: 4 }}>
@@ -810,7 +795,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                 options={['expense', 'income', 'all']}
                                 variant="compact"
                                 labelSize="small"
-                                style={{ marginTop: Spacing.sm }}
+                                style={{ marginTop: Spacing.sm, }}
                               />
                             )}
                             {section.id === 'payers' && isExpanded && (
@@ -843,7 +828,13 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                     />
                                     <ThemedText style={[styles.infoText, { color: palette.icon }]}>
                                       Separate multiple names with commas or the return key.
-                                    </ThemedText>
+                                            </ThemedText>
+                                             <InfoTooltip
+                                                            content={'Enter a Payee/Payer and tap "Done" on your keyboard.'}
+                                                            size={16}
+                                                            iconColor={palette.icon}
+                                                            testID={`payer-tooltip`}
+                                                          />
                                   </View>
                                 )}
                                 {localFilters.selectedPayers.length > 0 && (
@@ -1018,9 +1009,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                                 </View>
                                 <View style={styles.infoRow}>
                                   <MaterialCommunityIcons name="information-outline" size={14} color={palette.icon} />
-                                  <ThemedText style={[styles.infoText, { color: palette.icon }]}>
-                                    Searches notes, labels, payers, and titles.
-                                  </ThemedText>
+                                  
                                 </View>
                                 {localFilters.keyTerms.length > 0 && (
                                   <ScrollView
@@ -1104,7 +1093,7 @@ export const RecordsFilterSheet: React.FC<RecordsFilterSheetProps> = ({
                       </TouchableOpacity>
                     )}
                       {section.id !== 'accounts' && (
-                      <View style={[styles.separator, { backgroundColor: palette.border }]} />
+                      <View style={[styles.separator]} />
                     )}
                   </View>
                 );

@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -13,6 +13,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
+import { getCustomHeaderStyles } from '@/styles/custom-header.styles';
 import { logExpensesStyles } from '@/styles/log-expenses.styles';
 import { SingleDraft } from '@/types/transactions';
 import { emitRecordDetailUpdate, subscribeToCategorySelection } from '@/utils/navigation-events';
@@ -21,7 +22,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 const styles = logExpensesStyles;
 
 export const options = {
-  headerShown: true,
+  headerShown: false,
   headerTitle: 'record_details',
 };
 
@@ -42,6 +43,7 @@ export default function RecordDetailScreen() {
   const returnTo = useMemo(() => (typeof params.returnTo === 'string' ? params.returnTo : undefined), [params.returnTo]);
   const { showToast } = useToast();
   const allowDateEditing = returnTo !== 'log-expenses-list';
+    const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
 
   const recordIndex = useMemo(() => {
     const indexParam = params.recordIndex;
@@ -131,6 +133,7 @@ export default function RecordDetailScreen() {
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const labelInputRef = useRef<TextInput>(null);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const focusLabelInput = useCallback(() => {
     setTimeout(() => labelInputRef.current?.focus(), 60);
@@ -336,25 +339,28 @@ export default function RecordDetailScreen() {
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
 
   useEffect(() => {
-    navigation.setOptions({
-      headerTitle: t('record_details'),
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack();
-          }}
-          style={{ padding: 8 }}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <TouchableOpacity onPress={handleSave} style={{ padding: 8 }}>
-          <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [handleSave, navigation, palette.icon, palette.tint]);
+        // Listeners to track the keyboard's state
+        const keyboardDidShowListener = Keyboard.addListener(
+          'keyboardDidShow',
+          () => setKeyboardVisible(true),
+        );
+        const keyboardDidHideListener = Keyboard.addListener(
+          'keyboardDidHide',
+          () => setKeyboardVisible(false),
+        );
+    
+        // Cleanup listeners on component unmount
+        return () => {
+          keyboardDidHideListener.remove();
+          keyboardDidShowListener.remove();
+        };
+      }, []);
+
+    useEffect(() => {
+      navigation.setOptions({
+        headerShown: false,
+      });
+    }, [navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -387,13 +393,26 @@ export default function RecordDetailScreen() {
   }, [navigation, isDraftEdited, returnTo]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.card }]}>
+       <View style={customHeaderStyles.headerContainer}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+        </TouchableOpacity>
+        <ThemedText style={{ fontSize: 18, flex: 1, fontWeight: '600', color: palette.text }}>
+          {t("record_details")}
+        </ThemedText>
+        <TouchableOpacity onPress={handleSave} style={{ padding: 8 }}>
+          <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+        </TouchableOpacity>
+        
+      </View>
       <KeyboardAvoidingView
-        behavior="padding"
-        style={styles.keyboardWrapper}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-      >
-        <ScrollView
+                    behavior="padding"
+                    style={styles.keyboardWrapper}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
+                  >
+        <View style={[{ flex: 1, height: '100%', display: 'flex', backgroundColor: palette.background }]}>
+           <ScrollView
           contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.background }]}
           keyboardShouldPersistTaps="always"
           keyboardDismissMode="on-drag"
@@ -628,7 +647,23 @@ export default function RecordDetailScreen() {
               )}
             </View>
           ) : null}
-        </ScrollView>
+          </ScrollView>
+          {!isKeyboardVisible &&
+            <View
+              style={[styles.bottomActionBar, { borderTopColor: palette.border, backgroundColor: palette.background }]}
+            >
+              <TouchableOpacity
+                onPress={() => handleSave()}
+                style={[styles.primaryActionButton, { backgroundColor: palette.tint }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={t('save_record')}
+              >
+                <ThemedText style={[styles.primaryActionLabel, { color: '#FFFFFF' }]}>{t('save')}</ThemedText>
+              </TouchableOpacity>
+            </View>}
+        </View>
+       
         </KeyboardAvoidingView>
     </SafeAreaView>
    

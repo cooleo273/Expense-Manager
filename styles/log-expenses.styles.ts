@@ -7,6 +7,7 @@ export const logExpensesStyles = StyleSheet.create({
   },
   keyboardWrapper: {
     flex: 1,
+    flexGrow: 1,
   },
   contentWrapper: {
     flex: 1,
@@ -15,10 +16,9 @@ export const logExpensesStyles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    // reduce top space between header and content by lowering top padding
     paddingTop: Spacing.sm,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 250, // Increased back to 250 for better keyboard space
+    paddingBottom: 250, 
     gap: Spacing.md,
   },
   summaryContainer: {
@@ -164,6 +164,9 @@ export const logExpensesStyles = StyleSheet.create({
   stackedIconGroup: {
     alignItems: 'center',
     justifyContent: 'center',
+    display: 'flex',
+    flexDirection: 'row',
+    gap: Spacing.sm,
   },
   smallIconTouch: {
     padding: Spacing.xs,

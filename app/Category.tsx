@@ -6,8 +6,10 @@ import { useFilterContext } from '@/contexts/FilterContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { StorageService } from '@/services/storage';
 import { transactionDraftState } from '@/state/transactionDraftState';
+import { getCustomHeaderStyles } from '@/styles/custom-header.styles';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
@@ -21,6 +23,8 @@ export default function CategoriesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { filters, setTempSelectedCategories } = useFilterContext();
+  const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
+  const navigation = useNavigation();
 
 
   const from = params.from as string || '';
@@ -226,6 +230,12 @@ export default function CategoriesScreen() {
     router.back();
   };
 
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
 
   useEffect(() => {
     if (!isFilterMode) {
@@ -254,18 +264,22 @@ export default function CategoriesScreen() {
 
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          headerRight: isFilterMode
-            ? () => (
-                <TouchableOpacity onPress={handleDone} style={{ paddingHorizontal: Spacing.md }}>
-                  <MaterialCommunityIcons name="check" size={22} color={palette.tint} />
-                </TouchableOpacity>
-              )
-            : undefined,
-        }}
-      />
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.card }}>
+      <View style={customHeaderStyles.headerContainer}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={palette.icon} />
+        </TouchableOpacity>
+        <ThemedText style={{ fontSize: 18, flex: 1, fontWeight: '600', color: palette.text }}>
+          {t("categories")}
+        </ThemedText>
+        {isFilterMode ? (
+          <TouchableOpacity onPress={handleDone} style={{ padding: 8 }}>
+            <MaterialCommunityIcons name="check" size={24} color={palette.tint} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
+      </View>
       <View style={{ paddingVertical: Spacing.tiny, backgroundColor: palette.card, borderBottomWidth: 1, borderBottomColor: palette.border }}>
         <ThemedText style={{ color: palette.icon, fontSize: 12, fontWeight: '600', marginBottom: 8, marginHorizontal: Spacing.lg, padding: Spacing.tiny }}>{t('most_frequent')}</ThemedText>
         {mostFrequentWithLastUsed.length > 0 ? (
@@ -334,6 +348,12 @@ export default function CategoriesScreen() {
             const isCategorySelected = selectedIds.includes(item.id);
             const subcategories = getSubcategories(item.id);
             const selectedSubCount = subcategories.filter(sub => selectedIds.includes(sub.id)).length;
+            const isIndeterminate = selectedSubCount > 0 && selectedSubCount < subcategories.length;
+            const iconNameCheckbox = isCategorySelected
+              ? 'checkbox-marked'
+              : isIndeterminate
+                ? 'checkbox-intermediate'
+                : 'checkbox-blank-outline';
 
 
             return (
@@ -371,10 +391,10 @@ export default function CategoriesScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => toggleCategorySelection(item.id)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
                     <MaterialCommunityIcons
-                      name={isCategorySelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                      name={iconNameCheckbox as any}
                       size={28}
                       // Show selected state with app accent (blue) — not the category color
-                      color={isCategorySelected ? palette.tint : palette.icon}
+                      color={isCategorySelected || isIndeterminate ? palette.tint : palette.icon}
                     />
                   </TouchableOpacity>
                 </View>
@@ -443,6 +463,3 @@ export default function CategoriesScreen() {
 }
 
 
-export const options = {
-  headerShown: false,
-};

@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { VictoryLabel, VictoryPie } from 'victory-native';
 
 import { InfoTooltip } from '@/components/InfoTooltip';
@@ -312,17 +312,7 @@ export function ExpenseStructureCard({
   const rippleColor = `${palette.tint}1A`;
 
   return (
-    <Pressable
-      onPress={() => {}}
-      android_ripple={{ color: rippleColor, borderless: false }}
-      style={({ pressed }) => [
-        styles.cardPressable,
-        outerContainerStyle ?? null,
-        pressed ? styles.cardPressablePressed : null,
-      ]}
-    >
-      {({ pressed }) => (
-        <ThemedView
+     <ThemedView
           style={[
             styles.container,
             {
@@ -330,8 +320,8 @@ export function ExpenseStructureCard({
               borderColor: palette.border,
               borderWidth: 1,
             },
-            pressed ? styles.containerPressed : null,
-            pressed ? { borderColor: palette.tint } : null,
+            // pressed ? styles.containerPressed : null,
+            // pressed ? { borderColor: palette.tint } : null,
             innerContainerStyle,
           ]}
         >
@@ -412,36 +402,18 @@ export function ExpenseStructureCard({
                 ]}
               >
                 {centerValue.display ? (
-                  <View style={styles.centerValueRow}>
+                      <View style={[styles.centerValueRow]}>
                     <ThemedText
                       adjustsFontSizeToFit
                       numberOfLines={1}
-                      style={[styles.centerValue, { color: palette.text, fontSize: isNarrow ? FontSizes.md : FontSizes.lg }]}
+                      style={[styles.centerValue, { color: palette.text, fontSize: isNarrow ? FontSizes.lg : FontSizes.xl }]}
                     >
                       {centerValue.display}
                     </ThemedText>
-                    {centerValue.display !== centerValue.full ? (
-                      <InfoTooltip
-                        content={centerValue.full}
-                        size={12}
-                        iconColor={palette.icon}
-                        testID="expense-structure-center-tooltip"
-                        anchorVisible={false}
-                      />
-                    ) : null}
                   </View>
                 ) : null}
-                {centerCaptionText ? (
-                  <ThemedText
-                    adjustsFontSizeToFit
-                    numberOfLines={1}
-                    style={[styles.centerCaption, { color: palette.icon, fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}
-                  >
-                    {centerCaptionText}
-                  </ThemedText>
-                ) : null}
                 {centerPercentText ? (
-                  <ThemedText style={[styles.centerPercent, { color: palette.icon, fontSize: isNarrow ? 10 : FontSizes.xs }]}>
+                  <ThemedText style={[styles.centerPercent, { color: palette.icon, fontSize: isNarrow ? 12 : FontSizes.xs }]}>
                     {centerPercentText}
                   </ThemedText>
                 ) : null}
@@ -492,23 +464,6 @@ export function ExpenseStructureCard({
                 <View style={styles.legendContent}>
                   {legendVariant === 'detailed' ? (
                     <>
-                      <View style={styles.legendHeaderRow}>
-                        {segment.id === 'all' ? (
-                          <View style={{ backgroundColor: palette.tint, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm }}>
-                            <ThemedText style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]} numberOfLines={1}>
-                              {segment.label}
-                            </ThemedText>
-                          </View>
-                        ) : (
-                          <ThemedText
-                            style={[styles.legendLabel, { color: '#000000', fontSize: isNarrow ? FontSizes.sm : FontSizes.md }]}
-                            numberOfLines={1}
-                          >
-                            {segment.label}
-                          </ThemedText>
-                        )}
-                        <ThemedText style={[styles.legendPercent, { color: '#000000', fontSize: isNarrow ? FontSizes.xs : FontSizes.sm }]}>{percentLabel}</ThemedText>
-                      </View>
                       <View style={[styles.progressTrack, { backgroundColor: palette.muted }]}>
                         <View style={[styles.progressFill, { width: `${percentValue}%`, backgroundColor: segment.color }]} />
                       </View>
@@ -557,10 +512,7 @@ export function ExpenseStructureCard({
           {footer}
         </>
       ) : null}
-        </ThemedView>
-      )}
-    </Pressable>
-  );
+        </ThemedView>)
 }
 
 const styles = StyleSheet.create({

@@ -31,19 +31,20 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
   const insets = useSafeAreaInsets();
 
   const navigationItems = [
-    { label: t('debts'), route: '/reminders', icon: 'credit-card-clock' },
+    { label: t('debts'), route: '/reminders', icon: 'credit-card-clock', },
     { label: t('budgets'), route: '/analysis', icon: 'chart-pie' },
     { label: t('accounts'), route: '/accounts', icon: 'wallet-outline' },
     { label: t('statistics'), route: '/analysis', icon: 'shape-outline' },
     { label: t('settings'), route: '/settings', icon: 'cog-outline' },
-    { label: t('templates'), route: '/support', icon: 'file-document-edit-outline' },
+    { label: t('templates'), route: '/templates', icon: 'file-document-edit-outline' },
     { label: t('help'), route: '/support', icon: 'help-circle-outline' },
   ];
 
   const handleNavigate = (route: string, label: string) => {
-    onClose();
+    
 
-    if ([t('debts'), t('budgets'), t('accounts'), t('category'), t('templates')].includes(label)) {
+    if (![t('help')].includes(label)) {
+      onClose();
       showToast(t('feature_not_available'));
       return;
     }
@@ -139,8 +140,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
               <Text style={styles.avatarInitial}>J</Text>
             </View>
             <View>
-              <Text style={[styles.profileName, { color: palette.text }]}>John Doe</Text>
-              <Text style={[styles.profileHint, { color: palette.icon }]}>Premium Member</Text>
+              <Text style={[styles.profileName, { color: palette.text }]}>Dagi Wube</Text>
+              <Text style={[styles.profileHint, { color: palette.icon }]}>dagi@HCI.com</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.dismissButton}>
               <MaterialCommunityIcons name="close" size={20} color={palette.icon} />
@@ -157,10 +158,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
                 <MaterialCommunityIcons
                   name={item.icon as any}
                   size={20}
-                  color={palette.icon}
+                  color={item.route !== "/support" ? '#ccc' : palette.icon}
                   style={{ marginRight: 12 }}
                 />
-                <Text style={{ color: palette.text, fontSize: FontSizes.lg }}>{item.label}</Text>
+                <Text style={{ color: item.route !== "/support" ? '#ccc' : palette.text, fontSize: FontSizes.lg }}>{item.label}</Text>
               </TouchableOpacity>
             ))}
 

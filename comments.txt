@@ -1,0 +1,93 @@
+Colors, representing expense and income green and red (that's nice)
+
+(fix) Category colors, shouldn't match green and red
+
+(fix Dagi) Icon of more (tooltip) change it. (Already on plan)
+
+(optional fix) On long press on card, it looks like its about to move
+
+Keyboard automatic popup is conveninent
+
+(fix) Block future dates to be selected, 
+
+(optional fix) When on click, increase the thickness of the one that is chosen
+
+The fact that the labels are clickable is good
+
+Backward and Forward for the categories in the donut (pass)
+
+(fix) FAB, the close shouldn't be the main color. 
+
+(fix) Accounts, has a bug it stuck on ^ 
+
+(fix) Clear recent searches (both as a whole and individually)
+
+(fix) Show more on search, it should move the filter to the search (we don't support that so cut it off)
+
+(fix) Highlight which one is selected in date dropdown!
+
+Move 10 out of 234 next to Show More (below)
+
+(fix Dag) Key Terms (need to be renamed), Title 
+
+(fix) Category selection on filters the checkbox is too small, and the item height is too low.
+
+(fix) Manual record item entry, on Save click shows a confirmation modal as if it is a back button
+
+Buttons top and bottom are good!
+
+(fix) After Save record, any filter must be removed!! (I also commmented this before!)
+ 
+
+introduce
+home,
+records, 
+stats
+
+then: click on balance summary. show the tooltip
+select on the expesne labels
+show only limited records are available
+then click more to records
+
+
+show records there
+show basic filter and advanced filter (will be back later)
+show stats, show that we have advanced view here, extended list of labels, and income/expense options for donut.
+
+
+add record, explain what everything is, 
+show difference between income and expense
+then show the add list screen and come back
+add record, show that its added.
+come back add record, scan receipt, edit a label
+add a new data
+add new data and no record (delete that) no warning
+attempt delete the new record (alert)
+change the date and save. 
+
+
+go to filter, look for it in the filter
+use payer
+
+search earls
+then go 
+come back,
+clear it
+
+
+show language support
+play around a little
+come back and show the help
+
+
+
+
+
+
+
+
+
+
+
+
+
