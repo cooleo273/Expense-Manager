@@ -23,7 +23,6 @@ const formatRangeLabel = (start: Date, end: Date) => {
     return startLabel;
   }
   const sameMonthAndYear = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
-  const endLabel = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (sameMonthAndYear) {
     return `${startLabel}-${end.getDate()}`;
   }
@@ -61,19 +60,6 @@ const isThisWeek = (range: DateRange) => {
   return (
     normalized.start.getTime() === current.start.getTime() &&
     startOfDay(normalized.end).getTime() === startOfDay(current.end).getTime()
-  );
-};
-
-const isThisMonth = (range: DateRange) => {
-  const normalized = normalizeRange(range);
-  const current = getCurrentMonthRange();
-  const normalizedEnd = startOfDay(normalized.end);
-  const currentEnd = startOfDay(current.end);
-  return (
-    normalized.start.getFullYear() === current.start.getFullYear() &&
-    normalized.start.getMonth() === current.start.getMonth() &&
-    normalizedEnd.getFullYear() === currentEnd.getFullYear() &&
-    normalizedEnd.getMonth() === currentEnd.getMonth()
   );
 };
 
@@ -356,7 +342,6 @@ export const BreakdownChart: React.FC<BreakdownChartProps> = ({
   const labels = segments.map((segment) => segment.label);
   const numPeriods = segments.length;
 
-  const formatCurrency = (value: number) => formatCompactCurrency(value);
   const formatAxisValue = (value: number) => formatCompactCurrency(value).replace(/\$/g, '');
 
   const formatFullCurrency = (value: number) => {

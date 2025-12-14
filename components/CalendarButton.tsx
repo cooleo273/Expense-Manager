@@ -27,7 +27,7 @@ const addMonths = (date: Date, months: number) => {
 
 const getMonthMatrix = (cursor: Date) => {
   const firstOfMonth = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const firstDayOfWeek = (firstOfMonth.getDay() + 6) % 7; // start week on Monday
+  const firstDayOfWeek = (firstOfMonth.getDay() + 6) % 7;
   const gridStart = new Date(firstOfMonth);
   gridStart.setDate(firstOfMonth.getDate() - firstDayOfWeek);
 

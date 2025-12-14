@@ -18,9 +18,7 @@ type RecordListProps = {
   style?: ViewStyle;
   onPressItem?: (item: any) => void;
   formatCurrency?: (value: number, type?: 'income' | 'expense') => string;
-  /** Variant controls which row styles to use (home or records) */
   variant?: 'home' | 'records';
-  /** Extra padding at the bottom for safe area or tab bar */
   bottomInset?: number;
 };
 
@@ -106,9 +104,7 @@ export default function RecordList({ records, limit, style, onPressItem, formatC
             </TouchableOpacity>
           );
         }
-
-
-        // default to home style
+        
         return (
           <TouchableOpacity onPress={() => onPressItem?.(item)} style={{ paddingVertical: Spacing.sm }}>
             <View style={[homeStyles.recordRow]}>

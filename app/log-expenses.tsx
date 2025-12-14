@@ -47,7 +47,6 @@ export default function LogExpensesScreen() {
   const { filters, setSelectedAccount, resetFilters } = useFilterContext();
   const customHeaderStyles = useMemo(() => getCustomHeaderStyles(palette), [palette]);
   
-  // --- STATE SETUP ---
   const [transactionType, setTransactionType] = useState<RecordType>(
     transactionDraftState.getTransactionType()
   );
@@ -72,9 +71,7 @@ export default function LogExpensesScreen() {
   const singleAmountRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // --- KEYBOARD VISIBILITY EFFECT ---
   useEffect(() => {
-    // Listeners to track the keyboard's state
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
       () => setKeyboardVisible(true),
@@ -84,14 +81,11 @@ export default function LogExpensesScreen() {
       () => setKeyboardVisible(false),
     );
 
-    // Cleanup listeners on component unmount
     return () => {
       keyboardDidHideListener.remove();
       keyboardDidShowListener.remove();
     };
   }, []);
-
-  // --- EXISTING HOOKS/CALLBACKS ---
   
   const focusLabelInput = useCallback(() => {
     setTimeout(() => labelInputRef.current?.focus(), 60);
@@ -341,7 +335,6 @@ export default function LogExpensesScreen() {
           records.map((record) => StorageService.incrementCategoryUsage(record.subcategoryId ?? record.category))
         );
       } catch (err) {
-        // not fatal; just log
         console.error('Failed to increment category usage:', err);
       }
       resetDrafts();
@@ -447,31 +440,6 @@ export default function LogExpensesScreen() {
     const anyOther = amountSet || noteSet || payeeSet || subcategorySet || labelsSet || occurredAtSet;
     return anyOther || (categorySet && subcategorySet);
   }, []);
-
-  const confirmDiscardSingle = useCallback(() => {
-    const draftEdited = isSingleDraftEdited(singleDraft);
-    if (!draftEdited) {
-      showToast && showToast(t('no_changes_to_discard'));
-      return;
-    }
-    Alert.alert(
-      t('discard_draft'),
-      t('discard_draft_confirm'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('discard'),
-          style: 'destructive',
-          onPress: () => {
-            transactionDraftState.resetSingleDraft(lastSelectedCategory);
-            setSingleDraft(transactionDraftState.getSingleDraft());
-            showToast && showToast(t('changes_discarded'));
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  }, [isSingleDraftEdited, lastSelectedCategory, setSingleDraft, singleDraft, showToast, t]);
 
   const handleTransactionTypeChange = useCallback(
     (value: TransactionTypeValue) => {
@@ -676,7 +644,6 @@ export default function LogExpensesScreen() {
                       {getFullCategoryLabel(singleDraft.category, singleDraft.subcategoryId) || singleDraft.category}
                     </ThemedText>
                   </View>
-                  {/* chevron removed — category is not a dropdown visually per sketch */}
                 </TouchableOpacity>
                 {categoryError ? (
                   <ThemedText style={{ color: palette.error, fontSize: 12, marginTop: 4 }}>
@@ -801,11 +768,7 @@ export default function LogExpensesScreen() {
                 </View>
               </View>
             )}
-
             
-
-            {/* labels are rendered inline inside the Labels input wrapper */}
-
             <View style={[styles.fieldGroup, isAddingLabel && { marginTop: Spacing.md }]}>
               <View style={styles.dateTimeRow}>
                 <View
@@ -883,7 +846,6 @@ export default function LogExpensesScreen() {
             </View>
           ) : null}
 
-          {/* Removed saved summary - users should not see record count at the bottom */}
           </ScrollView>
           {!isKeyboardVisible &&
             <View

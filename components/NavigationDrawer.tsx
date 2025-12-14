@@ -207,7 +207,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ visible, onC
             <TouchableOpacity
               style={[styles.footerButton, { borderColor: palette.border }]}
               onPress={() => {
-                // Close the drawer and navigate to the legacy page
                 onClose();
                 router.push('/legacy');
               }}

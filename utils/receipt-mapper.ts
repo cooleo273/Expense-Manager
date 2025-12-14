@@ -1,12 +1,12 @@
 import {
-    ExpenseLineItem,
-    ExpenseTax,
-    MindeeField,
-    ReceiptDraftPatch,
-    ReceiptFields,
-    ReceiptImportResult,
-    ReceiptLineItemField,
-    ReceiptTaxField,
+  ExpenseLineItem,
+  ExpenseTax,
+  MindeeField,
+  ReceiptDraftPatch,
+  ReceiptFields,
+  ReceiptImportResult,
+  ReceiptLineItemField,
+  ReceiptTaxField,
 } from '@/types/receipt';
 
 const isMindeeField = <T>(value: unknown): value is MindeeField<T> =>
@@ -40,11 +40,6 @@ const toCleanString = (value?: MindeeField<string> | string | number | null): st
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-/**
- * Normalize the casing of a display string coming from OCR. If the text appears
- * to be all-caps, convert it to title-case (Graphic Tee), otherwise return
- * the original string.
- */
 export const normalizeCasing = (input?: string | null): string | undefined => {
   if (!input) return undefined;
   const text = input.trim();
@@ -74,7 +69,7 @@ const toNumber = (value?: MindeeField<number> | MindeeField<string> | number | s
   return undefined;
 };
 
-const pickFirstString = (candidates: Array<string | number | MindeeField<string> | MindeeField<number> | null | undefined>): string | undefined => {
+const pickFirstString = (candidates: (string | number | MindeeField<string> | MindeeField<number> | null | undefined)[]): string | undefined => {
   for (const candidate of candidates) {
     const value = toCleanString(candidate as MindeeField<string> | string | number | null);
     if (value) {
@@ -84,7 +79,7 @@ const pickFirstString = (candidates: Array<string | number | MindeeField<string>
   return undefined;
 };
 
-const pickFirstNumber = (candidates: Array<MindeeField<number> | MindeeField<string> | number | string | null | undefined>): number | undefined => {
+const pickFirstNumber = (candidates: (MindeeField<number> | MindeeField<string> | number | string | null | undefined)[]): number | undefined => {
   for (const candidate of candidates) {
     const numeric = toNumber(candidate as MindeeField<number> | number | string | null);
     if (numeric !== undefined) {
@@ -143,7 +138,6 @@ export const mapReceiptToExpense = (fields?: ReceiptFields | null): ReceiptImpor
     return null;
   }
 
-  // If records are provided in the response, use them directly
   if (fields.records && fields.records.length > 0) {
     const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
     const merchant = normalizeCasing(merchantRaw) ?? '';
@@ -162,7 +156,7 @@ export const mapReceiptToExpense = (fields?: ReceiptFields | null): ReceiptImpor
     if (merchant) {
       draftPatch.note = merchant;
     }
-    draftPatch.category = 'shopping'; // Default category
+    draftPatch.category = 'shopping';
     draftPatch.subcategoryId = 'other';
 
     const items = buildLineItems(fields.line_items);
@@ -187,7 +181,6 @@ export const mapReceiptToExpense = (fields?: ReceiptFields | null): ReceiptImpor
     };
   }
 
-  // Fallback to original logic if no records
   const merchantRaw = pickFirstString([fields.supplier_name, fields.merchant_name, fields.vendor]) ?? '';
   const descriptionRaw = pickFirstString([fields.purchase_description, fields.description, merchantRaw]) ?? '';
   const merchant = normalizeCasing(merchantRaw) ?? '';

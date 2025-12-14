@@ -12,7 +12,7 @@ type InfoTooltipProps = {
   iconColor?: string;
   size?: number;
   testID?: string;
-  anchorVisible?: boolean; // When false, do not render the visual help icon; still enables the tooltip on press/hover
+  anchorVisible?: boolean;
 };
 
 type AnchorRect = LayoutRectangle | null;

@@ -93,7 +93,6 @@ export default function Statistics() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const windowWidth = Dimensions.get('window').width;
-  const chartWidth = Math.max(windowWidth - 64, 280);
   const expenseChartSize = Math.min(Math.max(windowWidth * 0.4, 180), 250);
   const tabBarHeight = useBottomTabBarHeight();
   const { filters, applyDateFilter } = useFilterContext();

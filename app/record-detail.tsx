@@ -339,28 +339,27 @@ export default function RecordDetailScreen() {
   }, [draft, navigation, recordDate, recordIndex, showToast, validate]);
 
   useEffect(() => {
-        // Listeners to track the keyboard's state
-        const keyboardDidShowListener = Keyboard.addListener(
-          'keyboardDidShow',
-          () => setKeyboardVisible(true),
-        );
-        const keyboardDidHideListener = Keyboard.addListener(
-          'keyboardDidHide',
-          () => setKeyboardVisible(false),
-        );
-    
-        // Cleanup listeners on component unmount
-        return () => {
-          keyboardDidHideListener.remove();
-          keyboardDidShowListener.remove();
-        };
-      }, []);
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => setKeyboardVisible(false)
+    );
 
-    useEffect(() => {
-      navigation.setOptions({
-        headerShown: false,
-      });
-    }, [navigation]);
+    // Cleanup listeners on component unmount
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {

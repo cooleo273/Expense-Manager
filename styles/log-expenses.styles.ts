@@ -160,7 +160,6 @@ export const logExpensesStyles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
   },
-  // small touch area for stacked actions (edit/delete) in top-right
   stackedIconGroup: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -323,15 +322,12 @@ export const logExpensesStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   currencyTiny: {
-    // Use the same font-size and lineHeight as the compact amount input so
-    // the currency symbol aligns perfectly with the numeric text.
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.semibold as any,
     lineHeight: FontSizes.lg + 4,
     textAlignVertical: 'center',
     alignSelf: 'center',
   },
-  // deleteButton and menuButton moved to stack inside noteRow. Keep old classes if used elsewhere but keep them neutral
   deleteButton: {
     padding: Spacing.sm,
   },
@@ -563,7 +559,7 @@ export const logExpensesStyles = StyleSheet.create({
     borderBottomRightRadius: 0,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
-    paddingRight: 96, // Space for the stacked action buttons
+    paddingRight: 96,
     fontSize: FontSizes.md,
   },
   sharedLabelIconButton: {
@@ -576,7 +572,7 @@ export const logExpensesStyles = StyleSheet.create({
     justifyContent: 'center',
     borderTopRightRadius: BorderRadius.md,
     borderBottomRightRadius: BorderRadius.md,
-    backgroundColor: 'transparent', // Or tint if needed
+    backgroundColor: 'transparent',
   },
   sharedLabelActions: {
     position: 'absolute',
@@ -606,7 +602,6 @@ export const logExpensesStyles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   labelsScrollArea: {
-    // Lock to a single row height so the container does not expand vertically.
     maxHeight: 72,
     flex: 1,
     width: '100%',
@@ -668,7 +663,6 @@ export const logExpensesStyles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
     gap: Spacing.xs,
-    // subtle elevation/shadow for visual depth
     ...(Shadows.light ?? {}),
     elevation: 1,
   },
@@ -676,7 +670,6 @@ export const logExpensesStyles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold as any,
   },
-  // Reusable input base style for consistent height/padding
   inputBase: {
     height: 48,
     justifyContent: 'center',

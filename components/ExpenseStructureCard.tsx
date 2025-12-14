@@ -123,20 +123,6 @@ export function ExpenseStructureCard({
     return StyleSheet.flatten(containerStyle) as ViewStyle | undefined;
   }, [containerStyle]);
 
-  const outerContainerStyle = useMemo<ViewStyle | undefined>(() => {
-    if (!flattenedContainerStyle) {
-      return undefined;
-    }
-    const style: ViewStyle = {};
-    MARGIN_KEYS.forEach((key) => {
-      const value = (flattenedContainerStyle as Record<string, any>)[key];
-      if (value !== undefined) {
-        (style as Record<string, any>)[key] = value;
-      }
-    });
-    return style;
-  }, [flattenedContainerStyle]);
-
   const innerContainerOverrides = useMemo<ViewStyle | undefined>(() => {
     if (!flattenedContainerStyle) {
       return undefined;
@@ -301,7 +287,6 @@ export function ExpenseStructureCard({
   const outerRadius = Math.max(effectiveChartSize / 2 - 8, 24);
   const innerRadius = isNarrow ? 20 : Math.max(effectiveChartSize * 0.2, 16);
   const labelRadius = (innerRadius + outerRadius) / 2;
-  const centerDiameter = Math.min(Math.max(Math.round(effectiveChartSize * 0.44), 44), effectiveChartSize - 16);
   const chartCenterBorderColor = activeSegment
     ? `${activeSegment.color}55`
     : activeSegmentId === 'all'
@@ -309,7 +294,6 @@ export function ExpenseStructureCard({
       : palette.border;
 
   const innerContainerStyle = (innerContainerOverrides ?? containerStyle) as StyleProp<ViewStyle> | undefined;
-  const rippleColor = `${palette.tint}1A`;
 
   return (
      <ThemedView
@@ -430,7 +414,6 @@ export function ExpenseStructureCard({
             color: '#FFFFFF',
           } as ExpenseStructureSegment, ...displayedSegments].map((segment) => {
             const percentValue = clampPercent(segment.percent ?? 0);
-            const percentLabel = formatPercentLabel(percentValue);
             const formattedValue = formatValue(segment.value, segment);
             const fullValue = formatFullValue(segment.value, segment);
             const showTooltip = formattedValue !== fullValue;

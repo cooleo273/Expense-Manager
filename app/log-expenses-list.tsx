@@ -154,9 +154,7 @@ export default function LogExpensesListScreen() {
     [router, transactionType]
   );
 
-    // --- KEYBOARD VISIBILITY EFFECT ---
     useEffect(() => {
-      // Listeners to track the keyboard's state
       const keyboardDidShowListener = Keyboard.addListener(
         'keyboardDidShow',
         () => setKeyboardVisible(true),
@@ -166,7 +164,6 @@ export default function LogExpensesListScreen() {
         () => setKeyboardVisible(false),
       );
   
-      // Cleanup listeners on component unmount
       return () => {
         keyboardDidHideListener.remove();
         keyboardDidShowListener.remove();
@@ -285,7 +282,6 @@ export default function LogExpensesListScreen() {
       }
       return '';
     });
-    // payee validation removed (field is no longer shown)
     setRecordErrors(amountErrors);
     setRecordCategoryErrors(categoryErrors);
     setRecordNoteErrors(noteErrors);
@@ -375,9 +371,7 @@ export default function LogExpensesListScreen() {
       setRecordErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordNoteErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
       setRecordCategoryErrors((prev) => prev.map((err, idx) => (idx === 0 ? '' : err)));
-        
 
-      // receipt fields applied; no success toast to avoid duplicate notifications
       scanPrefillRef.current = parsedParam;
     } catch (error) {
       console.error('Failed to import scan payload', error);

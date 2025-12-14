@@ -287,7 +287,7 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.content, { backgroundColor: palette.background, paddingBottom: tabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border, marginTop: '-20' }]}>
+        <ThemedView style={[styles.balanceCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.balanceContent}>
             <View style={styles.leftSide}>
               <ThemedText style={styles.balanceLabel}>{t('balance_summary')}</ThemedText>

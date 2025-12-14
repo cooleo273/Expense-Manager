@@ -119,7 +119,7 @@ export default function RecordsScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea]} edges={['top', 'bottom']}>
-      <View style={{ flex: 1, overflow: 'visible',  marginTop: '-50' }}>
+      <View style={{ flex: 1, overflow: 'visible' }}>
         <View style={styles.header}>
           <View style={styles.filterRow}>
             <View style={styles.chipWrapper}>

@@ -26,7 +26,6 @@ export default function SubcategoriesScreen() {
   
 
   const categoryId = params.category as CategoryKey;
-  const batchIndex = params.batchIndex as string || '';
   const selectedSubcategory = params.selected as string || '';
   const returnTo = params.returnTo as string || 'log-expenses';
   const recordIndex = params.recordIndex as string || '';

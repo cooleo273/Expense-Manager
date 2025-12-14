@@ -128,11 +128,6 @@ export default function LogExpensesReviewScreen() {
     setPickerMode(mode);
   }, []);
 
-  const openRecordPicker = useCallback((mode: PickerMode, recordIndex: number) => {
-    setPickerTarget({ scope: 'record', recordIndex });
-    setPickerMode(mode);
-  }, []);
-
   useEffect(() => {
         // Listeners to track the keyboard's state
         const keyboardDidShowListener = Keyboard.addListener(
@@ -209,7 +204,6 @@ export default function LogExpensesReviewScreen() {
             };
           })
         );
-        const pluralSuffix = savedCount === 1 ? '' : 's';
         const successMessage = stayOnScreen
           ? (savedCount === 1 ? 'Record Added. Starting a new list.' : `${savedCount} Records Added. Starting a new list.`)
           : (savedCount === 1 ? 'Record Added. Taking you to Records.' : `${savedCount} Records Added. Taking you to Records.`);
